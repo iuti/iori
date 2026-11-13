@@ -13,6 +13,8 @@ namespace Iori.Audio
         public string Weather = WeatherIds.Clear;
         /// <summary>true なら時間帯に関係なく静けさの時間にする(寝る前など)。</summary>
         public bool QuietOverride;
+        /// <summary>true ならラジオを止める: 曲、正時のチャイム、静けさのフレーズを予定表に入れない(環境音は鳴り続ける)。</summary>
+        public bool RadioOff;
         /// <summary>何時間先まで予定表を作るか。アプリが裏にいる間はこの範囲を鳴らす。24 時間以上にする。</summary>
         public TimeSpan Horizon = TimeSpan.FromHours(48);
         public long ClockOffsetMs;
@@ -67,7 +69,7 @@ namespace Iori.Audio
                 };
                 plan.Phases.Add(span);
 
-                var track = span.Mode == RadioMode.Theme ? program.FindTrack(b.Phase.Id, weather, b.DayIndex) : null;
+                var track = span.Mode == RadioMode.Theme && !ctx.RadioOff ? program.FindTrack(b.Phase.Id, weather, b.DayIndex) : null;
                 // 同じ曲が続く時間帯はつなげて、無駄なクロスフェードをしない。
                 var last = runs.Count > 0 ? runs[runs.Count - 1] : null;
                 if (last != null && last.EndMs == span.StartMs && SameTrack(last.Track, track))
@@ -88,9 +90,12 @@ namespace Iori.Audio
             }
             plan.Music.Sort((a, c) => a.StartMs != c.StartMs ? a.StartMs.CompareTo(c.StartMs) : string.CompareOrdinal(a.Id, c.Id));
 
-            // 3. 単発音。
-            AddQuietPhrases(program, plan, ctx.TimeZone, nowMs, endMs);
-            if (program.Chime != null) AddChimes(program, plan, ctx.TimeZone, nowMs, endMs);
+            // 3. 単発音(ラジオを止めている間は鳴らさない)。
+            if (!ctx.RadioOff)
+            {
+                AddQuietPhrases(program, plan, ctx.TimeZone, nowMs, endMs);
+                if (program.Chime != null) AddChimes(program, plan, ctx.TimeZone, nowMs, endMs);
+            }
             plan.OneShots.Sort((a, c) => a.AtMs.CompareTo(c.AtMs));
 
             // 4. 環境音。

@@ -14,6 +14,7 @@ namespace Iori.Audio
         const string IndexFile = StreamingAudio.RootFolder + "/audio-index.json";
         const string PrefWeather = "iori.radio.weather";
         const string PrefQuiet = "iori.radio.quiet";
+        const string PrefOff = "iori.radio.off";
         const string PrefMusicVolume = "iori.radio.musicVolume";
         const string PrefMixer = "iori.radio.mixer";
         static readonly TimeSpan RebuildInterval = TimeSpan.FromMinutes(30);
@@ -28,6 +29,8 @@ namespace Iori.Audio
 
         public string Weather { get; private set; } = WeatherIds.Clear;
         public bool Quiet { get; private set; }
+        /// <summary>ラジオを止めているか(曲、チャイム、フレーズが鳴らない。環境音は鳴る)。</summary>
+        public bool Off { get; private set; }
         public float MusicVolume { get; private set; } = 1f;
         /// <summary>動作確認用の時計のずれ。保存しない。</summary>
         public long ClockOffsetMs { get; private set; }
@@ -51,6 +54,7 @@ namespace Iori.Audio
             Instance = this;
             Weather = PlayerPrefs.GetString(PrefWeather, WeatherIds.Clear);
             Quiet = PlayerPrefs.GetInt(PrefQuiet, 0) == 1;
+            Off = PlayerPrefs.GetInt(PrefOff, 0) == 1;
             MusicVolume = PlayerPrefs.GetFloat(PrefMusicVolume, 1f);
 #if UNITY_ANDROID && !UNITY_EDITOR
             Backend = new AndroidPlaybackBackend();
@@ -121,6 +125,7 @@ namespace Iori.Audio
                 TimeZone = TimeZoneInfo.Local,
                 Weather = Weather,
                 QuietOverride = Quiet,
+                RadioOff = Off,
                 ClockOffsetMs = ClockOffsetMs,
                 MusicVolume = MusicVolume,
                 Audio = _audioIndex,
@@ -141,6 +146,13 @@ namespace Iori.Audio
         {
             Quiet = quiet;
             PlayerPrefs.SetInt(PrefQuiet, quiet ? 1 : 0);
+            Rebuild();
+        }
+
+        public void SetOff(bool off)
+        {
+            Off = off;
+            PlayerPrefs.SetInt(PrefOff, off ? 1 : 0);
             Rebuild();
         }
 

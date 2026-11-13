@@ -36,10 +36,13 @@ namespace Iori.Camp
         public float pitch;
         public float zoom = 1f;
         public CampProp focus;
+        [Tooltip("画面の下からどこまでをパネルが覆っているか(0〜1)。覆われていない所の真ん中に見ている物が来るよう、カメラが下を向く")]
+        [Range(0f, 1f)] public float panelCover;
 
         Camera _cam;
         Vector3 _camT;
         float _camR;
+        float _cover;
         bool _init;
 
         // input
@@ -50,6 +53,9 @@ namespace Iori.Camp
 
         /// <summary>Set by the debug panel while the pointer is over it, so taps there do not move the camera.</summary>
         public static bool InputBlocked;
+
+        /// <summary>Set by the UI while one of its panels is open: the presses belong to the panel then.</summary>
+        public static bool UiBlocked;
 
         void OnEnable() { _cam = GetComponent<Camera>(); _init = false; }
 
@@ -80,12 +86,13 @@ namespace Iori.Camp
                 wantR = fr.focusDistance * (iori ? 1.05f : 1f) + Vector3.Distance(f, fr.target) * 0.25f;
                 close = 1f;
             }
-            if (!_init || snap) { _camT = wantT; _camR = wantR; _init = true; }
+            if (!_init || snap) { _camT = wantT; _camR = wantR; _cover = panelCover; _init = true; }
             else
             {
                 float k = 1 - Mathf.Exp(-dt * follow);
                 _camT = Vector3.Lerp(_camT, wantT, k);
                 _camR += (wantR - _camR) * k;
+                _cover += (panelCover - _cover) * k;
             }
             float y = yaw + (autoSway ? Mathf.Sin(t * .13f) * (focus ? .04f : .07f) : 0f);
             float p = fr.tilt + pitch + (autoSway ? Mathf.Sin(t * .09f) * .006f : 0f);
@@ -93,12 +100,15 @@ namespace Iori.Camp
             var pos = new Vector3(_camT.x + _camR * Mathf.Sin(y) * Mathf.Cos(p), Mathf.Max(.3f, _camT.y + _camR * Mathf.Sin(p)), _camT.z - _camR * Mathf.Cos(y) * Mathf.Cos(p));
             transform.position = pos;
             transform.LookAt(_camT);
+            // a panel covers the bottom of the screen: look down by as much as puts the target in the middle of the rest
+            if (_cover > 0.0005f)
+                transform.Rotate(Mathf.Atan(_cover * Mathf.Tan(fr.fov * 0.5f * Mathf.Deg2Rad)) * Mathf.Rad2Deg, 0f, 0f, Space.Self);
             if (atm) atm.SetFocus(_camR, close * Mathf.Clamp01((fr.distance - _camR) / Mathf.Max(0.01f, fr.distance - fr.focusDistance)));
         }
 
         void HandleInput()
         {
-            if (InputBlocked) { _down = false; _dragging = false; return; }
+            if (InputBlocked || UiBlocked) { _down = false; _dragging = false; _pinch = 0f; return; }
             if (Input.touchCount >= 2)
             {
                 float d = Vector2.Distance(Input.GetTouch(0).position, Input.GetTouch(1).position);
