@@ -11,7 +11,8 @@ Material:
   m_Shader: {fileID: 4800000, guid: 7587a0366d9f44ce88da1c5db75506a6, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _PUDDLE
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -26,7 +27,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _Air: 0.3
-    - _ColumnStretch: 6
+    - _ColumnLength: 1.1
     - _Columns: 0
     - _Glitter: 0
     - _Lanes: 0
