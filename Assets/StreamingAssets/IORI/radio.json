@@ -91,7 +91,7 @@
     }
   ],
   "chime": {
-    "file": "placeholder/chime.wav",
+    "file": "fx/chime.ogg",
     "volume": 0.5
   },
   "quiet": {
@@ -115,22 +115,22 @@
   "ambient": [
     {
       "id": "fire",
-      "file": "placeholder/amb_fire.wav",
+      "file": "ambient/fire.ogg",
       "defaultVolume": 0.7
     },
     {
       "id": "wind",
-      "file": "placeholder/amb_wind.wav",
+      "file": "ambient/wind.ogg",
       "defaultVolume": 0.3
     },
     {
       "id": "insects",
-      "file": "placeholder/amb_insects.wav",
+      "file": "ambient/insects.ogg",
       "defaultVolume": 0.25
     },
     {
       "id": "rain",
-      "file": "placeholder/amb_rain.wav",
+      "file": "ambient/rain.ogg",
       "defaultVolume": 0.7,
       "weathers": [
         "rain"
