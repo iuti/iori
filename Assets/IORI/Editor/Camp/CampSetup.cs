@@ -123,7 +123,7 @@ namespace Iori.Camp.EditorTools
 
             var look = AssetDatabase.LoadAssetAtPath<CampLook>(LookPath);
             if (!look) { look = CampLook.CreateDefault(); look.name = "CampLook"; AssetDatabase.CreateAsset(look, LookPath); }
-            else if (resetLook) { look.FillDefaultKeys(); EditorUtility.SetDirty(look); }
+            else if (resetLook) { var fresh = CampLook.CreateDefault(); EditorUtility.CopySerialized(fresh, look); look.name = "CampLook"; UnityEngine.Object.DestroyImmediate(fresh); EditorUtility.SetDirty(look); }
             var skyMat = EnsureMaterial(SkyMatPath, Load<Shader>(ShaderDir + "/IoriSky.shader"));
             var ioriMat = EnsureMaterial(IoriMatPath, Load<Shader>(ShaderDir + "/IoriCharacter.shader"));
             var ioriTex = Load<Texture2D>(IoriTexPath);
