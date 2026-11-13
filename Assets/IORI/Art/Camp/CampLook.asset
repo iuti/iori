@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4fde53757314741a95da0a1cb6dcf7c, type: 3}
   m_Name: CampLook
   m_EditorClassIdentifier: IORI.Camp::Iori.Camp.CampLook
-  version: 9
+  version: 10
   keys:
   - hour: 0
     label: "\u591C"
@@ -30,14 +30,14 @@ MonoBehaviour:
       sunGlow: 0
       sunDisc: 0
       moon: 1
-      keyColor: {r: 0.6627451, g: 0.7372549, b: 1, a: 1}
+      keyColor: {r: 0.5882353, g: 0.7137255, b: 1, a: 1}
       keyIntensity: 0.5
       keyShadow: 0.7
       ambientSky: {r: 0.09019608, g: 0.48235294, b: 0.88235295, a: 1}
       ambientEquator: {r: 0.09019608, g: 0.34901962, b: 0.8, a: 1}
       ambientGround: {r: 0.0627451, g: 0.16470589, b: 0.5019608, a: 1}
       ambientIntensity: 0.9
-      shadeGlaze: 0.5
+      shadeGlaze: 0.75
       fog: {r: 0.101960786, g: 0.16470589, b: 0.47058824, a: 1}
       fogDensity: 0.004
       mist: {r: 0.15686275, g: 0.22745098, b: 0.54901963, a: 1}
@@ -71,14 +71,14 @@ MonoBehaviour:
       sunGlow: 0
       sunDisc: 0
       moon: 1
-      keyColor: {r: 0.6627451, g: 0.7372549, b: 1, a: 1}
+      keyColor: {r: 0.5882353, g: 0.7137255, b: 1, a: 1}
       keyIntensity: 0.5
       keyShadow: 0.7
       ambientSky: {r: 0.09019608, g: 0.48235294, b: 0.88235295, a: 1}
       ambientEquator: {r: 0.09019608, g: 0.34901962, b: 0.8, a: 1}
       ambientGround: {r: 0.0627451, g: 0.16470589, b: 0.5019608, a: 1}
       ambientIntensity: 0.9
-      shadeGlaze: 0.5
+      shadeGlaze: 0.75
       fog: {r: 0.101960786, g: 0.16470589, b: 0.47058824, a: 1}
       fogDensity: 0.004
       mist: {r: 0.15686275, g: 0.22745098, b: 0.54901963, a: 1}
@@ -112,17 +112,17 @@ MonoBehaviour:
       sunGlow: 0.3
       sunDisc: 0
       moon: 0
-      keyColor: {r: 0.78431374, g: 0.627451, b: 0.9411765, a: 1}
+      keyColor: {r: 0.36078432, g: 0.6117647, b: 1, a: 1}
       keyIntensity: 0.25
       keyShadow: 0.55
-      ambientSky: {r: 0.101960786, g: 0.5921569, b: 1, a: 1}
+      ambientSky: {r: 0.101960786, g: 0.6117647, b: 1, a: 1}
       ambientEquator: {r: 0.10980392, g: 0.4392157, b: 0.93333334, a: 1}
       ambientGround: {r: 0.09019608, g: 0.2509804, b: 0.65882355, a: 1}
       ambientIntensity: 1
-      shadeGlaze: 0.5
-      fog: {r: 0.43529412, g: 0.5254902, b: 0.89411765, a: 1}
-      fogDensity: 0.003
-      mist: {r: 0.6039216, g: 0.6431373, b: 0.93333334, a: 1}
+      shadeGlaze: 0.75
+      fog: {r: 0.2901961, g: 0.5019608, b: 0.9098039, a: 1}
+      fogDensity: 0.002
+      mist: {r: 0.49803922, g: 0.61960787, b: 0.9411765, a: 1}
       mistDensity: 0.009
       farNear: {r: 0.14117648, g: 0.20392157, b: 0.6039216, a: 1}
       farFar: {r: 0.41568628, g: 0.5647059, b: 0.93333334, a: 1}
@@ -317,17 +317,17 @@ MonoBehaviour:
       sunGlow: 0.75
       sunDisc: 0
       moon: 0
-      keyColor: {r: 0.78431374, g: 0.627451, b: 0.9411765, a: 1}
+      keyColor: {r: 0.36078432, g: 0.6117647, b: 1, a: 1}
       keyIntensity: 0.3
       keyShadow: 0.55
-      ambientSky: {r: 0.101960786, g: 0.5921569, b: 1, a: 1}
+      ambientSky: {r: 0.101960786, g: 0.6117647, b: 1, a: 1}
       ambientEquator: {r: 0.10980392, g: 0.4392157, b: 0.93333334, a: 1}
       ambientGround: {r: 0.09019608, g: 0.2509804, b: 0.65882355, a: 1}
       ambientIntensity: 1
-      shadeGlaze: 0.5
-      fog: {r: 0.43529412, g: 0.5254902, b: 0.89411765, a: 1}
-      fogDensity: 0.003
-      mist: {r: 0.6039216, g: 0.6431373, b: 0.93333334, a: 1}
+      shadeGlaze: 0.75
+      fog: {r: 0.2901961, g: 0.5019608, b: 0.9098039, a: 1}
+      fogDensity: 0.002
+      mist: {r: 0.49803922, g: 0.61960787, b: 0.9411765, a: 1}
       mistDensity: 0.0035
       farNear: {r: 0.14117648, g: 0.20392157, b: 0.6039216, a: 1}
       farFar: {r: 0.41568628, g: 0.5647059, b: 0.93333334, a: 1}
@@ -358,14 +358,14 @@ MonoBehaviour:
       sunGlow: 0
       sunDisc: 0
       moon: 1
-      keyColor: {r: 0.6627451, g: 0.7372549, b: 1, a: 1}
+      keyColor: {r: 0.5882353, g: 0.7137255, b: 1, a: 1}
       keyIntensity: 0.5
       keyShadow: 0.7
       ambientSky: {r: 0.09019608, g: 0.48235294, b: 0.88235295, a: 1}
       ambientEquator: {r: 0.09019608, g: 0.34901962, b: 0.8, a: 1}
       ambientGround: {r: 0.0627451, g: 0.16470589, b: 0.5019608, a: 1}
       ambientIntensity: 0.9
-      shadeGlaze: 0.5
+      shadeGlaze: 0.75
       fog: {r: 0.101960786, g: 0.16470589, b: 0.47058824, a: 1}
       fogDensity: 0.004
       mist: {r: 0.15686275, g: 0.22745098, b: 0.54901963, a: 1}
@@ -399,14 +399,14 @@ MonoBehaviour:
       sunGlow: 0
       sunDisc: 0
       moon: 1
-      keyColor: {r: 0.6627451, g: 0.7372549, b: 1, a: 1}
+      keyColor: {r: 0.5882353, g: 0.7137255, b: 1, a: 1}
       keyIntensity: 0.5
       keyShadow: 0.7
       ambientSky: {r: 0.09019608, g: 0.48235294, b: 0.88235295, a: 1}
       ambientEquator: {r: 0.09019608, g: 0.34901962, b: 0.8, a: 1}
       ambientGround: {r: 0.0627451, g: 0.16470589, b: 0.5019608, a: 1}
       ambientIntensity: 0.9
-      shadeGlaze: 0.5
+      shadeGlaze: 0.75
       fog: {r: 0.101960786, g: 0.16470589, b: 0.47058824, a: 1}
       fogDensity: 0.004
       mist: {r: 0.15686275, g: 0.22745098, b: 0.54901963, a: 1}
@@ -444,7 +444,12 @@ MonoBehaviour:
   groundLampWrap: 0.1
   groundLampAmount: 0.45
   lampGlaze: 0.35
-  lampAir: 0.001
+  frontLamp: 0.3
+  frontStart: 0.3
+  frontEnd: 1
+  lampAir: 0.00015
+  lampAirWet: 0.0025
+  bloomScatter: 0.45
   tentGlow: 1
   lanternGlow: 3.5
   dialGlow: 2.2
