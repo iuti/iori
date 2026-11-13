@@ -33,6 +33,16 @@ namespace Iori.Camp.EditorTools
         const string RidgePath = ArtDir + "/Textures/iori_ridges.png";
         const string NoisePath = ArtDir + "/Textures/iori_noise3d.asset";
         const string IoriTexPath = "Assets/IORI/Art/Character/iori_placeholder.png";
+        // Iori sitting (drawn with her own chair) and the normals made from that drawing by
+        // tools/character/make_sprite.py. When both are there she is used instead of the standing placeholder.
+        const string IoriSitPath = "Assets/IORI/Art/Character/iori_sit.png";
+        const string IoriSitNormalPath = "Assets/IORI/Art/Character/iori_sit_n.png";
+        /// <summary>Height of the sitting picture's board in metres (the figure, goggles to soles, fills 0.985 of it).</summary>
+        const float IoriSitHeight = 1.28f;
+        /// <summary>The model that the sitting picture's own drawn chair stands in for.</summary>
+        const string ChairMesh = "Chair";
+
+        static bool HasSittingIori => File.Exists(IoriSitPath) && File.Exists(IoriSitNormalPath);
         const string UrpAssetPath = "Assets/IORI/Settings/IORI_URP.asset";
         const string UrpRendererPath = "Assets/IORI/Settings/IORI_URP_Renderer.asset";
 
@@ -166,6 +176,30 @@ namespace Iori.Camp.EditorTools
                 bool dirty = !t.alphaIsTransparency || t.wrapMode != TextureWrapMode.Clamp;
                 t.alphaIsTransparency = true; t.wrapMode = TextureWrapMode.Clamp; t.mipmapEnabled = true; t.maxTextureSize = 2048;
                 if (dirty) t.SaveAndReimport();
+            }
+            // the sitting picture keeps its own size (the board takes its shape from it) and is not compressed:
+            // flat cel colors and thin lines show every block of a compressed texture
+            if (AssetImporter.GetAtPath(IoriSitPath) is TextureImporter sit)
+            {
+                bool dirty = !sit.sRGBTexture || !sit.alphaIsTransparency || !sit.mipmapEnabled || sit.wrapMode != TextureWrapMode.Clamp || sit.filterMode != FilterMode.Trilinear
+                             || sit.textureCompression != TextureImporterCompression.Uncompressed || sit.npotScale != TextureImporterNPOTScale.None || sit.maxTextureSize != 2048;
+                sit.textureType = TextureImporterType.Default;
+                sit.sRGBTexture = true; sit.alphaSource = TextureImporterAlphaSource.FromInput; sit.alphaIsTransparency = true;
+                sit.mipmapEnabled = true; sit.wrapMode = TextureWrapMode.Clamp; sit.filterMode = FilterMode.Trilinear;
+                sit.textureCompression = TextureImporterCompression.Uncompressed; sit.npotScale = TextureImporterNPOTScale.None; sit.maxTextureSize = 2048;
+                if (dirty) sit.SaveAndReimport();
+            }
+            // her normals are numbers (r right, g up, b toward the viewer), read as they are: not a color, and not
+            // Unity's "normal map" type, which repacks the channels differently per platform
+            if (AssetImporter.GetAtPath(IoriSitNormalPath) is TextureImporter sn)
+            {
+                bool dirty = sn.sRGBTexture || sn.alphaIsTransparency || !sn.mipmapEnabled || sn.wrapMode != TextureWrapMode.Clamp || sn.filterMode != FilterMode.Trilinear
+                             || sn.textureCompression != TextureImporterCompression.Uncompressed || sn.npotScale != TextureImporterNPOTScale.None || sn.maxTextureSize != 2048;
+                sn.textureType = TextureImporterType.Default;
+                sn.sRGBTexture = false; sn.alphaSource = TextureImporterAlphaSource.None; sn.alphaIsTransparency = false;
+                sn.mipmapEnabled = true; sn.wrapMode = TextureWrapMode.Clamp; sn.filterMode = FilterMode.Trilinear;
+                sn.textureCompression = TextureImporterCompression.Uncompressed; sn.npotScale = TextureImporterNPOTScale.None; sn.maxTextureSize = 2048;
+                if (dirty) sn.SaveAndReimport();
             }
         }
 
@@ -496,10 +530,17 @@ namespace Iori.Camp.EditorTools
             }
             var strokeTex = Load<Texture2D>(StrokePath);
             var groundTex = Load<Texture2D>(GroundMapPath);
-            var ioriTex = Load<Texture2D>(IoriTexPath);
+            bool sitting = HasSittingIori;
+            var ioriTex = Load<Texture2D>(sitting ? IoriSitPath : IoriTexPath);
             var noiseTex = EnsureNoise();
             var mats = BuildMaterials(resetLook, groundTex);
             mats["Iori"].SetTexture("_MainTex", ioriTex);
+            // with her normals the fire and the sky light her side by side; the rims drawn from her outline step back
+            mats["Iori"].SetTexture("_NormalTex", sitting ? Load<Texture2D>(IoriSitNormalPath) : null);
+            mats["Iori"].SetFloat("_NormalStrength", sitting ? 1f : 0f);
+            mats["Iori"].SetFloat("_RimWarm", sitting ? 0.3f : 0.7f);
+            mats["Iori"].SetFloat("_RimCool", sitting ? 0.15f : 0.35f);
+            EditorUtility.SetDirty(mats["Iori"]);
             var volume = EnsureVolume();
             EnsureWaterMeshes(lay, out var lakeMesh, out var puddleMesh);
             AssetDatabase.SaveAssets();
@@ -545,6 +586,7 @@ namespace Iori.Camp.EditorTools
             var renderers = new Dictionary<string, MeshRenderer>();
             foreach (var o in lay.objects)
             {
+                if (sitting && o.mesh == ChairMesh) continue;      // she is drawn sitting on her own chair
                 if (!meshes.TryGetValue(o.mesh, out var mesh)) { Debug.LogWarning("[IORI] メッシュがない: " + o.mesh); continue; }
                 if (!mats.TryGetValue(o.material, out var mat)) { Debug.LogWarning($"[IORI] マテリアルがない: {o.material}({o.name})"); mat = mats["Prop"]; }
                 var go = new GameObject(o.name);
@@ -583,7 +625,7 @@ namespace Iori.Camp.EditorTools
             }
             var a = lay.anchors ?? new LayoutAnchors();
             var fireAnchor = Anchor("焚き火", a.fire, CampPropKind.Fire, new Vector3(0f, 0.32f, 0f), 0.45f);
-            var ioriAnchor = Anchor("イオリ", a.iori, CampPropKind.Iori, new Vector3(0f, 1.0f, 0f), 0.5f);
+            var ioriAnchor = Anchor("イオリ", a.iori, CampPropKind.Iori, new Vector3(0f, sitting ? 0.8f : 1.0f, 0f), 0.5f);
             var lanternAnchor = Anchor("ランタン", a.lantern, CampPropKind.Lantern, new Vector3(0f, 0.13f, 0f), 0.2f, false);
             Anchor("ラジオ", a.radio, CampPropKind.Radio, new Vector3(-0.02f, 0.43f, -0.03f), 0.3f);
             Anchor("音楽プレーヤー", a.player, CampPropKind.Player, new Vector3(-0.01f, 0.38f, -0.01f), 0.28f);
@@ -682,9 +724,9 @@ namespace Iori.Camp.EditorTools
                 go.AddComponent<CampRain>();
             }
 
-            // ---- Iori (a placeholder picture on a board until her real model exists)
+            // ---- Iori (a picture on a board until her real model exists)
             {
-                var board = new GameObject("イオリの板(仮の立ち絵)");
+                var board = new GameObject(sitting ? "イオリの板(座り絵)" : "イオリの板(仮の立ち絵)");
                 board.transform.SetParent(ioriAnchor, false);
                 board.AddComponent<MeshFilter>();
                 var br = board.AddComponent<MeshRenderer>();
@@ -693,6 +735,7 @@ namespace Iori.Camp.EditorTools
                 br.receiveShadows = false;
                 var bb = board.AddComponent<CampBillboard>();
                 bb.picture = ioriTex;
+                if (sitting) bb.height = IoriSitHeight;
                 bb.viewer = cam;
             }
 
@@ -826,6 +869,7 @@ namespace Iori.Camp.EditorTools
             {
                 string dir = ArgValue("-shotDir") ?? Path.GetFullPath("camp-shots");
                 string only = ArgValue("-shots");
+                _flatIori = HasArg("-ioriFlat");
                 var shots = new List<Shot>(DefaultShots);
                 if (!string.IsNullOrEmpty(only))
                 {
@@ -837,6 +881,9 @@ namespace Iori.Camp.EditorTools
             }
             catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
         }
+
+        /// <summary>-ioriFlat: take the pictures with Iori's normals switched off (the board lit as one flat thing), to compare.</summary>
+        static bool _flatIori;
 
         public static void Capture(string dir, Shot[] shots)
         {
@@ -862,6 +909,9 @@ namespace Iori.Camp.EditorTools
             bool oldClock = atm.followClock; float oldHour = atm.previewHour; var oldWeather = atm.weather; var oldSeason = atm.season;
             bool oldSway = rig.autoSway; var oldLevel = quality.level;
             bool oldLakeClassic = atm.look && atm.look.lakeClassic;
+            var boardMat = board ? board.GetComponent<MeshRenderer>().sharedMaterial : null;
+            float oldNormal = boardMat && boardMat.HasProperty("_NormalStrength") ? boardMat.GetFloat("_NormalStrength") : 0f;
+            if (_flatIori && boardMat) boardMat.SetFloat("_NormalStrength", 0f);
             try
             {
                 foreach (var s in shots)
@@ -911,6 +961,7 @@ namespace Iori.Camp.EditorTools
             finally
             {
                 cam.targetTexture = null;
+                if (_flatIori && boardMat) boardMat.SetFloat("_NormalStrength", oldNormal);
                 atm.followClock = oldClock; atm.previewHour = oldHour; atm.weather = oldWeather; atm.season = oldSeason; atm.sleep = false; atm.timeOverride = -1f;
                 rig.focus = null; rig.yaw = 0f; rig.autoSway = oldSway;
                 if (atm.look) atm.look.lakeClassic = oldLakeClassic;
