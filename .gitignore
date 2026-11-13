@@ -40,3 +40,4 @@ crashlytics-buildid.txt
 
 .DS_Store
 Thumbs.db
+*.slnx
