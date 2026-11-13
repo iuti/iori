@@ -51,7 +51,7 @@ namespace Iori.Camp
 
         [Header("遠くの山(手前と奥)と町の灯り")]
         public Color farNear = Hex("#2a2c80");
-        public Color farFar = Hex("#7f8ee6");
+        public Color farFar = Hex("#748cee");
         public float town = 1f;
 
         [Header("湖の色")]
@@ -67,7 +67,7 @@ namespace Iori.Camp
         [Range(-100, 100)] public float saturation = 6f;
         [Range(-100, 100)] public float contrast = 4f;
         public Color filter = Color.white;
-        [Range(0, 3)] public float bloom = 0.9f;
+        [Range(0, 3)] public float bloom = 0.45f;
 
         [Header("雨のときに空と空気へ混ぜる色")]
         public Color rainTint = Hex("#5a6498");
@@ -151,7 +151,7 @@ namespace Iori.Camp
             farNear = Hex("#12154a"), farFar = Hex("#2e3e98"), town = 1f,
             water = Hex("#243090"),
             fire = 1.15f, tent = 1f, lantern = 1f,
-            exposure = 0f, saturation = 6f, contrast = 6f, bloom = 1.0f,
+            exposure = 0f, saturation = 6f, contrast = 6f, bloom = 0.5f,
             rainTint = Hex("#232a55"),
         };
 
@@ -168,7 +168,7 @@ namespace Iori.Camp
             farNear = Hex("#5062b0"), farFar = Hex("#d8c4e4"), town = 0.15f,
             water = Hex("#b4c2f0"),
             fire = 0.8f, tent = 0f, lantern = 0.3f,
-            exposure = 0f, saturation = 4f, contrast = 2f, bloom = 0.6f,
+            exposure = 0f, saturation = 4f, contrast = 2f, bloom = 0.3f,
             rainTint = Hex("#8088a8"),
         };
 
@@ -185,7 +185,7 @@ namespace Iori.Camp
             farNear = Hex("#4460b4"), farFar = Hex("#acc2ee"), town = 0f,
             water = Hex("#8fb4f0"),
             fire = 0.7f, tent = 0f, lantern = 0f,
-            exposure = 0f, saturation = 4f, contrast = 2f, bloom = 0.4f,
+            exposure = 0f, saturation = 4f, contrast = 2f, bloom = 0.2f,
             rainTint = Hex("#7884a8"),
         };
 
@@ -202,7 +202,7 @@ namespace Iori.Camp
             farNear = Hex("#4a4a9a"), farFar = Hex("#c8a8d8"), town = 0.4f,
             water = Hex("#b0a8e0"),
             fire = 0.9f, tent = 0.3f, lantern = 0.5f,
-            exposure = 0f, saturation = 6f, contrast = 4f, bloom = 0.8f,
+            exposure = 0f, saturation = 6f, contrast = 4f, bloom = 0.4f,
             rainTint = Hex("#8088a8"),
         };
     }

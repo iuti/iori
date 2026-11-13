@@ -101,13 +101,12 @@ def leaf(pl, pos, direction, size, rng, color):
     pl.poly([base, mid + side * w / 2 + fold, tip, mid - side * w / 2 + fold], cen, c, [1.0, 1.0, 1.0, 1.0])
 
 
-def blade(pl, root, direction, length, width, rng, color, tip_color, lean=0.35):
-    """A grass blade: three quads bending over, wide like a brush mark."""
+def blade(pl, root, direction, length, width, rng, color, tip_color, lean=0.35, segs=3):
+    """A grass blade: a few quads bending over, ending in a point, like one flick of a thin brush."""
     r = Vector(root)
     d = Vector((direction[0], direction[1], 0.0)).normalized()
     side = Vector((-d.y, d.x, 0.0))
     pts_l, pts_r = [], []
-    segs = 3
     for i in range(segs + 1):
         t = i / segs
         c = r + Vector((0, 0, 1)) * length * (t - lean * 0.45 * t * t) + d * length * lean * t * t
@@ -133,11 +132,11 @@ def blade(pl, root, direction, length, width, rng, color, tip_color, lean=0.35):
     pl.add(pts, nrm, (r.x, r.y, r.z), [mix(col, tipc, t) for t in tn], [t * t for t in tn], tn, tris)
 
 
-def tuft(pl, x, y, z, rng, height=0.10, blades=6, spread=0.05, color=GRASS_A, tip=GRASS_B, width=0.022):
+def tuft(pl, x, y, z, rng, height=0.10, blades=6, spread=0.05, color=GRASS_A, tip=GRASS_B, width=0.022, segs=3):
     for _ in range(blades):
         a = rng.uniform(0, 2 * math.pi)
         r = rng.uniform(0, spread)
-        blade(pl, (x + math.cos(a) * r, y + math.sin(a) * r, z - 0.01), (math.cos(a), math.sin(a)), height * rng.uniform(.6, 1.15), width * rng.uniform(.75, 1.25), rng, color, tip, lean=rng.uniform(.15, .6))
+        blade(pl, (x + math.cos(a) * r, y + math.sin(a) * r, z - 0.01), (math.cos(a), math.sin(a)), height * rng.uniform(.6, 1.15), width * rng.uniform(.75, 1.25), rng, color, tip, lean=rng.uniform(.15, .6), segs=segs)
 
 
 def fern(pl, x, y, z, rng, fronds=7, length=0.5, color=hexc('#2c4f3e')):

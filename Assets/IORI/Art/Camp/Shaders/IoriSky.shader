@@ -95,8 +95,9 @@ Shader "IORI/Camp/Sky"
                 // ---- sky: horizon to zenith, one flat color per stroke
                 float h = saturate(dc.y);
                 float hj = h + (rnd - 0.5) * 0.05;
-                float3 col = lerp(_IoriSkyHorizon.rgb, _IoriSkyMid.rgb, smoothstep(0.0, 0.22, hj));
-                col = lerp(col, _IoriSkyZenith.rgb, smoothstep(0.14, 0.62, hj));
+                // (the change of color sits low: a phone held upright sees only the lowest 15 degrees of sky)
+                float3 col = lerp(_IoriSkyHorizon.rgb, _IoriSkyMid.rgb, smoothstep(0.0, 0.17, hj));
+                col = lerp(col, _IoriSkyZenith.rgb, smoothstep(0.10, 0.46, hj));
                 float sd = saturate(dot(dc, sunDir));
                 float sdFlat = saturate(dot(normalize(float3(dc.x, 0, dc.z)), normalize(float3(sunDir.x, 0, sunDir.z) + 1e-5)));
                 // the glow hugs the horizon under the light, and closes in around the light itself
@@ -187,7 +188,7 @@ Shader "IORI/Camp/Sky"
                     float under = saturate(1.0 - (tk - elc) / (2.6 + depth));
                     float facing = saturate(sk * side * 1.5 + 0.15);
                     float faceLit = saturate(floor(under * facing * 3.0 + mrnd) / 3.0);
-                    mc = lerp(mc, lerp(mc, behind, 0.5) * 1.06, faceLit * (0.75 - 0.25 * depth));
+                    mc = lerp(mc, lerp(mc, behind, 0.35) * 1.12, faceLit * (0.75 - 0.25 * depth));
                     mc *= 1.0 + (mrnd - 0.5) * 0.10 - step(mrnd, 0.14) * 0.07 * (1.0 - depth);
                     // paler toward the water: mist lies on the lake
                     float low = (1.0 - smoothstep(0.0, 2.8, elc)) * (0.12 + 0.30 * depth);
@@ -216,6 +217,8 @@ Shader "IORI/Camp/Sky"
                 float haze = (1.0 - smoothstep(0.0, 3.2, elp)) * saturate(_IoriFog.y * 40.0);
                 col = lerp(col, _IoriMistColor.rgb, haze * 0.6 * (1.0 - 0.5 * inShore));
                 col = lerp(col, air, smoothstep(-0.2, -3.0, elp));
+                // the air around the lamps glows in front of the far view as well
+                col += IoriLampAir(_WorldSpaceCameraPos + d * 3000.0);
                 return half4(col, 1);
             }
             ENDHLSL

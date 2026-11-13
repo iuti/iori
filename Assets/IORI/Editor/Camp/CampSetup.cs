@@ -280,12 +280,14 @@ namespace Iori.Camp.EditorTools
             }
             // The parts that change with the hour (exposure, color, bloom, depth of field) are set by
             // CampAtmosphere on its own volume; this one holds what stays the same.
+            // No tone curve: the colors are chosen as they should appear, and a curve would dull all of them
+            // (the "neutral" one shows white as light grey). What is brighter than white just stays white, and glows.
             var tone = Get<Tonemapping>();
-            tone.mode.Override(TonemappingMode.Neutral);
+            tone.mode.Override(TonemappingMode.None);
             var vig = Get<Vignette>();
             vig.intensity.Override(0.2f); vig.smoothness.Override(0.5f); vig.color.Override(new Color(0.05f, 0.05f, 0.2f));
             var bloom = Get<Bloom>();
-            bloom.threshold.Override(1.0f); bloom.intensity.Override(0.5f); bloom.scatter.Override(0.7f);
+            bloom.threshold.Override(1.0f); bloom.intensity.Override(0.4f); bloom.scatter.Override(0.6f);
             bloom.highQualityFiltering.Override(false);
             EditorUtility.SetDirty(profile);
             return profile;
@@ -349,7 +351,7 @@ namespace Iori.Camp.EditorTools
                 m.SetFloat("_StrokeScale", 4f); m.SetFloat("_Variation", 0.18f); m.SetFloat("_Bristle", 0.3f); m.SetFloat("_Wrap", 0.3f);
                 m.SetFloat("_TintAmount", 0.3f); m.SetFloat("_WetDarken", 0.1f); m.SetFloat("_WetGloss", 0f);
                 // logs in the fire stay dark against the flame
-                m.SetFloat("_LampAmount", 0.3f);
+                m.SetFloat("_LampAmount", 0.15f);
             });
             d["Ember"].SetFloat("_Ember", 1f);
             d["Ember"].EnableKeyword("_EMBER");
@@ -865,9 +867,9 @@ namespace Iori.Camp.EditorTools
                     foreach (var m in mirrors)
                     {
                         m.UpdateNow();
-                        if (m.Active && m.ReflectionCamera && m.Texture) RenderCamera(m.ReflectionCamera, m.Texture);
+                        if (m.Active && m.ReflectionCamera && m.Texture) RenderCamera(m.ReflectionCamera, m.Texture, false);
                     }
-                    RenderCamera(cam, rt);
+                    RenderCamera(cam, rt, true);
 
                     var prev = RenderTexture.active;
                     RenderTexture.active = rt;
@@ -899,8 +901,18 @@ namespace Iori.Camp.EditorTools
             LogStats(mirrors.Length > 0 ? mirrors[0] : null);
         }
 
-        static void RenderCamera(Camera c, RenderTexture target)
+        /// <param name="finished">true for the picture itself: asks for the whole pipeline, so the picture's finish
+        /// (glow, blur, color) is applied as it is when playing. A "single camera" request skips working out
+        /// which volumes apply, and the picture comes out without any finish; that is fine for the mirror
+        /// images, which have none.</param>
+        static void RenderCamera(Camera c, RenderTexture target, bool finished)
         {
+            if (finished)
+            {
+                var whole = new RenderPipeline.StandardRequest { destination = target };
+                if (RenderPipeline.SupportsRenderRequest(c, whole)) { RenderPipeline.SubmitRenderRequest(c, whole); return; }
+                Debug.LogWarning("[IORI] the pipeline takes no standard request; the shots lack the picture's finish");
+            }
             var req = new UniversalRenderPipeline.SingleCameraRequest { destination = target };
             if (RenderPipeline.SupportsRenderRequest(c, req)) RenderPipeline.SubmitRenderRequest(c, req);
             else c.Render();

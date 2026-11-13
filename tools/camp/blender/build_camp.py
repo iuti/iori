@@ -244,7 +244,7 @@ def blocked(x, y):
 def build_plants():
     grasses, plants = [N.Plants(), N.Plants(), N.Plants()], N.Plants()
     pick = lambda: grasses[0] if rng.random() < 0.40 else grasses[1 + (rng.random() < 0.5)]   # density tiers: Grass0 is always drawn
-    def scatter(count, xr, yr, hmin, hmax, blades, width, wild=0.0):
+    def scatter(count, xr, yr, hmin, hmax, blades, width, wild=0.0, segs=3):
         xs = np.array([rng.uniform(*xr) for _ in range(count)]); ys = np.array([rng.uniform(*yr) for _ in range(count)])
         dirt, sand, moss = T.cover(xs, ys)
         hs = T.height(xs, ys)
@@ -255,18 +255,19 @@ def build_plants():
             if rng.random() > keep * keep or bw[i] > 0.35 or hs[i] < T.WATER_Z + 0.08 or blocked(x, y): continue
             dry = rng.random() < 0.10
             N.tuft(pick(), x, y, float(hs[i]), rng, height=rng.uniform(hmin, hmax) * (1 + wild * moss[i]), blades=blades, spread=0.045,
-                   color=N.GRASS_DRY if dry else N.GRASS_A, tip=hexc('#b0a868') if dry else N.GRASS_B, width=width)
+                   color=N.GRASS_DRY if dry else N.GRASS_A, tip=hexc('#b0a868') if dry else N.GRASS_B, width=width, segs=segs)
     k = 0.35 if FAST else 1.0
-    scatter(int(5200 * k), (-2.6, 2.6), (-2.6, 2.2), .06, .13, 4, .026)           # short grass around the camp
-    scatter(int(3600 * k), (-5.5, 5.5), (-3.0, 7.6), .09, .20, 4, .034, wild=.8)  # longer further out
-    scatter(int(1600 * k), (-11, 11), (-4.0, 8.0), .14, .30, 4, .05, wild=1.0)
+    # thin blades, many to a tuft: fine marks close to the camera (the far ones are simpler and a little wider)
+    scatter(int(5200 * k), (-2.6, 2.6), (-2.6, 2.2), .06, .13, 6, .015)                    # short grass around the camp
+    scatter(int(3600 * k), (-5.5, 5.5), (-3.0, 7.6), .09, .20, 6, .020, wild=.8, segs=2)   # longer further out
+    scatter(int(1600 * k), (-11, 11), (-4.0, 8.0), .14, .30, 5, .032, wild=1.0, segs=2)
     # taller clumps hugging things
     for (cx, cy, r, n) in [(T.STUMP[0], T.STUMP[1], .34, 16), (T.CRATE[0], T.CRATE[1], .36, 14), (T.TREE_R[0], T.TREE_R[1], .32, 22), (T.TREE_L[0], T.TREE_L[1], .34, 22),
                            (1.95, 3.1, .7, 26), (-2.7, 1.2, .55, 20), (T.TABLE[0] - .35, T.TABLE[1] + .25, .25, 8), (1.42, 1.25, .4, 12)]:
         for _ in range(n):
             a = rng.uniform(0, 6.28); d = r * rng.uniform(.85, 1.25)
             x, y = cx + math.cos(a) * d, cy + math.sin(a) * d
-            N.tuft(grasses[0], x, y, gz(x, y), rng, height=rng.uniform(.16, .30), blades=6, spread=.05, width=.03)
+            N.tuft(grasses[0], x, y, gz(x, y), rng, height=rng.uniform(.16, .30), blades=8, spread=.05, width=.02)
     for i, g in enumerate(grasses):
         S.put('Grass%d' % i, g.piece(), 'Grass', layer='CampGround', ao=False, occluder=False, shadows=False)
 

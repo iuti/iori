@@ -106,6 +106,10 @@ def cover(x, y):
     for (px, py, r) in ((IORI[0], IORI[1], 0.9), (TABLE[0], TABLE[1], 0.75), (CRATE[0], CRATE[1], 0.6), (0.1, -2.2, 0.9)):
         dirt = np.maximum(dirt, sstep(r, r * 0.45, np.hypot(x - px, y - py) + n1 * 0.35) * 0.9)
     dirt = np.maximum(dirt, sstep(0.9, 0.3, np.hypot(x - TENT[0] - 0.3, y - TENT[1] + 1.5) + n1 * 0.3) * 0.8)
+    # worn ground around the tent, in streaks that run toward the camp: this is where the tent's light lands
+    dtent = np.hypot(x - TENT[0], y - TENT[1])
+    streaks = sstep(-0.30, 0.20, fbm(x * 2.4 + 3, y * 0.8, 31, 2))
+    dirt = np.maximum(dirt, sstep(3.4, 1.5, dtent + n1 * 0.9) * sstep(TENT[1] + 1.2, TENT[1] + 0.2, y) * streaks * 0.85)
     dirt = np.maximum(dirt, sstep(0.52, 0.70, n2 + 0.5 * 0) * sstep(0.55, 0.75, 0.5 + n2) * 0.0)
     dirt = np.maximum(dirt, sstep(0.38, 0.55, n2) * 0.75)             # scattered bare patches
     h = height(x, y)

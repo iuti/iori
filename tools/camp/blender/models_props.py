@@ -338,32 +338,40 @@ def firewood(rng):
 
 
 # ------------------------------------------------------------------------------ tent
-def tent(rng, radius=1.15, height=1.38):
+def tent(rng, radius=1.15, height=1.38, detail=3):
     """Geodesic dome tent with a lamp hanging inside. Door toward -Y.
-    The cloth carries how much of the lamp's light arrives at each panel (glow strength 0.3..1.25);
-    the shader turns that, and where the lamp is behind the cloth as seen from the camera, into color."""
+    The cloth carries how much of the lamp's light arrives at each panel (glow strength 0.3..1.25)
+    and each panel's middle; the shader turns that, and where the lamp is behind the cloth as seen
+    from the camera, into color, one panel at a time."""
     p = P()
     cloth_hot, cloth_edge = hexc('#f0b658'), hexc('#d8842e')
-    dome = ico(1.0, 2)
+    dome = ico(1.0, detail)
     bmesh.ops.bisect_plane(dome.bm, geom=dome.bm.verts[:] + dome.bm.edges[:] + dome.bm.faces[:], plane_co=(0, 0, -0.02), plane_no=(0, 0, -1), clear_outer=True)
     dome.scale(radius, radius, height)
     dome.shade(False)
     lamp = Vector((0.0, -0.1, 0.55))
     dome.bm.faces.index_update()
-    tone = {f.index: rng.uniform(-.07, .07) for f in dome.bm.faces}
+    tone = {f.index: rng.uniform(-.18, .18) for f in dome.bm.faces}
     # light arriving from the lamp: stronger where the cloth is close and faces it
     def arriving(co, nrm):
         to = lamp - co
         d = to.length
         return abs(nrm.dot(to)) / d / (d * d)
-    most = max(arriving(l.vert.co, f.normal) for f in dome.bm.faces for l in f.loops)
+    most = max(arriving(f.calc_center_median(), f.normal) for f in dome.bm.faces)
     for f in dome.bm.faces:
+        # A panel is mostly one tone (taken at its middle) with a little of the slope across it.
+        # Its middle also goes to the shader (uv0 and data.w, in the engine's axes: x, up, depth),
+        # which uses it to tell how far the panel is from the line between the camera and the lamp.
+        mid = f.calc_center_median()
+        e_mid = min(1.0, arriving(mid, f.normal) / most)
         for l in f.loops:
-            e = (arriving(l.vert.co, f.normal) / most) ** 1.3
+            e_here = min(1.0, arriving(l.vert.co, f.normal) / most)
+            e = (0.75 * e_mid + 0.25 * e_here) ** 1.3
             c = mix(cloth_edge, cloth_hot, e)
-            c = tuple(min(1.0, ch * (1 + tone[f.index])) for ch in c)
+            c = tuple(min(1.0, ch * (1 + tone[f.index] * 0.4)) for ch in c)
             l[dome.col] = (c[0], c[1], c[2], 1.0)
-            l[dome.dat] = (float(GLOW['tent']), 0.36 + 0.82 * e + tone[f.index], 0.0, 0.0)
+            l[dome.dat] = (float(GLOW['tent']), 0.36 + 0.82 * e + tone[f.index], 0.0, mid.y)
+            l[dome.uv].uv = (mid.x, mid.z)
     p.add(dome)
     # poles along the panel seams, dark against the light
     seam = hexc('#5a3418')
@@ -375,7 +383,7 @@ def tent(rng, radius=1.15, height=1.38):
         key = (round(a.x + b.x, 3), round(a.y + b.y, 3), round(a.z + b.z, 3))
         if key in seen: continue
         seen.add(key)
-        s = tube([a * 1.006, b * 1.006], 0.011, 4, seam, caps=False)
+        s = tube([a * 1.006, b * 1.006], 0.008, 4, seam, caps=False)
         s.data(glow='tent', strength=0.10)
         p.add(s)
     # ground skirt

@@ -200,6 +200,7 @@ Shader "IORI/Camp/Water"
                 // the mirror image already carries the air of what it shows; only part of the haze is laid over it
                 float air = min(IoriAirAmount(wp) * 0.6, _Air);
                 col = lerp(col, lerp(_IoriFogColor.rgb, _IoriMistColor.rgb, 0.5), air);
+                col += IoriLampAir(wp);
                 return half4(col, alpha);
             }
             ENDHLSL

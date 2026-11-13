@@ -114,6 +114,8 @@ namespace Iori.Camp
             public static readonly int Noise3D = Shader.PropertyToID("_IoriNoise3D");
             public static readonly int RidgeTex = Shader.PropertyToID("_IoriRidgeTex");
             public static readonly int TentLamp = Shader.PropertyToID("_IoriTentLamp");
+            public static readonly int AirFire = Shader.PropertyToID("_IoriAirFire");
+            public static readonly int AirTent = Shader.PropertyToID("_IoriAirTent");
             public static readonly int AmbientSky = Shader.PropertyToID("_IoriAmbientSky");
             public static readonly int AmbientEquator = Shader.PropertyToID("_IoriAmbientEquator");
             public static readonly int AmbientGround = Shader.PropertyToID("_IoriAmbientGround");
@@ -126,6 +128,7 @@ namespace Iori.Camp
             public static readonly int GroundMap = Shader.PropertyToID("_IoriGroundMap");
             public static readonly int FirePos = Shader.PropertyToID("_IoriFirePos");
             public static readonly int Light = Shader.PropertyToID("_IoriLight");
+            public static readonly int Lamp = Shader.PropertyToID("_IoriLamp");
             public static readonly int Fire = Shader.PropertyToID("_IoriFire");
             public static readonly int SeasonGrass = Shader.PropertyToID("_IoriSeasonGrass");
             public static readonly int SeasonLeaf = Shader.PropertyToID("_IoriSeasonLeaf");
@@ -436,8 +439,13 @@ namespace Iori.Camp
             }
             Shader.SetGlobalVector(Id.FirePos, new Vector4(firePos.x, firePos.y, firePos.z, L.fireRange));
             Shader.SetGlobalVector(Id.Light, new Vector4(L.lampSize * L.lampSize, L.litKnee, L.litTop, L.lampGlaze));
+            Shader.SetGlobalVector(Id.Lamp, new Vector4(L.lampWins, L.lampKnee, L.lampTop, 0f));
             Vector3 tentLamp = tentLight ? tentLight.transform.position : new Vector3(-2.2f, 0.6f, 1.2f);
             Shader.SetGlobalVector(Id.TentLamp, new Vector4(tentLamp.x, tentLamp.y, tentLamp.z, tentLevel * L.tentGlow));
+            // the air around the lamps catches their light: more of it in mist and in rain
+            float airCatch = L.lampAir * (1f + rain * 1.5f + Mathf.Clamp01(p.mistDensity * 40f));
+            Shader.SetGlobalVector(Id.AirFire, Lin(L.fireColor, L.fireIntensity * fireLevel * flick * airCatch));
+            Shader.SetGlobalVector(Id.AirTent, Lin(L.tentColor, L.tentIntensity * tentLevel * airCatch * 0.3f));
             // flame size: a low flame over embers when sleeping, never quite out
             float flameSize = Mathf.Clamp(0.35f + 0.65f * fireLevel, 0.3f, 1.2f) * Mathf.Lerp(1f, 0.55f, sl);
             Shader.SetGlobalVector(Id.Fire, new Vector4(flameSize, Mathf.Lerp(0.85f, 1.1f, Mathf.Clamp01(fireLevel)) * flick, Mathf.Clamp01(fireLevel * (1f - sl * 0.7f)), 0f));
@@ -518,7 +526,7 @@ namespace Iori.Camp
             _color.colorFilter.Override(p.filter);
             _bloom.intensity.Override(p.bloom);
             _bloom.threshold.Override(1.0f);
-            _bloom.scatter.Override(0.72f);
+            _bloom.scatter.Override(0.6f);
             _dof.mode.Override(CampQuality.DepthOfFieldOn ? DepthOfFieldMode.Bokeh : DepthOfFieldMode.Off);
             _dof.focusDistance.Override(_focusDistance);
             _dof.focalLength.Override(L.focalLength);

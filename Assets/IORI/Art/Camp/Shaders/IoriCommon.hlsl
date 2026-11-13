@@ -31,7 +31,10 @@ float4 _IoriGlow[8];         // rgb: light given off by each glow channel (see G
 float4 _IoriGroundMap;       // xy: world x,z of the ground texture's corner, z: 1 / its size in metres, w: puddle water height right now
 float4 _IoriFirePos;         // xyz: where the fire's light sits, w: how far it reaches
 float4 _IoriLight;           // x: size of the lamps squared (softens their light close up), y: brightness where colors stop getting lighter and start to hold, z: most a lit color may reach, w: how much of a lamp's color lands on a surface whatever its own color
+float4 _IoriLamp;            // x: how far the sky's light steps back where a lamp is stronger (0..1), y: brightness where lamp-lit colors start to hold, z: most a lamp-lit color may reach
 float4 _IoriTentLamp;        // xyz: the lamp inside the tent, w: how strongly it burns
+float4 _IoriAirFire;         // rgb: light that a metre of air catches right at the fire (0 = none)
+float4 _IoriAirTent;         // rgb: the same for the lamp in the tent
 
 float IoriTime() { return _IoriWeather.w; }
 
@@ -199,13 +202,28 @@ IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao
 // Puts the light on a surface color. Light from the sky and the sun is multiplied in, the way light
 // works. A lamp's light is partly laid over the color like a glaze of paint (as much as the color is
 // light, whatever its hue): grass by the fire turns a warm color, where plain multiplying gives mud.
+// Two more things a painter does: lamp-lit colors are held at a deep value (ground at the fire is a
+// deep orange, never a pale one), and where a lamp is the stronger light the sky's cool light steps
+// back, so the warm pool stays warm instead of turning salmon.
 // lampAmount: how much of the lamps this surface takes (logs inside the fire take little: they stay
 // dark against the flame).
+float3 IoriHold(float3 c, float knee, float top)
+{
+    float m = max(c.r, max(c.g, c.b));
+    if (m <= knee) return c;
+    float over = m - knee, room = max(top - knee, 0.01);
+    return c * ((knee + room * over / (over + room)) / m);
+}
+
 float3 IoriShade(float3 albedo, IoriLit L, float lampAmount)
 {
     float v = max(albedo.r, max(albedo.g, albedo.b));
     float3 glazed = lerp(albedo, float3(v, v, v), _IoriLight.w);
-    return IoriSoftClip(albedo * L.diffuse + glazed * (L.lamp * lampAmount)) + L.spec;
+    float3 lamp = IoriHold(glazed * (L.lamp * lampAmount), _IoriLamp.y, _IoriLamp.z);
+    float3 sky = albedo * L.diffuse;
+    float lm = max(lamp.r, max(lamp.g, lamp.b)), sm = max(sky.r, max(sky.g, sky.b));
+    sky *= 1.0 - _IoriLamp.x * lm / (lm + sm + 1e-4);
+    return IoriSoftClip(sky + lamp) + L.spec;
 }
 
 // The same light without strokes or steps, for things that must stay smooth (the character).
@@ -237,6 +255,28 @@ float IoriAirAmount(float3 posWS)
     return min(1.0 - exp(-(d * _IoriFog.x + mist)), _IoriFog.w);
 }
 
+// The air itself lights up around a lamp: the glow that hangs around a fire on a misty evening.
+// This is all the light the air catches along the line of sight from the camera to posWS, worked out
+// exactly for a lamp whose light thins with the square of the distance. Unlike a glow added to the
+// finished picture it knows about depth: a thing in front of the fire cuts it off, and in the mirror
+// images it is right too.
+// q: camera minus lamp, rd: the line of sight, tmax: its length, soft2: size of the lamp squared.
+float IoriGlowAlong(float3 q, float3 rd, float tmax, float soft2)
+{
+    float b = dot(rd, q);
+    float h = sqrt(max(dot(q, q) - b * b, 0.0) + soft2);
+    return (atan((tmax + b) / h) - atan(b / h)) / h;
+}
+
+float3 IoriLampAir(float3 posWS)
+{
+    float3 v = posWS - _WorldSpaceCameraPos;
+    float tmax = length(v);
+    float3 rd = v / max(tmax, 1e-4);
+    return _IoriAirFire.rgb * IoriGlowAlong(_WorldSpaceCameraPos - _IoriFirePos.xyz, rd, tmax, 0.03)
+         + _IoriAirTent.rgb * IoriGlowAlong(_WorldSpaceCameraPos - _IoriTentLamp.xyz, rd, tmax, 0.25);
+}
+
 float3 IoriAir(float3 col, float3 posWS)
 {
     float3 v = posWS - _WorldSpaceCameraPos;
@@ -248,7 +288,7 @@ float3 IoriAir(float3 col, float3 posWS)
     float mist = _IoriFog.y * exp(-b * max(_WorldSpaceCameraPos.y, 0.0)) * d * k;
     float a = min(1.0 - exp(-(haze + mist)), _IoriFog.w);
     float3 c = lerp(_IoriFogColor.rgb, _IoriMistColor.rgb, saturate(mist / max(haze + mist, 1e-4)));
-    return lerp(col, c, a);
+    return lerp(col, c, a) + IoriLampAir(posWS);
 }
 
 // ---------------------------------------------------------------- helpers for vertex data

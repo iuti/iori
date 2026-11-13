@@ -1,10 +1,11 @@
 // The campfire's flame: a real volume, not a picture on a card. The pixel shader walks a ray
 // through the box around the fire, through a flame made of several tongues of rising, bitten
 // noise. For every tongue it keeps the hottest point it passed, then paints the tongues one over
-// the other, the far ones first: each has a pale core, a yellow body and an orange edge, and the
-// edge of a near tongue shows against the body of the one behind it. So the flame reads as
-// painted, overlapping shapes, yet it has depth: it wraps around the logs, the logs hide what
-// burns behind them, and it changes as the camera moves.
+// the other, the far ones first: each has a pale core, a yellow body and an orange edge with soft
+// borders between them and a crisp outline against the dark, and where a near tongue crosses a far
+// one it leaves only a faint warm line. So the flame reads as one painted body with pointed licks,
+// yet it has depth: it wraps around the logs, the logs hide what burns behind them, and it changes
+// as the camera moves.
 // The box is any cube; its size and place come from its transform. Flame size follows _IoriFire.x.
 // (Tuned with a stand-alone copy of this arithmetic before it was written here.)
 Shader "IORI/Camp/Fire"
@@ -14,21 +15,21 @@ Shader "IORI/Camp/Fire"
         _Scale ("Height of the tallest tongue at full size (m)", Float) = 0.74
         _Steps ("Steps along the ray", Range(6, 32)) = 22
         _Rise ("Rise speed", Float) = 1.5
-        _Stretch ("Tall shapes (smaller = taller)", Float) = 0.42
-        _Sway ("Wavering", Float) = 0.5
+        _Stretch ("Tall shapes (smaller = taller)", Float) = 0.28
+        _Sway ("Wavering", Float) = 0.7
         _Lean ("Tongues lean outward", Float) = 0.9
         _Curl ("Tips swing", Float) = 0.16
         _Breath ("Tongues grow and shrink", Range(0, 0.5)) = 0.18
-        _Bite ("Noise bites the upper flame", Float) = 2.0
+        _Bite ("Noise bites the upper flame", Float) = 1.4
         _Cool ("Cooling toward the tips", Float) = 0.5
-        _Core ("Core color", Color) = (1.0, 0.965, 0.80, 1)
-        _Mid ("Body color", Color) = (1.0, 0.86, 0.45, 1)
-        _Outer ("Edge color", Color) = (0.96, 0.58, 0.16, 1)
-        _Rim ("Outermost rim, against the dark only", Color) = (0.84, 0.36, 0.12, 1)
-        _Bright ("Brightness (core, body, edge, rim)", Vector) = (1.5, 1.25, 1.12, 0.9)
-        _Bands ("Heat where each color starts (core, body, edge, rim)", Vector) = (0.66, 0.36, 0.12, 0.06)
-        _Inner ("How strongly edges show inside the flame", Range(0, 1)) = 0.8
-        _RimAmount ("How strongly the outermost rim shows", Range(0, 1)) = 0.6
+        _Core ("Core color", Color) = (1.0, 0.94, 0.67, 1)
+        _Mid ("Body color", Color) = (1.0, 0.77, 0.27, 1)
+        _Outer ("Edge color", Color) = (0.98, 0.56, 0.15, 1)
+        _Rim ("Outline color", Color) = (0.84, 0.36, 0.12, 1)
+        _Bright ("Brightness (core, body, edge, outline)", Vector) = (1.3, 1.2, 1.1, 1.0)
+        _Bands ("Heat where each color starts (core, body, edge, outline)", Vector) = (0.625, 0.325, 0.14, 0.08)
+        _Soft ("Softness of the borders between the colors", Range(0.005, 0.2)) = 0.05
+        _Inner ("Line where a near tongue crosses a far one", Range(0, 0.5)) = 0.2
         _FrameRate ("Drawn frames per second (0 = smooth)", Float) = 0
         [Toggle] _UseDepth ("Stop at solid things (needs the depth texture)", Float) = 1
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull (Front with depth, Back without)", Float) = 1
@@ -55,7 +56,7 @@ Shader "IORI/Camp/Fire"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                float _Scale, _Steps, _Rise, _Stretch, _Sway, _Lean, _Curl, _Breath, _Bite, _Cool, _Inner, _RimAmount, _FrameRate, _UseDepth, _Cull, _ZTest;
+                float _Scale, _Steps, _Rise, _Stretch, _Sway, _Lean, _Curl, _Breath, _Bite, _Cool, _Soft, _Inner, _FrameRate, _UseDepth, _Cull, _ZTest;
                 float4 _Core, _Mid, _Outer, _Rim, _Bright, _Bands;
             CBUFFER_END
             TEXTURE3D(_IoriNoise3D);
@@ -104,7 +105,7 @@ Shader "IORI/Camp/Fire"
             {
                 float h = clamp(p.y / now.z, 0.0, 1.3);
                 float2 xz = p.xz - c.xy * (1.0 + _Lean * h) + nz.yz * (_Sway * h) + now.xy * (h * h);
-                float r = c.w * pow(saturate(1.0 - h / 1.15), 0.8) * (0.55 + 0.45 * smoothstep(0.0, 0.14, h)) + 1e-4;
+                float r = c.w * saturate(1.0 - h / 1.15) * (0.55 + 0.45 * smoothstep(0.0, 0.14, h)) + 1e-4;
                 // noise bites more out of the flame the higher it gets, and it cools on the way up
                 float e = 1.0 - length(xz) / r - (nz.x - 0.30) * (0.9 + _Bite * h) - _Cool * h;
                 return saturate(e * 1.15) * smoothstep(-0.03, 0.05, p.y);
@@ -198,21 +199,19 @@ Shader "IORI/Camp/Fire"
                 // paint them one over the other
                 float3 col = 0;
                 float alpha = 0;
+                float3 through = float3(1.0, 1.0 - 0.6 * _Inner, 1.0 - 1.6 * _Inner);
                 for (k = 0; k < TONGUE_COUNT; k++)
                 {
                     float heat = order[k].y;
-                    float w = 0.012;
-                    float mRim = smoothstep(_Bands.w - w, _Bands.w + w, heat);
-                    float mOut = smoothstep(_Bands.z - w, _Bands.z + w, heat);
-                    float mMid = smoothstep(_Bands.y - w, _Bands.y + w, heat);
-                    float mCore = smoothstep(_Bands.x - w, _Bands.x + w, heat);
                     float3 c = _Rim.rgb * _Bright.w;
-                    c = lerp(c, _Outer.rgb * _Bright.z, mOut);
-                    c = lerp(c, _Mid.rgb * _Bright.y, mMid);
-                    c = lerp(c, _Core.rgb * _Bright.x, mCore);
-                    // an edge in front of another tongue is fainter than one against the dark; the rim only shows against the dark
-                    float a2 = max(mMid, mOut * (1.0 - alpha * (1.0 - _Inner)));
-                    a2 = max(a2, mRim * _RimAmount * (1.0 - alpha));
+                    c = lerp(c, _Outer.rgb * _Bright.z, smoothstep(_Bands.z - _Soft, _Bands.z + _Soft, heat));
+                    c = lerp(c, _Mid.rgb * _Bright.y, smoothstep(_Bands.y - _Soft, _Bands.y + _Soft, heat));
+                    c = lerp(c, _Core.rgb * _Bright.x, smoothstep(_Bands.x - _Soft, _Bands.x + _Soft, heat));
+                    // in front of another tongue it never gets much darker than what burns behind it: the
+                    // crossing shows as a faint warm line, not as a dark veil
+                    c = lerp(c, max(c, col * through), alpha);
+                    // the outline is crisp
+                    float a2 = smoothstep(_Bands.w - 0.012, _Bands.w + 0.012, heat);
                     col = lerp(col, c, a2);
                     alpha = alpha + (1.0 - alpha) * a2;
                 }
