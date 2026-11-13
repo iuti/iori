@@ -114,7 +114,8 @@ namespace Iori.Audio
 
         /// <summary>
         /// [run.StartMs, run.EndMs) の間、曲を鳴らすクリップを並べる。最後のクリップは次の時間帯の頭と
-        /// クロスフェードするため run.EndMs + crossfade まで伸びる。
+        /// 重なるため run.EndMs + crossfade まで伸び、そこでフェードアウトする。
+        /// 時間帯の頭(各 run の最初の回)はフェードインしない。イントロの張りをそのまま聞かせるため。
         /// </summary>
         static void AddClips(PlaybackPlan plan, Run run, long durationMs, int crossfadeMs, long nowMs, long endMs)
         {
@@ -130,7 +131,7 @@ namespace Iori.Audio
                     EndMs = runEndWithTail,
                     File = t.File,
                     Volume = t.Volume,
-                    FadeInMs = x,
+                    FadeInMs = 0,
                     FadeOutMs = x,
                     Loop = true,
                     Phase = run.Phase,
@@ -158,7 +159,8 @@ namespace Iori.Audio
                     EndMs = end,
                     File = t.File,
                     Volume = t.Volume,
-                    FadeInMs = k == 0 || overlap > 0 ? x : 0,
+                    // 同じ曲の繰り返しで重ねるときだけフェードインする(時間帯の頭はしない)。
+                    FadeInMs = k > 0 && overlap > 0 ? x : 0,
                     FadeOutMs = end < naturalEnd || overlap > 0 ? x : 0,
                     Loop = false,
                     Phase = run.Phase,

@@ -104,7 +104,26 @@ namespace Iori.Audio.Tests
             Assert.That(atBoundary, Is.EquivalentTo(new[] { "m/day_clear.ogg", "m/evening_clear.ogg" }));
             var evening = plan.Music.First(c => c.File == "m/evening_clear.ogg");
             Assert.That(evening.StartMs, Is.EqualTo(Ms(Jst(11, 13, 16))));
-            Assert.That(evening.FadeInMs, Is.EqualTo(8000));
+            Assert.That(evening.FadeInMs, Is.EqualTo(0), "時間帯の頭はフェードインしない(イントロの張りを残す)");
+            Assert.That(day.FadeOutMs, Is.EqualTo(8000), "前の曲は重なりの間にフェードアウトする");
+        }
+
+        [Test]
+        public void CrossfadeTracks_FirstClipOfPhase_StartsWithoutFadeIn()
+        {
+            var now = Jst(11, 13, 15, 59);
+            var ctx = Ctx(now);
+            ctx.Audio = Durations(("m/day_clear.ogg", 180_000), ("m/evening_clear.ogg", 180_000));
+            var plan = RadioScheduler.BuildPlan(Program(), ctx);
+
+            var evening = plan.Music.Where(c => c.File == "m/evening_clear.ogg").OrderBy(c => c.StartMs).ToList();
+            Assert.That(evening[0].StartMs, Is.EqualTo(Ms(Jst(11, 13, 16))));
+            Assert.That(evening[0].FadeInMs, Is.EqualTo(0), "時間帯の頭はイントロをそのまま鳴らす");
+            Assert.That(evening[1].FadeInMs, Is.EqualTo(8000), "同じ曲の繰り返しの継ぎ目はクロスフェードのまま");
+
+            var lastDay = plan.Music.Where(c => c.File == "m/day_clear.ogg" && c.StartMs < Ms(Jst(11, 13, 16))).OrderBy(c => c.StartMs).Last();
+            Assert.That(lastDay.EndMs, Is.EqualTo(Ms(Jst(11, 13, 16)) + 8000));
+            Assert.That(lastDay.FadeOutMs, Is.EqualTo(8000), "前の時間帯の曲はフェードアウトする");
         }
 
         [Test]
