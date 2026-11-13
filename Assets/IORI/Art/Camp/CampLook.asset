@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4fde53757314741a95da0a1cb6dcf7c, type: 3}
   m_Name: CampLook
   m_EditorClassIdentifier: IORI.Camp::Iori.Camp.CampLook
-  version: 6
+  version: 7
   keys:
   - hour: 0
     label: "\u591C"
