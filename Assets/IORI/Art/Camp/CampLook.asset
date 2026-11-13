@@ -461,6 +461,7 @@ MonoBehaviour:
   lightBands: 2.5
   skyStrokeTiles: 0.33
   skyStrokeAmount: 1
+  lakeClassic: 0
   windDirection: {x: 0.8, y: 0.6}
   wind: 1
   rainWind: 2.2
