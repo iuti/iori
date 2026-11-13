@@ -29,7 +29,8 @@ Material:
     - _Bristle: 0.12
     - _Ember: 0
     - _InsideOutside: 0.3
-    - _InsideSpot: 0.8
+    - _InsidePanel: 0.75
+    - _InsideSpot: 0.75
     - _LampAmount: 0.2
     - _LampInside: 1
     - _StrokeScale: 1.5

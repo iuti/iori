@@ -26,28 +26,28 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Bite: 2
+    - _Bite: 1.4
     - _Breath: 0.18
     - _Cool: 0.5
     - _Cull: 1
     - _Curl: 0.16
     - _FrameRate: 0
-    - _Inner: 0.8
+    - _Inner: 0.2
     - _Lean: 0.9
-    - _RimAmount: 0.6
     - _Rise: 1.5
     - _Scale: 0.74
+    - _Soft: 0.05
     - _Steps: 22
-    - _Stretch: 0.42
-    - _Sway: 0.5
+    - _Stretch: 0.28
+    - _Sway: 0.7
     - _UseDepth: 1
     - _ZTest: 8
     m_Colors:
-    - _Bands: {r: 0.66, g: 0.36, b: 0.12, a: 0.06}
-    - _Bright: {r: 1.5, g: 1.25, b: 1.12, a: 0.9}
-    - _Core: {r: 1, g: 0.965, b: 0.8, a: 1}
-    - _Mid: {r: 1, g: 0.86, b: 0.45, a: 1}
-    - _Outer: {r: 0.96, g: 0.58, b: 0.15999997, a: 1}
+    - _Bands: {r: 0.625, g: 0.325, b: 0.14, a: 0.08}
+    - _Bright: {r: 1.3, g: 1.2, b: 1.1, a: 1}
+    - _Core: {r: 1, g: 0.94, b: 0.67, a: 1}
+    - _Mid: {r: 1, g: 0.77, b: 0.26999995, a: 1}
+    - _Outer: {r: 0.97999996, g: 0.56, b: 0.14999998, a: 1}
     - _Rim: {r: 0.8399999, g: 0.35999998, b: 0.11999995, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
