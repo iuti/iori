@@ -32,7 +32,7 @@ radio.json(番組表) ─┐
 | `Assets/IORI/Tests/EditMode/` | Core のテスト |
 | `Assets/Plugins/Android/IoriPlayback.androidlib/` | Android のバックグラウンド再生サービス(Java、Media3) |
 | `Assets/StreamingAssets/IORI/radio.json` | 番組表(時間帯、曲、チャイム、静けさの時間のフレーズ、環境音) |
-| `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`radio/`(ラジオの曲)、`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
+| `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`radio/`(ラジオの曲)、`voice/`(イオリの声)、`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
 | `tools/CoreTests/` | Unity なしで Core のテストを動かす .NET プロジェクト |
 
 ## はじめに(デスクトップで)
@@ -77,6 +77,28 @@ Suno(v6)の Cover で、時間帯ごとのモチーフの種から作った曲�
 
 どれも小節の頭で切った継ぎ目なしのループ(`"loop": "seamless"`、OGG Vorbis 44.1kHz ステレオ、-16 LUFS)。
 Suno の曲は Pro の月の枠でダウンロードしたものだけ商用で使える。元の WAV はリポジトリに入れていない。
+
+## イオリの声
+
+ElevenLabs の Voice Library の声「Chinyaku - Cute Japanese Actor」を、モデル Eleven v4 Turbo(日本語)で読ませた仮の声。いずれ自前の声に差し替える予定。
+`voice/{場面}_{番号}.ogg`(OGG Vorbis 44.1kHz モノラル、-18 LUFS、頭とおしりの無音を詰めてある)。まだコードからは鳴らしていない。
+
+| ファイル | 場面 | セリフ |
+| --- | --- | --- |
+| `greet_early_morning_01` | 早朝に開いた | 早いね。……火、つけといた。 |
+| `greet_morning_01` | 朝に開いた | おはよ。ゆ、沸いてるよ。 |
+| `greet_day_01` | 昼に開いた | いい天気。……眠くなるね。 |
+| `greet_evening_01` | 夕方に開いた | 日、落ちてきたね。 |
+| `greet_night_01` | 夜に開いた | 星、出てるよ。 |
+| `greet_late_night_01` | 深夜に開いた | まだ起きてるんだ。……私もだけど。 |
+| `rain_start_01` | 雨が降り始めた | 降ってきた。 |
+| `rain_stop_01` | 雨が止んだ | ……止んだね。 |
+| `okaeri_01` | 帰宅した | おかえり。 |
+| `okaeri_02` | 帰宅した(遅い時間) | おかえり。……遅かったね。 |
+| `itterasshai_01` | 出かける | いってらっしゃい。 |
+| `itterasshai_02` | 出かける | 気をつけて。 |
+| `tap_01` `tap_02` `tap_03` | イオリをタップ | ん。/……なに。/見てるよ。 |
+| `firewood_01` | 薪をくべた | ありがと。(小声) |
 
 ## 環境音・チャイム・UI の効果音
 
