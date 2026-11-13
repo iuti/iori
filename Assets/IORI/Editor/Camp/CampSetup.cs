@@ -919,7 +919,7 @@ namespace Iori.Camp.EditorTools
         /// <summary>-ioriPlainFire: take the pictures with the care for the firelight on Iori switched off (lit from where
         /// the fire is, no glowing border, no glints, no flicker of her own), to compare.</summary>
         static bool _plainFire;
-        static readonly string[] FireCare = { "_LampFromSide", "_LampUpFade", "_EdgeGlow", "_Glint", "_Flicker", "_Dance" };
+        static readonly string[] FireCare = { "_LampFromSide", "_LampUpFade", "_EdgeGlow", "_Glint", "_Flicker", "_Dance", "_ShadeDeep", "_LampFill", "_LampSoft" };
 
         public static void Capture(string dir, Shot[] shots)
         {
@@ -955,6 +955,8 @@ namespace Iori.Camp.EditorTools
                     oldFire[i] = boardMat.GetFloat(FireCare[i]);
                     boardMat.SetFloat(FireCare[i], 0f);
                 }
+            // the border of the fire's light as hard as the other lights' (0 would be no border at all)
+            if (_plainFire && boardMat) boardMat.SetFloat("_LampSoft", boardMat.GetFloat("_CelSoft"));
             try
             {
                 foreach (var s in shots)

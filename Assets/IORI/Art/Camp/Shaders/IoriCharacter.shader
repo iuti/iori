@@ -10,9 +10,16 @@
 //   the viewer is lit and nothing turns. So its light is turned toward the picture plane
 //   (_LampFromSide): it comes from below and from the fire's side, the undersides glow, and the
 //   tops of her shoulders, sleeves and thighs fall into the sky's blue.
+//   A part of it still arrives from where the fire really is (_LampFill), so those tops are not cut
+//   off from the fire altogether, and the border of its light is softer than a cel edge (_LampSoft):
+//   a hard border between orange and blue on white cloth reads as satin or metal.
+// - Next to a fire the eye is set to its brightness: the sides its light does not reach take less of
+//   the sky's light too (_ShadeDeep). Without this the moonlit tops shine as bright as the lit sides.
 // - It thins toward her head (_LampUpFade).
-// - Where firelight ends, the border glows a saturated warm color, as light does that passes
-//   through skin and cloth (_EdgeGlow). Gold fittings catch the fire (_Glint).
+// - Just inside the border of the firelight her own color glows saturated and warm, as light does
+//   that passes through skin (_EdgeGlow). It lies on the lit side only (laid over the blue side it
+//   turns lavender), and white cloth takes little of it (_EdgeGlowOnWhite).
+//   Gold fittings catch the fire (_Glint).
 // - It flickers: her firelight swells and sinks with the fire, and the border between light and
 //   shade moves with it and leans with the flame (_Flicker, _Dance; CampAtmosphere's _IoriFireFlicker).
 // Drawn as a solid thing so that depth of field and shadows treat her properly.
@@ -34,10 +41,14 @@ Shader "IORI/Camp/Character"
         _SkyBack ("Sky light stepping back where a lamp lights her", Range(0, 1)) = 0.3
         _LampInDaylight ("Lamps fading on her as the sun or moon gets brighter", Range(0, 4)) = 1.2
         _LampFromSide ("Firelight turned into the picture plane (0 = from where the fire is)", Range(0, 1)) = 0.6
+        _LampFill ("Firelight that still comes from where the fire is", Range(0, 1)) = 0.4
+        _LampSoft ("Softness of the firelight's border", Range(0.01, 0.5)) = 0.14
         _LampUpFade ("Firelight thinning toward her head", Range(0, 1)) = 0.3
-        _EdgeGlow ("Warm glow on the border of firelight and shade", Range(0, 3)) = 0.9
+        _ShadeDeep ("Sky light held back on the sides the fire does not reach", Range(0, 1)) = 0.4
+        _EdgeGlow ("Warm glow just inside the border of the firelight", Range(0, 3)) = 0.9
         _EdgeWidth ("Width of that glow", Range(0.02, 0.5)) = 0.12
-        _Glint ("Fire glinting on gold fittings", Range(0, 8)) = 3
+        _EdgeGlowOnWhite ("How much of that glow white cloth takes", Range(0, 1)) = 0.25
+        _Glint ("Fire glinting on gold fittings", Range(0, 8)) = 1
         _Flicker ("Her firelight swelling and sinking with the fire", Range(0, 3)) = 1
         _Dance ("The border of light moving with the flicker", Range(0, 3)) = 1
     }
@@ -54,6 +65,7 @@ Shader "IORI/Camp/Character"
             float _Cutoff, _Breath, _RimWarm, _RimCool;
             float _NormalStrength, _Cel, _CelEdge, _CelSoft, _Wrap, _SkyBack, _LampInDaylight;
             float _LampFromSide, _LampUpFade, _EdgeGlow, _EdgeWidth, _Glint, _Flicker, _Dance;
+            float _LampFill, _LampSoft, _ShadeDeep, _EdgeGlowOnWhite;
         CBUFFER_END
         TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
         TEXTURE2D(_NormalTex); SAMPLER(sampler_NormalTex);
@@ -107,13 +119,14 @@ Shader "IORI/Camp/Character"
             // How much of a light a side takes: a cel edge (lit or not, with a soft border) mixed with a
             // smooth falloff, so the drawing keeps its flat look and still turns gently.
             // edge: where on the turn from facing the light to facing away the border lies.
-            float IoriCelAt(float nl, float edge)
+            // soft: half the width of that border.
+            float IoriCelAt(float nl, float edge, float soft)
             {
                 float gentle = saturate((nl + _Wrap) / (1.0 + _Wrap));
-                float hard = smoothstep(edge - _CelSoft, edge + _CelSoft, nl);
+                float hard = smoothstep(edge - soft, edge + soft, nl);
                 return lerp(gentle, hard, _Cel);
             }
-            float IoriCel(float nl) { return IoriCelAt(nl, _CelEdge); }
+            float IoriCel(float nl) { return IoriCelAt(nl, _CelEdge, _CelSoft); }
 
             half4 frag(Varyings i) : SV_Target
             {
@@ -137,8 +150,9 @@ Shader "IORI/Camp/Character"
                 float3 toFire = normalize(_IoriFirePos.xyz - sp);
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.positionWS);
                 float flick = _IoriFireFlicker.x;
-                float border = 0.0;     // how close this spot is to the border of the firelight
+                float border = 0.0;     // how close this spot is to the border of the firelight (on its lit side)
                 float glint = 0.0;
+                float unlit = 0.0;      // near the fire, but on a side its light does not reach
                 uint count = GetAdditionalLightsCount();
                 for (uint k = 0u; k < count; ++k)
                 {
@@ -151,12 +165,16 @@ Shader "IORI/Camp/Character"
                     float nl = dot(n, ld);
                     // when the fire flares, its light reaches further around her
                     float edge = _CelEdge - isFire * _Dance * 0.12 * flick;
-                    float take = IoriCelAt(nl, edge);
+                    float take = IoriCelAt(nl, edge, lerp(_CelSoft, _LampSoft, isFire));
                     float reach = IoriLampFalloff(l.distanceAttenuation) * l.shadowAttenuation;
-                    lamp += l.color * (take * reach);
                     float close = saturate(max(l.color.r, max(l.color.g, l.color.b)) * reach * 0.25) * isFire;
-                    float away = (nl - edge) / _EdgeWidth;
-                    border = max(border, exp(-away * away) * close);
+                    float away = (nl - edge) / _EdgeWidth - 0.8;
+                    border = max(border, exp(-away * away) * take * close);
+                    unlit = max(unlit, (1.0 - take) * close);
+                    // what still arrives from where the fire really is: a soft fill, no border of its own
+                    float direct = saturate((dot(n, l.direction) + 0.5) / 1.5) * _LampFill * isFire;
+                    take = max(take, direct);
+                    lamp += l.color * (take * reach);
                     float3 h = normalize(ld + viewDir);
                     glint = max(glint, pow(saturate(dot(n, h)), 48.0) * take * close * 1.5);
                 }
@@ -169,6 +187,7 @@ Shader "IORI/Camp/Character"
                 float lw = max(lamp.r, max(lamp.g, lamp.b)), sw = max(sky.r, max(sky.g, sky.b));
                 float warm = smoothstep(0.35, 0.65, lw / (lw + sw + 1e-4));
                 sky *= 1.0 - _SkyBack * warm;
+                sky *= 1.0 - _ShadeDeep * unlit * night;
                 // she is a finished drawing with her own shading: the scene's light tints her and sets how
                 // bright she is, but strong light is held back so that she never burns out next to the fire.
                 // The flicker is laid on after that, or holding back would even it out again.
@@ -186,6 +205,8 @@ Shader "IORI/Camp/Character"
                 // the border of the firelight: her own color at full strength, pushed toward red
                 float v = max(t.r, max(t.g, t.b));
                 float3 pure = t.rgb / max(v, 1e-3);
+                float colored = saturate((1.0 - min(pure.r, min(pure.g, pure.b))) * 2.5);
+                border *= lerp(_EdgeGlowOnWhite, 1.0, colored);
                 col += pure * sqrt(pure) * (v * border * _EdgeGlow * fireShow) * fireColor * float3(1.0, 0.55, 0.35);
                 // gold fittings (yellow paint) catch the fire
                 float gold = saturate((t.r - t.b) * 2.5 - 0.35) * saturate((t.g - t.b) * 3.0);
