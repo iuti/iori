@@ -5,13 +5,17 @@ using UnityEngine;
 namespace Iori.Camp
 {
     /// <summary>
-    /// Everything chico tunes about the camp's colors, in one asset: the look at each hour,
-    /// the colors of the props, and how rain and the seasons shift things.
+    /// Everything chico tunes about how the camp looks, in one asset: the look at each hour, the
+    /// lamps, the brush, and how rain, the seasons and sleep mode shift things.
     /// If no asset is assigned, <see cref="CreateDefault"/> is used.
     /// </summary>
     [CreateAssetMenu(menuName = "IORI/Camp Look", fileName = "CampLook")]
     public sealed class CampLook : ScriptableObject
     {
+        /// <summary>Raised when the defaults change in code; CampSetup then rewrites an untouched asset.</summary>
+        public const int CurrentVersion = 2;
+        [HideInInspector] public int version;
+
         [Serializable]
         public sealed class Key
         {
@@ -23,42 +27,70 @@ namespace Iori.Camp
         [Tooltip("時刻ごとの見た目。時刻の順に並べる。あいだはなめらかに補間する")]
         public List<Key> keys = new List<Key>();
 
-        [Header("小物の色(時間で変わらない。光は時間帯に合わせて当たる)")]
-        public Color wood = CampPalette.Hex("#54487c");
-        public Color dark = CampPalette.Hex("#22264c");
-        public Color crate = CampPalette.Hex("#3c3c78");
-        public Color brass = CampPalette.Hex("#d9a02c");
-        public Color cream = CampPalette.Hex("#e2d8cc");
-        public Color log = CampPalette.Hex("#3a2a4a");
-        public Color knob = CampPalette.Hex("#151733");
-        public Color stumpTop = CampPalette.Hex("#b8a8c8");
-        [Tooltip("椅子の布")] public Color fabric = CampPalette.Hex("#3e3a7e");
-        [Tooltip("灯りが消えているときのテントの布")] public Color tentCloth = CampPalette.Hex("#c9a07a");
-        [Tooltip("草むらの小さな花")] public Color flower = CampPalette.Hex("#e8b8e8");
+        [Header("灯り(色、強さ、届く距離)")]
+        public Color fireColor = CampPalette.Hex("#ff8a3c");
+        public float fireIntensity = 11f;
+        public float fireRange = 9f;
+        public Color lanternColor = CampPalette.Hex("#ffc070");
+        public float lanternIntensity = 2.2f;
+        public float lanternRange = 4.5f;
+        public Color tentColor = CampPalette.Hex("#ff9438");
+        public float tentIntensity = 4f;
+        public float tentRange = 7f;
+        [Tooltip("テントの布、ランタンのガラス、ラジオの目盛り、熾火そのものの明るさ")]
+        public float tentGlow = 2.4f;
+        public float lanternGlow = 7f;
+        public float dialGlow = 2.2f;
+        public float emberGlow = 3.2f;
+        public float townGlow = 3.5f;
+
+        [Header("筆")]
+        [Tooltip("キャンプの近くでの筆あとの細かさ(1m あたりの模様の数)")] public float strokeTiles = 0.667f;
+        [Tooltip("この距離までは筆あとが同じ大きさ。その先は遠いほど大きくなる")] public float strokeNear = 5f;
+        [Range(0, 1)] public float strokeAmount = 1f;
+        [Tooltip("灯りの輪の段の細かさ(0 でなめらか)")] [Range(0, 6)] public float lightBands = 2.5f;
+        [Tooltip("空の筆あとの細かさ")] public float skyStrokeTiles = 0.33f;
+        [Range(0, 1)] public float skyStrokeAmount = 1f;
+
+        [Header("風")]
+        public Vector2 windDirection = new Vector2(0.8f, 0.6f);
+        public float wind = 1f;
+        public float rainWind = 2.2f;
 
         [Header("雨")]
-        [Range(0, 1)] public float rainSkyMix = 0.62f;
-        [Range(0, 1)] public float rainFogMix = 0.5f;
-        [Range(0, 1)] public float rainHillMix = 0.4f;
-        [Range(0, 1)] public float rainSilhouetteMix = 0.25f;
-        [Range(0, 1)] public float rainWaterMix = 0.45f;
+        [Range(0, 1)] public float rainSkyMix = 0.7f;
+        [Range(0, 1)] public float rainKey = 0.3f;
+        [Range(0, 1)] public float rainAmbient = 0.8f;
+        public float rainFog = 3f;
+        public float rainMist = 0.05f;
+        [Range(0, 1)] public float rainFire = 0.8f;
 
         [Header("季節(草と葉に掛ける色。夏が基準)")]
-        public Color springGrass = new Color(1.05f, 1.0f, 1.08f);
+        public Color springGrass = new Color(1.05f, 1.08f, 0.95f);
+        public Color springLeaf = new Color(1.1f, 1.15f, 0.9f);
         public Color summerGrass = Color.white;
-        public Color autumnGrass = new Color(1.25f, 0.82f, 0.95f);
-        public Color winterGrass = new Color(1.25f, 1.15f, 1.35f);
-        public Color autumnLeaf = new Color(1.6f, 0.9f, 1.05f);
-        [Range(0, 1)] public float winterDesaturate = 0.55f;
+        public Color summerLeaf = Color.white;
+        public Color autumnGrass = new Color(1.5f, 1.15f, 0.7f);
+        public Color autumnLeaf = new Color(2.6f, 1.05f, 0.45f);
+        public Color winterGrass = new Color(1.5f, 1.45f, 1.5f);
+        public Color winterLeaf = new Color(1.1f, 1.0f, 1.05f);
 
         [Header("おやすみモード(ランタンを消したとき)")]
-        [Range(0, 1)] public float sleepAmbient = 0.55f;
-        [Range(0, 1)] public float sleepFire = 0.2f;
+        [Range(0, 1)] public float sleepAmbient = 0.6f;
+        [Range(0, 1)] public float sleepFire = 0.3f;
+        [Range(0, 1)] public float sleepTent = 0.25f;
+        public float sleepExposure = -0.35f;
+
+        [Header("ぼかし(ピントの合う距離はカメラが決める)")]
+        [Tooltip("絞り。小さいほど前後がぼける")] public float aperture = 11f;
+        [Tooltip("小物に寄ったときの絞り")] public float apertureClose = 3.2f;
+        public float focalLength = 85f;
 
         public static CampLook CreateDefault()
         {
             var look = CreateInstance<CampLook>();
             look.name = "CampLook (default)";
+            look.version = CurrentVersion;
             look.FillDefaultKeys();
             return look;
         }
@@ -69,12 +101,12 @@ namespace Iori.Camp
             {
                 new Key { hour = 0f, label = "夜", palette = CampPalette.Night() },
                 new Key { hour = 3.5f, label = "夜", palette = CampPalette.Night() },
-                new Key { hour = 4.75f, label = "夜明け前", palette = CampPalette.Twilight() },
+                new Key { hour = 4.75f, label = "夜明け前", palette = CampPalette.Twilight(true) },
                 new Key { hour = 6.25f, label = "朝焼け", palette = CampPalette.Dawn() },
                 new Key { hour = 8.5f, label = "昼", palette = CampPalette.Day() },
                 new Key { hour = 15.5f, label = "昼", palette = CampPalette.Day() },
                 new Key { hour = 17.0f, label = "夕方", palette = CampPalette.Evening() },
-                new Key { hour = 18.25f, label = "日没後", palette = CampPalette.Twilight() },
+                new Key { hour = 18.25f, label = "日没後", palette = CampPalette.Twilight(false) },
                 new Key { hour = 19.75f, label = "夜", palette = CampPalette.Night() },
                 new Key { hour = 24f, label = "夜", palette = CampPalette.Night() },
             };
@@ -95,6 +127,21 @@ namespace Iori.Camp
             float t = hb - ha > 1e-4f ? Mathf.Clamp01((hour - ha) / (hb - ha)) : 0f;
             t = t * t * (3f - 2f * t);
             CampPalette.Lerp(a.palette, b.palette, t, into);
+        }
+
+        /// <summary>The name of the part of the day at this hour, for the panel.</summary>
+        public string LabelAt(float hour)
+        {
+            if (keys == null || keys.Count == 0) FillDefaultKeys();
+            hour = Mathf.Repeat(hour, 24f);
+            Key best = keys[0];
+            float bestD = 99f;
+            foreach (var k in keys)
+            {
+                float d = Mathf.Abs(Mathf.DeltaAngle(hour * 15f, k.hour * 15f)) / 15f;
+                if (d < bestD) { bestD = d; best = k; }
+            }
+            return best.label;
         }
     }
 }

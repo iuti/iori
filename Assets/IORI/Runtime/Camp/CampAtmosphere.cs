@@ -1,6 +1,8 @@
 using System;
 using Iori.Audio;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace Iori.Camp
 {
@@ -9,8 +11,10 @@ namespace Iori.Camp
 
     /// <summary>
     /// Decides what the camp looks like right now (time of day, weather, season, sleep mode) and
-    /// pushes it to the shaders as global values. Nothing in the scene uses Unity lights; the
-    /// fire, lantern and tent lights are evaluated in the camp shaders from these globals.
+    /// applies it: turns the sun or moon, sets the fire, lantern and tent lights, the light from the
+    /// sky, the air, the picture's finish, and the values the camp shaders read.
+    /// The lights are real Unity lights (the fire's casts shadows); the shaders take them one brush
+    /// stroke at a time.
     /// </summary>
     [ExecuteAlways]
     [DefaultExecutionOrder(-50)]
@@ -18,20 +22,23 @@ namespace Iori.Camp
     {
         public static CampAtmosphere Instance { get; private set; }
 
-        [Tooltip("色の設定。空なら既定値")] public CampLook look;
+        [Tooltip("見た目の設定。空なら既定値")] public CampLook look;
         public Material skyMaterial;
-        public Texture2D brushTexture;
+        public Texture2D strokeTexture;
+        public Texture3D noiseTexture;
 
         [Header("時刻")]
         [Tooltip("Play 中は端末の時計(ラジオの時計のずれも反映)に合わせる。オフなら下の時刻")]
         public bool followClock = true;
         [Range(0, 24)] public float previewHour = 18.6f;
+        [Tooltip("時計に合わせないとき、1 秒に何時間進めるか(0 で止める)。一日の移り変わりを見る用")]
+        public float hoursPerSecond = 0f;
 
         [Header("天気")]
-        [Tooltip("Play 中はラジオの天気に合わせる(雨がやむと雨上がりになり、しばらくして乾く)")]
+        [Tooltip("Play 中はラジオの天気に合わせる(雨がやむと雨上がりになり、少しずつ乾く)")]
         public bool followRadioWeather = true;
         public CampWeather weather = CampWeather.Clear;
-        [Tooltip("雨上がりから乾くまでの分")] public float dryMinutes = 90f;
+        [Tooltip("雨上がりから乾ききるまでの分")] public float dryMinutes = 90f;
         [Tooltip("雨の降り始めとやみの切り替えにかける秒")] public float weatherFadeSeconds = 6f;
 
         [Header("季節")]
@@ -41,20 +48,16 @@ namespace Iori.Camp
         public bool sleep;
         public float sleepFadeSeconds = 3f;
 
-        [Header("筆と光の段")]
-        [Range(0, 1)] public float brushStrength = 1f;
-        [Tooltip("この距離まで筆あとを細かく出す")] public float brushNear = 3f;
-        [Tooltip("この距離で筆あとが消える")] public float brushFar = 16f;
-        public float brushScale = 0.6f;
-        [Tooltip("光の段の数(0 でなめらか)")] [Range(0, 12)] public float lightBands = 6f;
-        [Range(0, 2)] public float bandBrush = 0.9f;
-        [Range(0, 2)] public float slotSwitch = 1f;
-        [Tooltip("全体の明るさ")] public float exposure = 1.15f;
-
-        [Header("灯りの位置(組み立て係が入れる)")]
+        [Header("シーンの部品(「シーンを組み立てる」が入れる)")]
+        public Light keyLight;
+        public Light fireLight;
+        public Light lanternLight;
+        public Light tentLight;
         public Transform fire;
-        public Transform lantern;
-        public Transform tent;
+        public Renderer puddle;
+        [Tooltip("水たまりがいちばん満ちたときの水面の高さ")] public float puddleY = -0.03f;
+        [Tooltip("地面の模様の画像が覆う範囲(左下の x, z と一辺の長さ)")] public Vector3 groundMap = new Vector3(-9f, -6.5f, 18f);
+        [Tooltip("筆あとの大きさを測る基準の位置(カメラのいつもの位置)")] public Vector3 strokeOrigin = new Vector3(0f, 1.48f, -4.67f);
 
         [Header("ラジオの目盛りなど")]
         public bool radioLit = true;
@@ -70,19 +73,75 @@ namespace Iori.Camp
         string _lastRadioWeather;
 
         readonly CampPalette _pal = new CampPalette();
+        static readonly Color MoonWhite = CampPalette.Hex("#e6ecff");
+        static readonly Color LampOrange = CampPalette.Hex("#ffb060");
+        static readonly Color DialAmber = CampPalette.Hex("#ffc880");
+        static readonly Color PuddleDeep = CampPalette.Hex("#0a0c2a");
         CampLook _defaultLook;
-        readonly Vector4[] _palArray = new Vector4[32];
-        readonly Vector4[] _lightPos = new Vector4[4];
-        readonly Vector4[] _lightCol = new Vector4[4];
+        readonly Vector4[] _glow = new Vector4[8];
+        Vector3 _fireLightHome;
+        bool _fireHomeSet;
+
+        // picture finish, on top of the scene's own volume
+        GameObject _postGo;
+        VolumeProfile _postProfile;
+        ColorAdjustments _color;
+        Bloom _bloom;
+        DepthOfField _dof;
+        float _focusDistance = 4.7f;
+        float _focusClose;
 
         public float Rain => _rain;
         public float Wet => _wet;
         public float SleepAmount => _sleep;
         public float CurrentHour { get; private set; }
         public float ShaderTime { get; private set; }
+        public CampSeason CurrentSeason { get; private set; }
+        public CampPalette Palette => _pal;
         public CampLook Look => look != null ? look : (_defaultLook ??= CampLook.CreateDefault());
+        /// <summary>Minutes until the ground is dry again (0 unless it has just rained).</summary>
+        public float MinutesUntilDry => weather == CampWeather.AfterRain ? _wet * dryMinutes : 0f;
 
         public event Action<bool> SleepChanged;
+
+        static class Id
+        {
+            public static readonly int Stroke = Shader.PropertyToID("_IoriStroke");
+            public static readonly int StrokeOrigin = Shader.PropertyToID("_IoriStrokeOrigin");
+            public static readonly int StrokeTex = Shader.PropertyToID("_IoriStrokeTex");
+            public static readonly int Noise3D = Shader.PropertyToID("_IoriNoise3D");
+            public static readonly int AmbientSky = Shader.PropertyToID("_IoriAmbientSky");
+            public static readonly int AmbientEquator = Shader.PropertyToID("_IoriAmbientEquator");
+            public static readonly int AmbientGround = Shader.PropertyToID("_IoriAmbientGround");
+            public static readonly int FogColor = Shader.PropertyToID("_IoriFogColor");
+            public static readonly int MistColor = Shader.PropertyToID("_IoriMistColor");
+            public static readonly int Fog = Shader.PropertyToID("_IoriFog");
+            public static readonly int Weather = Shader.PropertyToID("_IoriWeather");
+            public static readonly int Wind = Shader.PropertyToID("_IoriWind");
+            public static readonly int Glow = Shader.PropertyToID("_IoriGlow");
+            public static readonly int GroundMap = Shader.PropertyToID("_IoriGroundMap");
+            public static readonly int FirePos = Shader.PropertyToID("_IoriFirePos");
+            public static readonly int Fire = Shader.PropertyToID("_IoriFire");
+            public static readonly int SeasonGrass = Shader.PropertyToID("_IoriSeasonGrass");
+            public static readonly int SeasonLeaf = Shader.PropertyToID("_IoriSeasonLeaf");
+            public static readonly int SkyHorizon = Shader.PropertyToID("_IoriSkyHorizon");
+            public static readonly int SkyMid = Shader.PropertyToID("_IoriSkyMid");
+            public static readonly int SkyZenith = Shader.PropertyToID("_IoriSkyZenith");
+            public static readonly int SunDir = Shader.PropertyToID("_IoriSunDir");
+            public static readonly int MoonDir = Shader.PropertyToID("_IoriMoonDir");
+            public static readonly int SunColor = Shader.PropertyToID("_IoriSunColor");
+            public static readonly int MoonColor = Shader.PropertyToID("_IoriMoonColor");
+            public static readonly int SkyParams = Shader.PropertyToID("_IoriSkyParams");
+            public static readonly int Cloud = Shader.PropertyToID("_IoriCloud");
+            public static readonly int CloudDark = Shader.PropertyToID("_IoriCloudDark");
+            public static readonly int CloudParams = Shader.PropertyToID("_IoriCloudParams");
+            public static readonly int FarNear = Shader.PropertyToID("_IoriFarNear");
+            public static readonly int FarFar = Shader.PropertyToID("_IoriFarFar");
+            public static readonly int Town = Shader.PropertyToID("_IoriTown");
+            public static readonly int SkyStroke = Shader.PropertyToID("_IoriSkyStroke");
+            public static readonly int WaterTint = Shader.PropertyToID("_IoriWaterTint");
+            public static readonly int PuddleTint = Shader.PropertyToID("_IoriPuddleTint");
+        }
 
         void OnEnable()
         {
@@ -94,6 +153,9 @@ namespace Iori.Camp
         void OnDisable()
         {
             if (Instance == this) Instance = null;
+            if (_postGo) DestroyImmediate(_postGo);
+            if (_postProfile) DestroyImmediate(_postProfile);
+            _postGo = null; _postProfile = null; _color = null; _bloom = null; _dof = null;
         }
 
         void OnValidate() => _snap = true;
@@ -105,6 +167,36 @@ namespace Iori.Camp
             SleepChanged?.Invoke(on);
         }
 
+        /// <summary>Sets the weather by hand (the panel). The radio's rain sound follows, and the radio does not undo it.</summary>
+        public void SetWeatherByHand(CampWeather w)
+        {
+            weather = w;
+            _afterRainSince = -1f;
+            var radio = RadioDirector.Instance;
+            if (radio != null)
+            {
+                string id = w == CampWeather.Rain ? WeatherIds.Rain : WeatherIds.Clear;
+                if (radio.Weather != id) radio.SetWeather(id);
+                _lastRadioWeather = id;
+            }
+        }
+
+        /// <summary>Back to following the clock, the radio's weather and the calendar.</summary>
+        public void FollowEverything()
+        {
+            followClock = true;
+            followRadioWeather = true;
+            hoursPerSecond = 0f;
+            season = CampSeason.Auto;
+            SetSleep(false);
+            var radio = RadioDirector.Instance;
+            if (radio != null) { weather = radio.Weather == WeatherIds.Rain ? CampWeather.Rain : CampWeather.Clear; _lastRadioWeather = radio.Weather; }
+            else weather = CampWeather.Clear;
+        }
+
+        /// <summary>True while time, weather and season all follow the real world.</summary>
+        public bool FollowingEverything => followClock && followRadioWeather && season == CampSeason.Auto && !sleep;
+
         /// <summary>Jump to the targets without fading (for screenshots and on start).</summary>
         public void Snap()
         {
@@ -112,9 +204,19 @@ namespace Iori.Camp
             Apply(0f);
         }
 
+        /// <summary>The camera tells where it is looking: distance to what should be sharp, and how close-up the shot is (0..1).</summary>
+        public void SetFocus(float distance, float closeUp)
+        {
+            _focusDistance = Mathf.Max(0.3f, distance);
+            _focusClose = Mathf.Clamp01(closeUp);
+        }
+
         void Update()
         {
-            Apply(Application.isPlaying ? Time.deltaTime : 0.1f);
+            float dt = Application.isPlaying ? Time.deltaTime : 0.1f;
+            if (Application.isPlaying && !followClock && hoursPerSecond != 0f)
+                previewHour = Mathf.Repeat(previewHour + hoursPerSecond * Time.deltaTime, 24f);
+            Apply(dt);
         }
 
         void Apply(float dt)
@@ -122,21 +224,21 @@ namespace Iori.Camp
             ShaderTime = timeOverride >= 0 ? timeOverride : (Application.isPlaying ? Time.time : Time.realtimeSinceStartup);
             CurrentHour = ResolveHour();
             ResolveWeather();
+            CurrentSeason = ResolveSeason();
 
             float rainTarget = weather == CampWeather.Rain ? 1f : 0f;
-            float wetTarget = weather == CampWeather.Clear ? 0f : 1f;
+            float wetTarget = WetTarget();
             float sleepTarget = sleep ? 1f : 0f;
             if (_snap) { _rain = rainTarget; _wet = wetTarget; _sleep = sleepTarget; _snap = false; }
             else
             {
                 _rain = Mathf.MoveTowards(_rain, rainTarget, dt / Mathf.Max(0.01f, weatherFadeSeconds));
-                _wet = Mathf.MoveTowards(_wet, wetTarget, dt / Mathf.Max(0.01f, wetTarget > _wet ? weatherFadeSeconds * 4f : weatherFadeSeconds * 2f));
+                // puddles fill over a few moments of rain and go away slowly
+                _wet = Mathf.MoveTowards(_wet, wetTarget, dt / Mathf.Max(0.01f, weatherFadeSeconds * 4f));
                 _sleep = Mathf.MoveTowards(_sleep, sleepTarget, dt / Mathf.Max(0.01f, sleepFadeSeconds));
             }
 
             Look.Evaluate(CurrentHour, _pal);
-            ApplyRain(_pal, _rain);
-            ApplySeason(_pal, ResolveSeason());
             Push(_pal);
         }
 
@@ -144,8 +246,7 @@ namespace Iori.Camp
         {
             if (!Application.isPlaying || !followClock) return previewHour;
             DateTimeOffset now = RadioDirector.Instance != null ? RadioDirector.Instance.VirtualNow : DateTimeOffset.UtcNow;
-            var local = now.ToLocalTime();
-            return (float)local.TimeOfDay.TotalHours;
+            return (float)now.ToLocalTime().TimeOfDay.TotalHours;
         }
 
         void ResolveWeather()
@@ -157,7 +258,7 @@ namespace Iori.Camp
                 if (w != _lastRadioWeather)
                 {
                     if (w == WeatherIds.Rain) weather = CampWeather.Rain;
-                    else if (_lastRadioWeather == WeatherIds.Rain) { weather = CampWeather.AfterRain; _afterRainSince = Time.realtimeSinceStartup; }
+                    else if (_lastRadioWeather == WeatherIds.Rain) weather = CampWeather.AfterRain;
                     else if (_lastRadioWeather == null) weather = CampWeather.Clear;
                     _lastRadioWeather = w;
                 }
@@ -170,6 +271,14 @@ namespace Iori.Camp
             else _afterRainSince = -1f;
         }
 
+        float WetTarget()
+        {
+            if (weather == CampWeather.Rain) return 1f;
+            if (weather == CampWeather.Clear) return 0f;
+            if (!Application.isPlaying || _afterRainSince < 0) return 1f;
+            return Mathf.Clamp01(1f - (Time.realtimeSinceStartup - _afterRainSince) / Mathf.Max(1f, dryMinutes * 60f));
+        }
+
         CampSeason ResolveSeason()
         {
             if (season != CampSeason.Auto) return season;
@@ -180,139 +289,199 @@ namespace Iori.Camp
             return CampSeason.Winter;
         }
 
-        void ApplyRain(CampPalette p, float r)
-        {
-            if (r <= 0f) return;
-            var L = Look;
-            Color rt = p.rainTint;
-            p.horizon = Color.Lerp(p.horizon, rt, L.rainSkyMix * r);
-            p.mid = Color.Lerp(p.mid, rt, L.rainSkyMix * r);
-            p.zenith = Color.Lerp(p.zenith, rt, L.rainSkyMix * r);
-            p.fog = Color.Lerp(p.fog, rt, L.rainFogMix * r);
-            p.hill0 = Color.Lerp(p.hill0, rt, L.rainHillMix * r);
-            p.hill1 = Color.Lerp(p.hill1, rt, L.rainHillMix * r);
-            p.hill2 = Color.Lerp(p.hill2, rt, L.rainHillMix * r);
-            float s = L.rainSilhouetteMix * r;
-            p.sil0 = Color.Lerp(p.sil0, rt, s); p.sil1 = Color.Lerp(p.sil1, rt, s); p.sil2 = Color.Lerp(p.sil2, rt, s);
-            p.sil3 = Color.Lerp(p.sil3, rt, s); p.sil4 = Color.Lerp(p.sil4, rt, s);
-            p.water = Color.Lerp(p.water, rt, L.rainWaterMix * r);
-            p.stars *= 1 - r; p.streaks *= 1 - r; p.moonDisc *= 1 - r;
-            p.sunGlow *= Mathf.Lerp(1f, 0.25f, r);
-            p.fogFar *= Mathf.Lerp(1f, 0.5f, r);
-            p.fogNear *= Mathf.Lerp(1f, 0.7f, r);
-            p.fire *= Mathf.Lerp(1f, 0.85f, r);
-            p.cloudAmount = Mathf.Lerp(p.cloudAmount, 0.8f, r);
-            p.hemiIntensity *= Mathf.Lerp(1f, 0.9f, r);
-        }
-
-        void ApplySeason(CampPalette p, CampSeason s)
-        {
-            var L = Look;
-            Color g = s switch { CampSeason.Spring => L.springGrass, CampSeason.Autumn => L.autumnGrass, CampSeason.Winter => L.winterGrass, _ => L.summerGrass };
-            p.grassA = Mul(p.grassA, g);
-            p.grassB = Mul(p.grassB, g);
-            if (s == CampSeason.Autumn) p.leaf = Mul(p.leaf, L.autumnLeaf);
-            if (s == CampSeason.Winter)
-            {
-                p.grassA = Desaturate(p.grassA, L.winterDesaturate);
-                p.grassB = Desaturate(p.grassB, L.winterDesaturate);
-            }
-        }
-
-        static Color Mul(Color a, Color b) => new Color(Mathf.Clamp01(a.r * b.r), Mathf.Clamp01(a.g * b.g), Mathf.Clamp01(a.b * b.b), 1f);
-        static Color Desaturate(Color c, float t)
-        {
-            float l = c.r * 0.299f + c.g * 0.587f + c.b * 0.114f;
-            return Color.Lerp(c, new Color(l, l, l * 1.08f), t);
-        }
-
         static Vector4 Lin(Color c, float k = 1f)
         {
             var l = c.linear;
             return new Vector4(l.r * k, l.g * k, l.b * k, 1f);
         }
 
-        static Vector3 FromMock(Vector3 v) => new Vector3(v.x, v.y, -v.z);
+        /// <summary>Direction toward a point in the sky. Azimuth 0 looks across the lake (+z), positive turns right.</summary>
+        public static Vector3 SkyDirection(float azimuthDeg, float elevationDeg)
+        {
+            float az = azimuthDeg * Mathf.Deg2Rad, el = elevationDeg * Mathf.Deg2Rad;
+            return new Vector3(Mathf.Sin(az) * Mathf.Cos(el), Mathf.Sin(el), Mathf.Cos(az) * Mathf.Cos(el));
+        }
+
+        /// <summary>The moon drifts slowly across the sky over the lake during the night, low enough to be in the picture.</summary>
+        public static Vector3 MoonDirection(float hour)
+        {
+            float n = Mathf.Repeat(hour - 19f, 24f) / 10f;
+            n = Mathf.Clamp01(n);
+            return SkyDirection(Mathf.Lerp(16f, 2f, n), 9f + 3.5f * Mathf.Sin(n * Mathf.PI));
+        }
 
         void Push(CampPalette p)
         {
             var L = Look;
             float t = ShaderTime;
-            float sl = _sleep;
+            float sl = _sleep, rain = _rain;
 
-            // ---- palette slots ----
-            Color[] slots =
-            {
-                p.grassA, p.grassB, p.groundShade, p.dirt, p.dirt2, p.sand, p.rock, p.rockHi, p.tree, p.treeHi, p.leaf,
-                p.sil0, p.sil1, p.sil2, p.sil3, p.sil4, p.hill0, p.hill1, p.hill2, p.water,
-                L.wood, L.dark, L.crate, L.brass, L.cream, L.log, L.knob, L.stumpTop, L.fabric, L.tentCloth, L.flower, Color.magenta,
-            };
-            for (int i = 0; i < 32; i++) _palArray[i] = Lin(slots[i]);
-            Shader.SetGlobalVectorArray("_IoriPal", _palArray);
+            // ---- sky and air, with the rain mixed in
+            Color rt = p.rainTint;
+            float skyMix = L.rainSkyMix * rain;
+            Color horizon = Color.Lerp(p.horizon, rt, skyMix), mid = Color.Lerp(p.mid, rt, skyMix), zenith = Color.Lerp(p.zenith, rt * 0.8f, skyMix);
+            Color fog = Color.Lerp(p.fog, rt, skyMix * 0.8f), mist = Color.Lerp(p.mist, rt, skyMix * 0.6f);
+            float skyDim = Mathf.Lerp(1f, 0.85f, sl);
+            float clearSky = 1f - rain;
 
-            // ---- light ----
-            float amb = p.hemiIntensity * Mathf.Lerp(1f, L.sleepAmbient, sl) * exposure;
-            Shader.SetGlobalVector("_IoriHemiSky", Lin(p.hemiSky));
-            var hg = Lin(p.hemiGround); hg.w = amb;
-            Shader.SetGlobalVector("_IoriHemiGround", hg);
-            Shader.SetGlobalVector("_IoriDirColor", Lin(p.dirColor, p.dirIntensity * Mathf.Lerp(1f, L.sleepAmbient, sl) * exposure));
-            var sd = p.sunDir.normalized;
-            var dirPos = new Vector3(sd.x * 50f, Mathf.Max(sd.y, 0.12f) * 50f + 4f, sd.z * 50f);
-            Shader.SetGlobalVector("_IoriDirVector", FromMock(dirPos).normalized);
-
-            // fire flicker, kept slow so the light bands do not pop
-            float fl = 0.9f + 0.07f * Mathf.Sin(t * 2.3f) * Mathf.Sin(t * 1.7f + 1f) + 0.03f * Mathf.Sin(t * 5.1f);
-            float fireLevel = p.fire * Mathf.Lerp(1f, L.sleepFire, sl);
-            float lanternLevel = 1f - sl;
-            float tentLevel = p.tent * (1f - sl * 0.7f);
-            Vector3 fireP = fire ? fire.position : new Vector3(-0.48f, 0, -1.05f);
-            Vector3 lanP = lantern ? lantern.position : new Vector3(-1f, 0.74f, 0.43f);
-            Vector3 tentP = tent ? tent.position : new Vector3(-1.9f, 0, 5.2f);
-            SetLight(0, fireP + new Vector3(0, 0.7f, 0), 6.5f, CampPalette.Hex("#ff8a3c"), 3.4f * fireLevel * fl * exposure);
-            SetLight(1, fireP + new Vector3(0.5f, 0.25f, 0.6f), 4f, CampPalette.Hex("#ff6a2a"), 0.8f * fireLevel * (1.1f - 0.3f * fl) * exposure);
-            SetLight(2, lanP + new Vector3(0.1f, 0.3f, -0.25f), 4f, CampPalette.Hex("#ffc070"), 1.3f * lanternLevel * (0.97f + 0.03f * Mathf.Sin(t * 3.1f)) * exposure);
-            SetLight(3, tentP + new Vector3(0.3f, 0.5f, -1.7f), 6f, CampPalette.Hex("#ff9438"), 2.6f * tentLevel * exposure);
-            Shader.SetGlobalVectorArray("_IoriLightPos", _lightPos);
-            Shader.SetGlobalVectorArray("_IoriLightColor", _lightCol);
-
-            float dawnish = Mathf.Clamp01(p.hemiIntensity - 1f) ; // bright looks dim the props' glow a little
-            Shader.SetGlobalVector("_IoriGlowA", new Vector4(fireLevel * fl, tentLevel, lanternLevel, p.town));
-            Shader.SetGlobalVector("_IoriGlowB", new Vector4(radioLit ? 1f - dawnish * 0.3f : 0f, playerLit ? 1f - dawnish * 0.3f : 0f, fireLevel * (1f - _rain) * Mathf.Clamp01(p.fire * 2f - 0.5f), Mathf.Clamp(fireLevel, 0.45f, 1.25f)));
-
-            // ---- fog, weather, brush ----
-            Shader.SetGlobalVector("_IoriFogColor", Lin(p.fog));
-            Shader.SetGlobalVector("_IoriFogParams", new Vector4(p.fogNear, p.fogFar, 1f, 0f));
-            Shader.SetGlobalVector("_IoriWeather", new Vector4(_rain, _wet, sl, t));
-            Shader.SetGlobalVector("_IoriBrushParams", new Vector4(brushStrength, brushNear, brushFar, brushScale));
-            Shader.SetGlobalVector("_IoriPaintParams", new Vector4(lightBands, bandBrush, slotSwitch, 0f));
-            if (brushTexture) Shader.SetGlobalTexture("_IoriBrushTex", brushTexture);
-
-            // ---- sky ----
-            float skyDim = Mathf.Lerp(1f, 0.82f, sl);
-            Shader.SetGlobalVector("_IoriSkyHorizon", Lin(p.horizon, skyDim));
-            Shader.SetGlobalVector("_IoriSkyMid", Lin(p.mid, skyDim));
-            Shader.SetGlobalVector("_IoriSkyZenith", Lin(p.zenith, skyDim));
-            Shader.SetGlobalVector("_IoriSunDir", new Vector4(sd.x, sd.y, sd.z, 0));
-            Shader.SetGlobalVector("_IoriSunColor", Lin(p.sunColor));
-            Shader.SetGlobalVector("_IoriSkyParams", new Vector4(p.sunGlow, p.moonDisc, p.stars, p.streaks));
-            Shader.SetGlobalVector("_IoriCloud", Lin(p.cloud, skyDim));
-            Shader.SetGlobalVector("_IoriCloudDark", Lin(p.cloudDark, skyDim));
-            Shader.SetGlobalVector("_IoriCloudParams", new Vector4(p.cloudAmount, _rain, 0, 0));
+            Vector3 sunDir = SkyDirection(p.sunAzimuth, p.sunElevation);
+            Vector3 moonDir = MoonDirection(CurrentHour);
+            Shader.SetGlobalVector(Id.SkyHorizon, Lin(horizon, skyDim));
+            Shader.SetGlobalVector(Id.SkyMid, Lin(mid, skyDim));
+            Shader.SetGlobalVector(Id.SkyZenith, Lin(zenith, skyDim));
+            Shader.SetGlobalVector(Id.SunDir, sunDir);
+            Shader.SetGlobalVector(Id.MoonDir, moonDir);
+            Shader.SetGlobalVector(Id.SunColor, Lin(p.sunGlowColor));
+            Shader.SetGlobalVector(Id.MoonColor, Lin(MoonWhite));
+            Shader.SetGlobalVector(Id.SkyParams, new Vector4(p.sunGlow * Mathf.Lerp(1f, 0.2f, rain), p.moon * clearSky, p.stars * clearSky, p.sunDisc * clearSky));
+            Shader.SetGlobalVector(Id.Cloud, Lin(Color.Lerp(p.cloud, rt * 1.15f, skyMix), skyDim));
+            Shader.SetGlobalVector(Id.CloudDark, Lin(Color.Lerp(p.cloudDark, rt * 0.7f, skyMix), skyDim));
+            Shader.SetGlobalVector(Id.CloudParams, new Vector4(p.cloudAmount, rain, 0.004f * (1f + rain * 3f), 0f));
+            Shader.SetGlobalVector(Id.FarNear, Lin(Color.Lerp(p.farNear, rt * 0.6f, skyMix * 0.5f), skyDim));
+            Shader.SetGlobalVector(Id.FarFar, Lin(Color.Lerp(p.farFar, rt, skyMix * 0.7f), skyDim));
+            Shader.SetGlobalVector(Id.Town, Lin(LampOrange, p.town * L.townGlow * Mathf.Lerp(1f, 0.6f, rain)));
+            Shader.SetGlobalVector(Id.SkyStroke, new Vector4(L.skyStrokeTiles, L.skyStrokeAmount, 0f, 0f));
             if (skyMaterial && RenderSettings.skybox != skyMaterial) RenderSettings.skybox = skyMaterial;
 
-            // ---- water, character, embers ----
-            Shader.SetGlobalVector("_IoriWaterTint", Lin(p.water));
-            Shader.SetGlobalVector("_IoriPuddleTint", Lin(Color.Lerp(p.groundShade, CampPalette.Hex("#0a0c2a"), 0.55f)));
-            Shader.SetGlobalVector("_IoriSpriteAmbient", Lin(p.spriteAmbient, Mathf.Lerp(1f, 0.75f, sl)));
-            Shader.SetGlobalVector("_IoriSpriteFire", Lin(CampPalette.Hex("#ff8a45"), 1.05f * Mathf.Min(fireLevel, 1.2f)));
-            Shader.SetGlobalVector("_IoriSpriteRim", Lin(p.rim));
-            Shader.SetGlobalVector("_IoriEmberColor", Lin(CampPalette.Hex("#ffb060"), 2.6f));
+            Shader.SetGlobalVector(Id.FogColor, Lin(fog, skyDim));
+            Shader.SetGlobalVector(Id.MistColor, Lin(mist, skyDim));
+            Shader.SetGlobalVector(Id.Fog, new Vector4(p.fogDensity * Mathf.Lerp(1f, L.rainFog, rain), p.mistDensity + L.rainMist * rain, 1.2f, 0.97f));
+
+            // ---- light from the sky
+            float amb = p.ambientIntensity * Mathf.Lerp(1f, L.sleepAmbient, sl) * Mathf.Lerp(1f, L.rainAmbient, rain);
+            Color aSky = Color.Lerp(p.ambientSky, rt, skyMix * 0.6f), aEq = Color.Lerp(p.ambientEquator, rt, skyMix * 0.6f), aGr = Color.Lerp(p.ambientGround, rt * 0.6f, skyMix * 0.4f);
+            Shader.SetGlobalVector(Id.AmbientSky, Lin(aSky, amb));
+            Shader.SetGlobalVector(Id.AmbientEquator, Lin(aEq, amb));
+            Shader.SetGlobalVector(Id.AmbientGround, Lin(aGr, amb));
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = aSky * amb;
+            RenderSettings.ambientEquatorColor = aEq * amb;
+            RenderSettings.ambientGroundColor = aGr * amb;
+            RenderSettings.fog = false;
+
+            // ---- the sun, its afterglow, or the moon. The light fades through zero where it changes hands.
+            if (keyLight)
+            {
+                bool moonLit = p.moon > 0.5f;
+                Vector3 toLight = moonLit ? moonDir : SkyDirection(p.sunAzimuth, Mathf.Max(p.sunElevation, 5f));
+                keyLight.transform.rotation = Quaternion.LookRotation(-toLight, Vector3.up);
+                keyLight.color = p.keyColor;
+                keyLight.intensity = p.keyIntensity * Mathf.Abs(2f * p.moon - 1f) * Mathf.Lerp(1f, L.rainKey, rain) * Mathf.Lerp(1f, L.sleepAmbient, sl);
+                keyLight.shadowStrength = p.keyShadow * Mathf.Lerp(1f, 0.4f, rain);
+            }
+
+            // ---- the fire: it breathes, and its light wanders a little so the shadows move
+            float flick = 0.9f + 0.07f * Mathf.Sin(t * 2.3f) * Mathf.Sin(t * 1.7f + 1f) + 0.035f * Mathf.Sin(t * 5.1f) + 0.02f * Mathf.Sin(t * 11.3f + 2f);
+            float fireLevel = p.fire * Mathf.Lerp(1f, L.sleepFire, sl) * Mathf.Lerp(1f, L.rainFire, rain);
+            float lanternLevel = p.lantern * (1f - sl);
+            float tentLevel = p.tent * Mathf.Lerp(1f, L.sleepTent, sl);
+            Vector3 firePos = fire ? fire.position + new Vector3(0f, 0.32f, 0f) : new Vector3(-0.22f, 0.3f, -0.85f);
+            if (fireLight)
+            {
+                if (!_fireHomeSet) { _fireLightHome = fireLight.transform.position; _fireHomeSet = true; }
+                if (fire) _fireLightHome = firePos;
+                fireLight.transform.position = _fireLightHome + new Vector3(Mathf.Sin(t * 3.1f) * 0.02f, Mathf.Sin(t * 4.3f + 1f) * 0.025f, Mathf.Cos(t * 2.7f) * 0.02f);
+                fireLight.color = L.fireColor;
+                fireLight.intensity = L.fireIntensity * fireLevel * flick;
+                fireLight.range = L.fireRange;
+                fireLight.enabled = fireLevel > 0.01f;
+            }
+            if (lanternLight)
+            {
+                lanternLight.color = L.lanternColor;
+                lanternLight.intensity = L.lanternIntensity * lanternLevel * (0.97f + 0.03f * Mathf.Sin(t * 3.1f));
+                lanternLight.range = L.lanternRange;
+                lanternLight.enabled = lanternLevel > 0.01f;
+            }
+            if (tentLight)
+            {
+                tentLight.color = L.tentColor;
+                tentLight.intensity = L.tentIntensity * tentLevel;
+                tentLight.range = L.tentRange;
+                tentLight.enabled = tentLevel > 0.01f;
+            }
+            Shader.SetGlobalVector(Id.FirePos, new Vector4(firePos.x, firePos.y, firePos.z, L.fireRange));
+            // flame size: a low flame over embers when sleeping, never quite out
+            float flameSize = Mathf.Clamp(0.35f + 0.65f * fireLevel, 0.3f, 1.2f) * Mathf.Lerp(1f, 0.55f, sl);
+            Shader.SetGlobalVector(Id.Fire, new Vector4(flameSize, Mathf.Lerp(0.85f, 1.1f, Mathf.Clamp01(fireLevel)) * flick, Mathf.Clamp01(fireLevel * (1f - sl * 0.7f)), 0f));
+
+            // ---- things that glow by themselves (channels as in campkit.py: 1 fire, 2 tent, 3 lantern, 4 town, 5 radio, 6 player, 7 embers)
+            float lampDim = Mathf.Lerp(1f, 0.75f, Mathf.Clamp01(p.keyIntensity - 1f));
+            _glow[0] = Vector4.zero;
+            _glow[1] = Lin(L.fireColor, fireLevel * flick);
+            _glow[2] = Lin(L.tentColor, L.tentGlow * tentLevel);
+            _glow[3] = Lin(L.lanternColor, L.lanternGlow * lanternLevel);
+            _glow[4] = Lin(LampOrange, p.town * L.townGlow);
+            _glow[5] = Lin(DialAmber, radioLit ? L.dialGlow * lampDim : 0f);
+            _glow[6] = Lin(LampOrange, playerLit ? L.dialGlow * lampDim : 0f);
+            _glow[7] = new Vector4(1f, 1f, 1f, 1f) * (L.emberGlow * Mathf.Clamp(fireLevel * 1.2f, 0.5f, 1.3f) * (0.92f + 0.08f * flick));
+            Shader.SetGlobalVectorArray(Id.Glow, _glow);
+
+            // ---- brush, weather, wind, ground
+            Shader.SetGlobalVector(Id.Stroke, new Vector4(L.strokeTiles, L.strokeNear, L.strokeAmount, L.lightBands));
+            Shader.SetGlobalVector(Id.StrokeOrigin, strokeOrigin);
+            if (strokeTexture) Shader.SetGlobalTexture(Id.StrokeTex, strokeTexture);
+            if (noiseTexture) Shader.SetGlobalTexture(Id.Noise3D, noiseTexture);
+            Shader.SetGlobalVector(Id.Weather, new Vector4(rain, _wet, sl, t));
+            Vector2 wd = L.windDirection.sqrMagnitude > 1e-6f ? L.windDirection.normalized : Vector2.right;
+            Shader.SetGlobalVector(Id.Wind, new Vector4(wd.x, wd.y, Mathf.Lerp(L.wind, L.rainWind, rain), 0f));
+            float puddleNow = Mathf.Lerp(puddleY - 0.1f, puddleY, Mathf.SmoothStep(0f, 1f, _wet));
+            Shader.SetGlobalVector(Id.GroundMap, new Vector4(groundMap.x, groundMap.y, 1f / Mathf.Max(0.01f, groundMap.z), puddleNow));
+            if (puddle)
+            {
+                var pt = puddle.transform;
+                var pp = pt.position;
+                if (!Mathf.Approximately(pp.y, puddleNow)) { pp.y = puddleNow; pt.position = pp; }
+                bool show = _wet > 0.01f;
+                if (puddle.enabled != show) puddle.enabled = show;
+            }
+
+            // ---- season
+            Color sg, sf;
+            switch (CurrentSeason)
+            {
+                case CampSeason.Spring: sg = L.springGrass; sf = L.springLeaf; break;
+                case CampSeason.Autumn: sg = L.autumnGrass; sf = L.autumnLeaf; break;
+                case CampSeason.Winter: sg = L.winterGrass; sf = L.winterLeaf; break;
+                default: sg = L.summerGrass; sf = L.summerLeaf; break;
+            }
+            Shader.SetGlobalVector(Id.SeasonGrass, new Vector4(sg.r, sg.g, sg.b, 1f));
+            Shader.SetGlobalVector(Id.SeasonLeaf, new Vector4(sf.r, sf.g, sf.b, 1f));
+
+            // ---- water
+            Shader.SetGlobalVector(Id.WaterTint, Lin(Color.Lerp(p.water, rt, skyMix * 0.6f), skyDim * 0.55f));
+            Shader.SetGlobalVector(Id.PuddleTint, Lin(Color.Lerp(p.ambientGround, PuddleDeep, 0.5f), 0.5f));
+
+            PushFinish(p, L, sl);
         }
 
-        void SetLight(int i, Vector3 pos, float range, Color c, float intensity)
+        void PushFinish(CampPalette p, CampLook L, float sl)
         {
-            _lightPos[i] = new Vector4(pos.x, pos.y, pos.z, range);
-            _lightCol[i] = Lin(c, Mathf.Max(0f, intensity));
+            if (!_postGo)
+            {
+                _postProfile = ScriptableObject.CreateInstance<VolumeProfile>();
+                _postProfile.hideFlags = HideFlags.HideAndDontSave;
+                _color = _postProfile.Add<ColorAdjustments>(true);
+                _bloom = _postProfile.Add<Bloom>(true);
+                _dof = _postProfile.Add<DepthOfField>(true);
+                _postGo = new GameObject("Camp finish (自動生成)") { hideFlags = HideFlags.HideAndDontSave };
+                var v = _postGo.AddComponent<Volume>();
+                v.isGlobal = true;
+                v.priority = 10f;
+                v.sharedProfile = _postProfile;
+            }
+            _color.postExposure.Override(p.exposure + L.sleepExposure * sl);
+            _color.saturation.Override(p.saturation);
+            _color.contrast.Override(p.contrast);
+            _color.colorFilter.Override(p.filter);
+            _bloom.intensity.Override(p.bloom);
+            _bloom.threshold.Override(1.0f);
+            _bloom.scatter.Override(0.72f);
+            _dof.mode.Override(CampQuality.DepthOfFieldOn ? DepthOfFieldMode.Bokeh : DepthOfFieldMode.Off);
+            _dof.focusDistance.Override(_focusDistance);
+            _dof.focalLength.Override(L.focalLength);
+            _dof.aperture.Override(Mathf.Lerp(L.aperture, L.apertureClose, _focusClose));
+            _dof.bladeCount.Override(6);
         }
     }
 }

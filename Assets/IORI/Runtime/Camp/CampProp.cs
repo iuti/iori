@@ -7,7 +7,7 @@ namespace Iori.Camp
 
     /// <summary>
     /// A prop in the scene that opens a feature when tapped. The anchor transform it sits on is also
-    /// where CampBuilder puts the prop's model. The features' panels are not built yet; listen to
+    /// near where its model stands. The features' panels are not built yet; listen to
     /// <see cref="Tapped"/> to open them. The lantern toggles sleep mode by itself.
     /// </summary>
     [ExecuteAlways]

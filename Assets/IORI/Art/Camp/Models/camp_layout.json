@@ -1,0 +1,491 @@
+{
+ "objects": [
+  {
+   "name": "Ground",
+   "mesh": "Ground",
+   "material": "Ground",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": false,
+   "layer": "CampGround",
+   "anchor": "",
+   "vertices": 24111,
+   "triangles": 47600
+  },
+  {
+   "name": "FireStones",
+   "mesh": "FireStones",
+   "material": "Rock",
+   "position": [
+    -0.2199999988079071,
+    -0.01608678512275219,
+    -0.8500000238418579
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "fire",
+   "vertices": 10817,
+   "triangles": 4022
+  },
+  {
+   "name": "FireAsh",
+   "mesh": "FireAsh",
+   "material": "Ember",
+   "position": [
+    -0.2199999988079071,
+    -0.01608678512275219,
+    -0.8500000238418579
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "fire",
+   "vertices": 1512,
+   "triangles": 504
+  },
+  {
+   "name": "FireLogs",
+   "mesh": "FireLogs",
+   "material": "Ember",
+   "position": [
+    -0.2199999988079071,
+    -0.01608678512275219,
+    -0.8500000238418579
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "fire",
+   "vertices": 3117,
+   "triangles": 1436
+  },
+  {
+   "name": "Table",
+   "mesh": "Table",
+   "material": "Prop",
+   "position": [
+    -0.6200000047683716,
+    0.01340379286557436,
+    0.44999998807907104
+   ],
+   "yaw": -9.99999970909292,
+   "scale": 0.9999999403953552,
+   "shadows": true,
+   "layer": "",
+   "anchor": "table",
+   "vertices": 1488,
+   "triangles": 548
+  },
+  {
+   "name": "Lantern",
+   "mesh": "Lantern",
+   "material": "Prop",
+   "position": [
+    -0.711534857749939,
+    0.41340377926826477,
+    0.39324286580085754
+   ],
+   "yaw": -19.99999771063855,
+   "scale": 0.9999999403953552,
+   "shadows": true,
+   "layer": "",
+   "anchor": "lantern",
+   "vertices": 3328,
+   "triangles": 1638
+  },
+  {
+   "name": "Mug",
+   "mesh": "Mug",
+   "material": "Prop",
+   "position": [
+    -0.43521785736083984,
+    0.41340377926826477,
+    0.38103941082954407
+   ],
+   "yaw": 139.99999934239548,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "table",
+   "vertices": 465,
+   "triangles": 222
+  },
+  {
+   "name": "Kettle",
+   "mesh": "Kettle",
+   "material": "Prop",
+   "position": [
+    -0.5076033473014832,
+    0.41340377926826477,
+    0.5612069368362427
+   ],
+   "yaw": -149.99999734394112,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "table",
+   "vertices": 701,
+   "triangles": 388
+  },
+  {
+   "name": "Chair",
+   "mesh": "Chair",
+   "material": "Prop",
+   "position": [
+    0.30000001192092896,
+    0.0154380202293396,
+    0.5
+   ],
+   "yaw": 21.065946060814714,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "iori",
+   "vertices": 2085,
+   "triangles": 844
+  },
+  {
+   "name": "Crate",
+   "mesh": "Crate",
+   "material": "Prop",
+   "position": [
+    0.800000011920929,
+    0.01659107208251953,
+    0.699999988079071
+   ],
+   "yaw": 14.000000104994276,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "radio",
+   "vertices": 2801,
+   "triangles": 1100
+  },
+  {
+   "name": "Radio",
+   "mesh": "Radio",
+   "material": "Prop",
+   "position": [
+    0.7799999713897705,
+    0.32259106636047363,
+    0.6700000166893005
+   ],
+   "yaw": -14.000000104994276,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "radio",
+   "vertices": 2883,
+   "triangles": 1456
+  },
+  {
+   "name": "Stump",
+   "mesh": "Stump",
+   "material": "Prop",
+   "position": [
+    0.4699999988079071,
+    0.016648903489112854,
+    -1.2400000095367432
+   ],
+   "yaw": -30.000000834826057,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "player",
+   "vertices": 961,
+   "triangles": 418
+  },
+  {
+   "name": "Deck",
+   "mesh": "Deck",
+   "material": "Prop",
+   "position": [
+    0.46000000834465027,
+    0.3086489140987396,
+    -1.25
+   ],
+   "yaw": 15.999999876058132,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "player",
+   "vertices": 1815,
+   "triangles": 788
+  },
+  {
+   "name": "Firewood",
+   "mesh": "Firewood",
+   "material": "Prop",
+   "position": [
+    1.4199999570846558,
+    0.010815566405653954,
+    1.25
+   ],
+   "yaw": -65.00000067042492,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "",
+   "vertices": 2959,
+   "triangles": 1260
+  },
+  {
+   "name": "Tent",
+   "mesh": "Tent",
+   "material": "Tent",
+   "position": [
+    -1.4500000476837158,
+    -0.005072945263236761,
+    5.599999904632568
+   ],
+   "yaw": 12.000000333930423,
+   "scale": 1.0,
+   "shadows": false,
+   "layer": "",
+   "anchor": "tent",
+   "vertices": 1629,
+   "triangles": 682
+  },
+  {
+   "name": "Fence",
+   "mesh": "Fence",
+   "material": "Prop",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "",
+   "vertices": 414,
+   "triangles": 360
+  },
+  {
+   "name": "Rocks",
+   "mesh": "Rocks",
+   "material": "Rock",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "",
+   "vertices": 47308,
+   "triangles": 17918
+  },
+  {
+   "name": "TreeWood",
+   "mesh": "TreeWood",
+   "material": "Bark",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "",
+   "vertices": 55491,
+   "triangles": 31272
+  },
+  {
+   "name": "TreeLeaves",
+   "mesh": "TreeLeaves",
+   "material": "Leaf",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": true,
+   "layer": "",
+   "anchor": "",
+   "vertices": 90048,
+   "triangles": 45024
+  },
+  {
+   "name": "FirTrunks",
+   "mesh": "FirTrunks",
+   "material": "Bark",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": false,
+   "layer": "",
+   "anchor": "",
+   "vertices": 1512,
+   "triangles": 840
+  },
+  {
+   "name": "Firs",
+   "mesh": "Firs",
+   "material": "Fir",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": false,
+   "layer": "",
+   "anchor": "",
+   "vertices": 16204,
+   "triangles": 8102
+  },
+  {
+   "name": "Grass0",
+   "mesh": "Grass0",
+   "material": "Grass",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": false,
+   "layer": "CampGround",
+   "anchor": "",
+   "vertices": 54152,
+   "triangles": 38680
+  },
+  {
+   "name": "Grass1",
+   "mesh": "Grass1",
+   "material": "Grass",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": false,
+   "layer": "CampGround",
+   "anchor": "",
+   "vertices": 36652,
+   "triangles": 26180
+  },
+  {
+   "name": "Grass2",
+   "mesh": "Grass2",
+   "material": "Grass",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": false,
+   "layer": "CampGround",
+   "anchor": "",
+   "vertices": 35308,
+   "triangles": 25220
+  },
+  {
+   "name": "Plants",
+   "mesh": "Plants",
+   "material": "Plant",
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "yaw": -0.0,
+   "scale": 1.0,
+   "shadows": false,
+   "layer": "",
+   "anchor": "",
+   "vertices": 21939,
+   "triangles": 10669
+  }
+ ],
+ "camera": {
+  "position": [
+   0.0,
+   1.48,
+   -4.67
+  ],
+  "target": [
+   0.0,
+   0.95,
+   0.0
+  ],
+  "fov": 42.0
+ },
+ "anchors": {
+  "fire": [
+   -0.22,
+   -0.01608678421543965,
+   -0.85
+  ],
+  "iori": [
+   0.16,
+   0.015358338822417834,
+   0.1
+  ],
+  "table": [
+   -0.62,
+   0.013403792679928871,
+   0.45
+  ],
+  "radio": [
+   0.8,
+   0.016591071911287426,
+   0.7
+  ],
+  "player": [
+   0.47,
+   0.016648903003721745,
+   -1.24
+  ],
+  "tent": [
+   -1.45,
+   -0.005072945245926719,
+   5.6
+  ],
+  "lantern": [
+   -0.711534857749939,
+   0.41340377926826477,
+   0.39324286580085754
+  ]
+ },
+ "groundMap": {
+  "x0": -9.0,
+  "z0": -6.5,
+  "size": 18.0
+ },
+ "waterY": -0.24,
+ "puddleY": -0.03,
+ "puddleArea": {
+  "halfWidth": 5.4,
+  "z0": -3.2,
+  "z1": 4.8
+ }
+}
