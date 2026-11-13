@@ -88,6 +88,9 @@ public final class IoriPlaybackService extends MediaSessionService
                     PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
         }
         session = builder.build();
+        // startService で起動したときは onGetSession が呼ばれないので、ここで登録する。
+        // 登録しないと Media3 が通知を出さず、フォアグラウンドにもならない(画面オフで止められる)。
+        addSession(session);
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "IORI:radio");

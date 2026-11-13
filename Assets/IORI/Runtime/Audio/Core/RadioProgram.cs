@@ -82,7 +82,12 @@ namespace Iori.Audio
     public sealed class RadioProgram
     {
         public int Version = 1;
+        /// <summary>曲が切り替わるとき、前の曲がフェードアウトする時間(秒)。新しい曲はその間に重なって始まる。</summary>
         public double CrossfadeSeconds = 8;
+        /// <summary>
+        /// 新しい曲の頭のフェードイン(秒)。既定の 0 は頭から全開で入る(イントロの張りを残すため。chico の希望)。
+        /// </summary>
+        public double IntroFadeSeconds;
         public string DefaultWeather = WeatherIds.Clear;
         public List<PhaseDef> Phases = new List<PhaseDef>();
         public List<TrackDef> Tracks = new List<TrackDef>();
@@ -98,6 +103,7 @@ namespace Iori.Audio
             {
                 Version = (int)JsonRead.Num(root, "version", 1),
                 CrossfadeSeconds = JsonRead.Num(root, "crossfadeSeconds", 8),
+                IntroFadeSeconds = JsonRead.Num(root, "introFadeSeconds", 0),
                 DefaultWeather = JsonRead.Str(root, "defaultWeather", WeatherIds.Clear),
             };
 
@@ -209,6 +215,7 @@ namespace Iori.Audio
                 if (t.GapSeconds < 0) throw new FormatException("gapSeconds は 0 以上です: " + t.File);
             }
             if (CrossfadeSeconds < 0) throw new FormatException("crossfadeSeconds は 0 以上です");
+            if (IntroFadeSeconds < 0) throw new FormatException("introFadeSeconds は 0 以上です");
             if (Quiet.MinGapSeconds <= 0 || Quiet.MaxGapSeconds < Quiet.MinGapSeconds)
                 throw new FormatException("quiet の minGapSeconds / maxGapSeconds が不正です");
             var ambientIds = new HashSet<string>();

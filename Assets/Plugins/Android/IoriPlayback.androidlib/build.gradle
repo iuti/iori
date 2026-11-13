@@ -2,9 +2,15 @@
 // Unity の Gradle ビルドにライブラリモジュールとしてそのまま取り込まれる。
 apply plugin: 'com.android.library'
 
+// compileSdk と Build-Tools は Unity が作る unityLibrary に合わせる。
+// 固定すると、Unity 同梱 SDK に無い版(例: Build-Tools 35)を Gradle が取りに行って失敗する。
+evaluationDependsOn(':unityLibrary')
+def unityAndroid = project(':unityLibrary').android
+
 android {
     namespace 'com.iori.playback'
-    compileSdk 35
+    compileSdk unityAndroid.compileSdk
+    buildToolsVersion unityAndroid.buildToolsVersion
 
     defaultConfig {
         minSdk 23
