@@ -340,6 +340,7 @@ namespace Iori.Camp.EditorTools
             rig.focus = null;
             atm.Snap();
             Debug.Log("[IORI] shots saved to " + dir);
+            LogStats(builder, refl);
         }
 
         // ------------------------------------------------------------------ phone performance test
@@ -374,6 +375,25 @@ namespace Iori.Camp.EditorTools
                 PlayerSettings.SetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget.Android, oldId);
                 PlayerSettings.productName = oldName;
             }
+        }
+
+        /// <summary>Rough cost of the scene for phones: renderers and triangles, main view and reflection.</summary>
+        static void LogStats(CampBuilder builder, CampReflection refl)
+        {
+            long tris = 0, reflTris = 0; int renderers = 0, reflRenderers = 0;
+            int mask = refl ? refl.mask.value : 0;
+            foreach (var mf in UnityEngine.Object.FindObjectsByType<MeshFilter>(FindObjectsSortMode.None))
+            {
+                if (!mf.sharedMesh) continue;
+                var r = mf.GetComponent<MeshRenderer>();
+                if (!r || !r.enabled) continue;
+                long t = 0;
+                for (int i = 0; i < mf.sharedMesh.subMeshCount; i++) t += mf.sharedMesh.GetIndexCount(i) / 3;
+                tris += t; renderers++;
+                if ((mask & (1 << mf.gameObject.layer)) != 0) { reflTris += t; reflRenderers++; }
+                Debug.Log($"[IORI] stats mesh {mf.name}: {t} tris, layer {mf.gameObject.layer}");
+            }
+            Debug.Log($"[IORI] stats total {renderers} renderers, {tris} tris; reflection {reflRenderers} renderers, {reflTris} tris");
         }
 
         static void RenderCamera(Camera c, RenderTexture target)

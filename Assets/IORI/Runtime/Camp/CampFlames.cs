@@ -29,7 +29,7 @@ namespace Iori.Camp
             if (atm)
             {
                 var glow = Shader.GetGlobalVector("_IoriGlowA");
-                size = Mathf.Lerp(0.6f, 1f, Mathf.Clamp01(glow.x));
+                size = Mathf.Lerp(0.42f, 1f, Mathf.Clamp01(glow.x));
             }
             for (int i = 0; i < transform.childCount; i++)
             {
