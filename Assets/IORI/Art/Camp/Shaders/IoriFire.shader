@@ -12,12 +12,12 @@ Shader "IORI/Camp/Fire"
 {
     Properties
     {
-        _Scale ("Height of the tallest tongue at full size (m)", Float) = 0.74
+        _Scale ("Height of the tallest tongue at full size (m)", Float) = 0.86
         _Steps ("Steps along the ray", Range(6, 32)) = 22
         _Rise ("Rise speed", Float) = 1.5
         _Stretch ("Tall shapes (smaller = taller)", Float) = 0.28
         _Sway ("Wavering", Float) = 0.7
-        _Lean ("Tongues lean outward", Float) = 0.9
+        _Lean ("Tongues lean outward", Float) = 0.45
         _Curl ("Tips swing", Float) = 0.16
         _Breath ("Tongues grow and shrink", Range(0, 0.5)) = 0.18
         _Bite ("Noise bites the upper flame", Float) = 1.4
@@ -80,7 +80,7 @@ Shader "IORI/Camp/Fire"
             #define TONGUE_COUNT 6
             static const float4 TONGUES[TONGUE_COUNT] =
             {
-                float4(0.00, 0.02, 1.00, 0.27),
+                float4(0.00, 0.02, 1.00, 0.30),
                 float4(0.16, 0.05, 0.74, 0.21),
                 float4(-0.16, -0.04, 0.66, 0.20),
                 float4(0.03, 0.15, 0.56, 0.18),

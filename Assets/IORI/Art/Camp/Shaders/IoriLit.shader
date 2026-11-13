@@ -19,7 +19,7 @@ Shader "IORI/Camp/Lit"
         _LampAmount ("Lamp light taken (logs in the fire: little)", Range(0, 1)) = 1
         [Toggle(_EMBER)] _Ember ("Glowing cracks (burning wood)", Float) = 0
         [Toggle(_LAMP_INSIDE)] _LampInside ("Cloth lit from inside (the tent)", Float) = 0
-        _InsideSpot ("  Size of the bright patch in front of the lamp (m)", Float) = 0.75
+        _InsideSpot ("  Size of the bright patch in front of the lamp (m)", Float) = 0.6
         _InsidePanel ("  One tone per panel (0 = smooth across the cloth)", Range(0, 1)) = 0.75
         _InsideOutside ("  Light from outside while the lamp is on", Range(0, 1)) = 0.3
         [HDR] _InsideCore ("  Right in front of the lamp", Color) = (1.75, 1.35, 0.60, 1)
@@ -158,11 +158,12 @@ Shader "IORI/Camp/Lit"
                     float nz = IoriNoise3(q) * 0.65 + IoriNoise3(q * 2.3 + 7.0) * 0.35;
                     float breathe = 0.75 + 0.25 * sin(t * 1.7 + IoriNoise3(i.positionOS * 6.0) * 12.0);
                     float crack = smoothstep(0.07, 0.015, abs(nz - 0.5)) * smoothstep(0.25, 0.7, heat);
-                    float core = smoothstep(0.62, 0.95, heat * (0.75 + 0.5 * IoriNoise3(i.positionOS * 11.0 + t * 0.15)));
+                    // whole glowing patches only where it is hottest (the bed of embers; on the logs just a spot here and there)
+                    float core = smoothstep(0.85, 1.25, heat * (0.75 + 0.5 * IoriNoise3(i.positionOS * 11.0 + t * 0.15)));
                     float e = saturate(crack * 0.9 + core) * breathe;
                     float3 hot = _IoriGlow[7].rgb;
-                    // cooler cracks are deep red, the hottest spots go yellow
-                    glow = hot * e * lerp(float3(0.8, 0.12, 0.03), float3(1.4, 0.75, 0.25), saturate(core * 1.2 + crack * heat * 0.4));
+                    // cooler cracks are deep red, the hottest spots a bright orange (never white: white is the flame's)
+                    glow = hot * e * lerp(float3(0.8, 0.12, 0.03), float3(1.0, 0.34, 0.05), saturate(core * 1.2 + crack * heat * 0.4));
                     col *= 1.0 - saturate(heat * 1.4) * 0.75;       // charred wood is nearly black
                 #else
                     glow *= 1.0 + (st.rnd - 0.5) * 0.35;

@@ -614,8 +614,9 @@ namespace Iori.Camp.EditorTools
                 var go = new GameObject(name);
                 go.transform.SetParent(fireAnchor, false);
                 // the box the flame lives in; its bottom is where the flame starts, just above the ash
-                go.transform.localPosition = new Vector3(0f, 0.05f + 0.5f, 0f);
-                go.transform.localScale = new Vector3(0.9f, 1.0f, 0.9f);
+                // (roomy: the tallest tongue at its tallest, on the brightest night, must not touch the lid)
+                go.transform.localPosition = new Vector3(0f, 0.05f + 0.75f, 0f);
+                go.transform.localScale = new Vector3(1.1f, 1.5f, 1.1f);
                 go.layer = layer;
                 go.AddComponent<MeshFilter>().sharedMesh = cube;
                 var r = go.AddComponent<MeshRenderer>();

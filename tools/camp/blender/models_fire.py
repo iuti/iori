@@ -131,21 +131,21 @@ def build_fire(rng):
     # base logs lying flat
     place(log(0.62, 0.05, rng, char=0.85, char_from=0.25), (-0.30, -0.06, 0.07), (0.30, 0.05, 0.085))
     place(log(0.56, 0.045, rng, char=0.9, char_from=0.2, split=True), (0.10, -0.27, 0.075), (-0.06, 0.26, 0.10))
-    # leaning logs, burnt at the top where they meet
-    k = 5
-    a0 = rng.uniform(0, 6.28)
-    for i in range(k):
-        a = a0 + i / k * 2 * math.pi + rng.uniform(-.25, .25)
-        rb = rng.uniform(.24, .30)
+    # Leaning logs, burnt at the top where they meet. They lie low, so the flame stands above the
+    # pile, and none of them points at the camera (which looks from -Y): seen from there the two in
+    # front lean in from the left and the right, and the flame shows between and over them.
+    for a_deg in (35, 100, 165, 228, 318):
+        a = math.radians(a_deg + rng.uniform(-8, 8))
+        rb = rng.uniform(.25, .30)
         base = (math.cos(a) * rb, math.sin(a) * rb, 0.03)
-        tip = (math.cos(a + 2.6) * 0.05 + rng.uniform(-.02, .02), math.sin(a + 2.6) * 0.05 + rng.uniform(-.02, .02), rng.uniform(0.27, 0.36))
-        place(log(rng.uniform(.46, .58), rng.uniform(.034, .046), rng, char=0.95, char_from=rng.uniform(.3, .45), split=rng.random() < .3), base, tip)
+        tip = (math.cos(a + 2.6) * 0.05 + rng.uniform(-.02, .02), math.sin(a + 2.6) * 0.05 + rng.uniform(-.02, .02), rng.uniform(0.19, 0.25))
+        place(log(rng.uniform(.38, .46), rng.uniform(.034, .046), rng, char=0.95, char_from=rng.uniform(.3, .45), split=rng.random() < .3), base, tip)
     # kindling
     for i in range(6):
         a = rng.uniform(0, 6.28)
         rb = rng.uniform(.12, .26)
         base = (math.cos(a) * rb, math.sin(a) * rb, 0.04)
-        tip = (rng.uniform(-.05, .05), rng.uniform(-.05, .05), rng.uniform(.12, .22))
+        tip = (rng.uniform(-.05, .05), rng.uniform(-.05, .05), rng.uniform(.10, .17))
         place(log(rng.uniform(.22, .32), rng.uniform(.010, .016), rng, sides=5, char=1.0, char_from=.2), base, tip)
     out['FireLogs'] = logs
     return out

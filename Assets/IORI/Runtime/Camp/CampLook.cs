@@ -13,7 +13,7 @@ namespace Iori.Camp
     public sealed class CampLook : ScriptableObject
     {
         /// <summary>Raised when the defaults change in code; CampSetup then rewrites an untouched asset.</summary>
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
         [HideInInspector] public int version;
 
         [Serializable]
@@ -57,7 +57,7 @@ namespace Iori.Camp
         public float tentGlow = 1f;
         public float lanternGlow = 3.5f;
         public float dialGlow = 2.2f;
-        public float emberGlow = 3.2f;
+        public float emberGlow = 1.3f;
         public float townGlow = 3.5f;
 
         [Header("筆")]

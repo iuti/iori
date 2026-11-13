@@ -79,16 +79,19 @@ namespace Iori.Camp
             yield return Wait(0.5f);
             yield return Shot("play_02_panel_as_started");
 
-            // a chosen look, the panel top and bottom
+            // a chosen look, and the panel's three tabs
             atm.followClock = false; atm.hoursPerSecond = 0f; atm.previewHour = 18.6f;
             atm.followRadioWeather = false; atm.SetWeatherByHand(CampWeather.Clear); atm.season = CampSeason.Summer;
             atm.Snap();
             yield return Wait(0.6f);
-            yield return Shot("play_03_panel_twilight");
-            panel.ScrollTo(1f);
+            yield return Shot("play_03_panel_look");
+            panel.tab = CampDebugPanel.Tab.Camera;
             yield return Wait(0.4f);
-            yield return Shot("play_04_panel_bottom");
-            panel.ScrollTo(0f);
+            yield return Shot("play_04_panel_camera");
+            panel.tab = CampDebugPanel.Tab.Sound;
+            yield return Wait(0.4f);
+            yield return Shot("play_06_panel_sound");
+            panel.tab = CampDebugPanel.Tab.Look;
             panel.open = false;
             yield return Wait(0.5f);
             yield return Shot("play_05_twilight");
