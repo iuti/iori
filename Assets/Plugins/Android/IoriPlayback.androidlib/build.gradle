@@ -1,0 +1,30 @@
+// IORI のバックグラウンド再生サービス(Unity が裏に回っても予定表どおりに鳴らし続ける)。
+// Unity の Gradle ビルドにライブラリモジュールとしてそのまま取り込まれる。
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.iori.playback'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 23
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.media3:media3-exoplayer:1.5.1'
+    implementation 'androidx.media3:media3-session:1.5.1'
+    implementation 'androidx.core:core:1.13.1'
+}

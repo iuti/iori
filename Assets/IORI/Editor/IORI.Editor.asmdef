@@ -1,0 +1,19 @@
+{
+    "name": "IORI.Editor",
+    "rootNamespace": "Iori.EditorTools",
+    "references": [
+        "IORI.Audio.Core",
+        "IORI.Audio"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

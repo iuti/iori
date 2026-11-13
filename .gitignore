@@ -1,0 +1,42 @@
+# Unity が生成するもの
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+crashlytics-buildid.txt
+*.apk
+*.aab
+*.unitypackage
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+!/tools/**/*.csproj
+
+# .NET でのテスト実行(tools/CoreTests)
+/tools/**/bin/
+/tools/**/obj/
+
+# エディタのメニュー「IORI/Audio」で作るもの
+/Assets/StreamingAssets/IORI/Audio/placeholder/
+/Assets/StreamingAssets/IORI/Audio/placeholder.meta
+/Assets/StreamingAssets/IORI/audio-index.json
+/Assets/StreamingAssets/IORI/audio-index.json.meta
+
+.DS_Store
+Thumbs.db

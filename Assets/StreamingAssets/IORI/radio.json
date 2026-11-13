@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "crossfadeSeconds": 8,
+  "defaultWeather": "clear",
+  "phases": [
+    {
+      "id": "early_morning",
+      "start": "04:00"
+    },
+    {
+      "id": "morning",
+      "start": "07:00"
+    },
+    {
+      "id": "day",
+      "start": "11:00"
+    },
+    {
+      "id": "evening",
+      "start": "16:00"
+    },
+    {
+      "id": "night",
+      "start": "19:00"
+    },
+    {
+      "id": "late_night",
+      "start": "23:00"
+    }
+  ],
+  "tracks": [
+    {
+      "phase": "early_morning",
+      "weather": "clear",
+      "file": "placeholder/music_early_morning_clear.wav"
+    },
+    {
+      "phase": "early_morning",
+      "weather": "rain",
+      "file": "placeholder/music_early_morning_rain.wav"
+    },
+    {
+      "phase": "morning",
+      "weather": "clear",
+      "file": "placeholder/music_morning_clear.wav"
+    },
+    {
+      "phase": "morning",
+      "weather": "rain",
+      "file": "placeholder/music_morning_rain.wav"
+    },
+    {
+      "phase": "day",
+      "weather": "clear",
+      "file": "placeholder/music_day_clear.wav"
+    },
+    {
+      "phase": "day",
+      "weather": "rain",
+      "file": "placeholder/music_day_rain.wav"
+    },
+    {
+      "phase": "evening",
+      "weather": "clear",
+      "file": "placeholder/music_evening_clear.wav"
+    },
+    {
+      "phase": "evening",
+      "weather": "rain",
+      "file": "placeholder/music_evening_rain.wav"
+    },
+    {
+      "phase": "night",
+      "weather": "clear",
+      "file": "placeholder/music_night_clear.wav"
+    },
+    {
+      "phase": "night",
+      "weather": "rain",
+      "file": "placeholder/music_night_rain.wav"
+    },
+    {
+      "phase": "late_night",
+      "weather": "clear",
+      "file": "placeholder/music_late_night_clear.wav"
+    },
+    {
+      "phase": "late_night",
+      "weather": "rain",
+      "file": "placeholder/music_late_night_rain.wav"
+    }
+  ],
+  "chime": {
+    "file": "placeholder/chime.wav",
+    "volume": 0.5
+  },
+  "quiet": {
+    "minGapSeconds": 45,
+    "maxGapSeconds": 180,
+    "phrases": [
+      {
+        "file": "placeholder/piano_01.wav",
+        "volume": 0.8
+      },
+      {
+        "file": "placeholder/piano_02.wav",
+        "volume": 0.8
+      },
+      {
+        "file": "placeholder/piano_03.wav",
+        "volume": 0.8
+      }
+    ]
+  },
+  "ambient": [
+    {
+      "id": "fire",
+      "file": "placeholder/amb_fire.wav",
+      "defaultVolume": 0.7
+    },
+    {
+      "id": "wind",
+      "file": "placeholder/amb_wind.wav",
+      "defaultVolume": 0.3
+    },
+    {
+      "id": "insects",
+      "file": "placeholder/amb_insects.wav",
+      "defaultVolume": 0.25
+    },
+    {
+      "id": "rain",
+      "file": "placeholder/amb_rain.wav",
+      "defaultVolume": 0.7,
+      "weathers": [
+        "rain"
+      ]
+    }
+  ]
+}
