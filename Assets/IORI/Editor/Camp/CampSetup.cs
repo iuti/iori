@@ -382,7 +382,9 @@ namespace Iori.Camp.EditorTools
         {
             long tris = 0, reflTris = 0; int renderers = 0, reflRenderers = 0;
             int mask = refl ? refl.mask.value : 0;
-            foreach (var mf in UnityEngine.Object.FindObjectsByType<MeshFilter>(FindObjectsSortMode.None))
+            var filters = new List<MeshFilter>(UnityEngine.Object.FindObjectsByType<MeshFilter>(FindObjectsSortMode.None));
+            if (builder && builder.Root) foreach (var f in builder.Root.GetComponentsInChildren<MeshFilter>(true)) if (!filters.Contains(f)) filters.Add(f);
+            foreach (var mf in filters)
             {
                 if (!mf.sharedMesh) continue;
                 var r = mf.GetComponent<MeshRenderer>();

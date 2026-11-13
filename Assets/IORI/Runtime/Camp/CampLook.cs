@@ -53,7 +53,7 @@ namespace Iori.Camp
 
         [Header("おやすみモード(ランタンを消したとき)")]
         [Range(0, 1)] public float sleepAmbient = 0.55f;
-        [Range(0, 1)] public float sleepFire = 0.35f;
+        [Range(0, 1)] public float sleepFire = 0.2f;
 
         public static CampLook CreateDefault()
         {
