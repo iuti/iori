@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4fde53757314741a95da0a1cb6dcf7c, type: 3}
   m_Name: CampLook
   m_EditorClassIdentifier: IORI.Camp::Iori.Camp.CampLook
-  version: 5
+  version: 6
   keys:
   - hour: 0
     label: "\u591C"
@@ -434,7 +434,7 @@ MonoBehaviour:
   tentGlow: 1
   lanternGlow: 3.5
   dialGlow: 2.2
-  emberGlow: 3.2
+  emberGlow: 1.3
   townGlow: 3.5
   strokeTiles: 0.667
   strokeNear: 5

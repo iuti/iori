@@ -1,3 +1,3 @@
 NVIDIA GeForce RTX 3070, Direct3D12, 12th Gen Intel(R) Core(TM) i7-12700KF
-full, after rain: 531.2 fps, average 1.88 ms, worst 9.5 ms, 540x1080
-phone level, after rain: 783.3 fps, average 1.28 ms, worst 4.3 ms, 540x1080
+full, after rain: 602.3 fps, average 1.66 ms, worst 3.1 ms, 540x1080
+phone level, after rain: 940.0 fps, average 1.06 ms, worst 6.4 ms, 540x1080

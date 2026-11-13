@@ -33,9 +33,9 @@ Material:
     - _Curl: 0.16
     - _FrameRate: 0
     - _Inner: 0.2
-    - _Lean: 0.9
+    - _Lean: 0.45
     - _Rise: 1.5
-    - _Scale: 0.74
+    - _Scale: 0.86
     - _Soft: 0.05
     - _Steps: 22
     - _Stretch: 0.28

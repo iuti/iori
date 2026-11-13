@@ -30,7 +30,7 @@ Material:
     - _Ember: 0
     - _InsideOutside: 0.3
     - _InsidePanel: 0.75
-    - _InsideSpot: 0.75
+    - _InsideSpot: 0.6
     - _LampAmount: 0.2
     - _LampInside: 1
     - _StrokeScale: 1.5
