@@ -13,7 +13,7 @@ namespace Iori.Camp
     public sealed class CampLook : ScriptableObject
     {
         /// <summary>Raised when the defaults change in code; CampSetup then rewrites an untouched asset.</summary>
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
         [HideInInspector] public int version;
 
         [Serializable]

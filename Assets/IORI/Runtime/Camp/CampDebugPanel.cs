@@ -109,7 +109,8 @@ namespace Iori.Camp
                 tabOn.normal.textColor = text; tabOn.hover.textColor = text;
                 sliderTrack = new GUIStyle { border = new RectOffset(4, 4, 4, 4), fixedHeight = 8, margin = new RectOffset(10, 10, 15, 13) };
                 sliderTrack.normal.background = track;
-                sliderThumb = new GUIStyle { fixedWidth = 22, fixedHeight = 22, border = new RectOffset(10, 10, 10, 10), overflow = new RectOffset(0, 0, 7, 7) };
+                // a round knob centered on the track: as tall as the track, drawn 7 more above and below
+                sliderThumb = new GUIStyle { fixedWidth = 22, fixedHeight = 8, border = new RectOffset(10, 10, 10, 10), overflow = new RectOffset(0, 0, 7, 7) };
                 sliderThumb.normal.background = thumb;
                 sliderThumb.hover.background = thumb;
                 sliderThumb.active.background = thumb;
@@ -430,16 +431,16 @@ namespace Iori.Camp
             var span = radio.Plan.SpanAt(radio.Plan.ToPlanTime(now.ToUnixTimeMilliseconds()));
             bool quietNow = span != null && span.Mode == RadioMode.Quiet;
             string shifted = radio.ClockOffsetMs != 0 ? $"(時計を {radio.ClockOffsetMs / 60000.0:+0;-0} 分ずらし中)" : "";
-            GUILayout.Label($"いまのラジオ: {local:HH:mm:ss}{shifted}、時間帯「{NameOf(PhaseNames, span?.Phase)}」、{(quietNow ? "静けさ(曲なし)" : "テーマ曲")}、{(radio.Weather == WeatherIds.Rain ? "雨" : "晴れ")}の音。天気は「景色」のタブで変えられるよ。", _s.note);
+            GUILayout.Label($"いまのラジオ: {local:HH:mm:ss}{shifted}、時間帯「{NameOf(PhaseNames, span?.Phase)}」、{(quietNow ? "静けさ(曲なし)" : "テーマ曲")}、{(radio.Weather == WeatherIds.Rain ? "雨" : "晴れ")}の音。天気は「景色」のタブで変えられるよ。", _s.note, GUILayout.Width(width));
 
             // ---- how it plays
             GUILayout.Label("流れ方", _s.header);
             if (GUILayout.Button(radio.Quiet ? "静けさの時間: オン" : "静けさの時間にする", radio.Quiet ? _s.chipOn : _s.chip))
                 radio.SetQuiet(!radio.Quiet);
-            GUILayout.Label("オンの間は曲を流さず、環境音とたまに鳴る短いフレーズだけになるよ。", _s.note);
+            GUILayout.Label("オンの間は曲を流さず、環境音とたまに鳴る短いフレーズだけになるよ。", _s.note, GUILayout.Width(width));
 
             // ---- hearing a change of the hour without waiting for it
-            GUILayout.Label("切り替わりを聞く(時計を進める。景色の時刻も一緒に進む)", _s.header);
+            GUILayout.Label("時間帯の切り替わりを聞く", _s.header);
             GUILayout.BeginHorizontal();
             float bw = (width - 12f) / 3f;
             if (GUILayout.Button("次の時間帯の直前へ", _s.chipSmall, GUILayout.Width(bw + 14f))) radio.JumpBeforeNextPhase(15);
@@ -448,6 +449,7 @@ namespace Iori.Camp
             GUILayout.Space(6);
             if (GUILayout.Button("時計を戻す", radio.ClockOffsetMs != 0 ? _s.chipSmallOn : _s.chipSmall, GUILayout.Width(bw - 18f))) radio.SetClockOffset(0);
             GUILayout.EndHorizontal();
+            GUILayout.Label("切り替わりの直前まで時計を進めるよ。自動のときは景色の時刻も一緒に進む。", _s.note, GUILayout.Width(width));
 
             // ---- volumes
             GUILayout.Label("音量", _s.header);
@@ -461,7 +463,7 @@ namespace Iori.Camp
                 if (Mathf.Abs(nv - v) > 0.001f) radio.SetAmbientVolume(layer.Id, nv);
             }
             GUILayout.Space(4);
-            GUILayout.Label("再生係: " + radio.Backend.Name + "\n" + radio.Backend.Status, _s.note);
+            GUILayout.Label("再生係: " + radio.Backend.Name + "\n" + radio.Backend.Status, _s.note, GUILayout.Width(width));
         }
 
         /// <summary>A row of choices as equal buttons, wrapped to perRow per line; the current one is highlighted.</summary>

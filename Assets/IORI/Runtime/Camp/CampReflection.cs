@@ -90,7 +90,8 @@ namespace Iori.Camp
             int h = Mathf.Max(64, Mathf.RoundToInt(source.pixelHeight * scale));
             if (!_rt || _rt.width != w || _rt.height != h)
             {
-                if (_rt) { _rt.Release(); DestroyImmediate(_rt); }
+                // (the camera must let go of the old texture first, or Unity reports an error when the screen changes size)
+                if (_rt) { _cam.targetTexture = null; _rt.Release(); DestroyImmediate(_rt); }
                 _rt = new RenderTexture(w, h, 16, RenderTextureFormat.DefaultHDR) { name = "IORI mirror " + textureName, hideFlags = HideFlags.DontSave, wrapMode = TextureWrapMode.Clamp };
                 _rt.Create();
             }

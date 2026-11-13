@@ -12,7 +12,7 @@ Shader "IORI/Camp/Fire"
 {
     Properties
     {
-        _Scale ("Height of the tallest tongue at full size (m)", Float) = 0.86
+        _Scale ("Height of the tallest tongue at full size (m)", Float) = 0.82
         _Steps ("Steps along the ray", Range(6, 32)) = 22
         _Rise ("Rise speed", Float) = 1.5
         _Stretch ("Tall shapes (smaller = taller)", Float) = 0.28
@@ -27,9 +27,9 @@ Shader "IORI/Camp/Fire"
         _Outer ("Edge color", Color) = (0.98, 0.56, 0.15, 1)
         _Rim ("Outline color", Color) = (0.84, 0.36, 0.12, 1)
         _Bright ("Brightness (core, body, edge, outline)", Vector) = (1.3, 1.2, 1.1, 1.0)
-        _Bands ("Heat where each color starts (core, body, edge, outline)", Vector) = (0.625, 0.325, 0.14, 0.08)
+        _Bands ("Heat where each color starts (core, body, edge, outline)", Vector) = (0.68, 0.38, 0.16, 0.08)
         _Soft ("Softness of the borders between the colors", Range(0.005, 0.2)) = 0.05
-        _Inner ("Line where a near tongue crosses a far one", Range(0, 0.5)) = 0.2
+        _Inner ("Line where a near tongue crosses a far one", Range(0, 0.5)) = 0.28
         _FrameRate ("Drawn frames per second (0 = smooth)", Float) = 0
         [Toggle] _UseDepth ("Stop at solid things (needs the depth texture)", Float) = 1
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull (Front with depth, Back without)", Float) = 1
@@ -81,11 +81,11 @@ Shader "IORI/Camp/Fire"
             static const float4 TONGUES[TONGUE_COUNT] =
             {
                 float4(0.00, 0.02, 1.00, 0.30),
-                float4(0.16, 0.05, 0.74, 0.21),
-                float4(-0.16, -0.04, 0.66, 0.20),
-                float4(0.03, 0.15, 0.56, 0.18),
-                float4(-0.07, -0.16, 0.50, 0.17),
-                float4(0.22, -0.10, 0.42, 0.15)
+                float4(0.13, 0.04, 0.74, 0.21),
+                float4(-0.13, -0.03, 0.66, 0.20),
+                float4(0.02, 0.12, 0.56, 0.18),
+                float4(-0.06, -0.13, 0.50, 0.17),
+                float4(0.18, -0.08, 0.42, 0.15)
             };
             static const float PHASES[TONGUE_COUNT] = { 0.0, 1.7, 3.1, 4.4, 5.3, 2.4 };
 
