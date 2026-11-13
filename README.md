@@ -32,7 +32,7 @@ radio.json(番組表) ─┐
 | `Assets/IORI/Tests/EditMode/` | Core のテスト |
 | `Assets/Plugins/Android/IoriPlayback.androidlib/` | Android のバックグラウンド再生サービス(Java、Media3) |
 | `Assets/StreamingAssets/IORI/radio.json` | 番組表(時間帯、曲、チャイム、静けさの時間のフレーズ、環境音) |
-| `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`placeholder/` はメニューで生成する仮素材(git に入れない) |
+| `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
 | `tools/CoreTests/` | Unity なしで Core のテストを動かす .NET プロジェクト |
 
 ## はじめに(デスクトップで)
@@ -61,6 +61,18 @@ radio.json(番組表) ─┐
 時間帯(`phases`)は `start`(HH:mm)の順に並び、次の時間帯まで続く。1 時間刻みにしたければ 24 個書けばよい。
 時間帯が切り替わるとき、前の曲は `crossfadeSeconds`(既定 8 秒)かけてフェードアウトし、次の曲はフェードインせず頭から鳴る(イントロの張りを残すため。フェードインさせたいときは `introFadeSeconds` を指定)。
 `mode: "quiet"` の時間帯は曲を流さず、環境音とたまに鳴るフレーズだけになる(ブレワイ式)。
+
+## 環境音・チャイム・UI の効果音
+
+ElevenLabs(Sound Effects v3)で作って、ループ処理と音量合わせをしたもの。
+
+| ファイル | 中身 |
+| --- | --- |
+| `ambient/fire.ogg` `rain.ogg` `wind.ogg` `insects.ogg` | 継ぎ目なしのループ(28〜30 秒、OGG Vorbis 44.1kHz ステレオ、どれも -22 LUFS にそろえてある)。混ぜる量は `radio.json` の `defaultVolume` で決める |
+| `fx/chime.ogg` | 正時チャイム(グロッケンの上がっていく 4 音、-18 LUFS) |
+| `ui/tap.wav` `toggle.wav` `slider.wav` `notice.wav` `open.wav` `close.wav` `radio_tune.wav` | UI の効果音(WAV モノラル 44.1kHz、ピーク -6 dB 前後、`slider` は連打されるので -9 dB)。まだコードからは鳴らしていない |
+
+ElevenLabs の効果音は、アプリに組み込んで使うのは問題ないが、音声ファイル単体として配ったり売ったりはしない(規約の条件)。
 
 ## Android
 
