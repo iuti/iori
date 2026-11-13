@@ -4,6 +4,7 @@ needs: a cut-out picture and a normal map, so that IoriCharacter.shader can ligh
 fire and the sky.
 
   python3 tools/character/make_sprite.py <picture.png> <out_dir> [--name iori_sit]
+  python3 tools/character/make_sprite.py --normals <estimated.png> <out_dir> [--name iori_sit]
 
 Writes <name>.png (color with alpha; her own colors are carried outward past the outline so that
 filtering never picks up the backdrop) and <name>_n.png (normals as plain numbers: r = right,
@@ -12,6 +13,11 @@ g = up, b = toward the viewer, each 0..255 for -1..1; import it with sRGB off, n
 There is no 3D model behind the normals. Every shape that the line art closes off is blown up
 like a cushion (see inflate), which is enough for light to come from a side: the side of an arm
 or a leg that faces the fire lights up, the far side falls into the sky's blue.
+
+Better normals come from a model that estimates them from the picture (chico runs one in ComfyUI on
+the cut-out picture). --normals takes such a map, made from <name>.png and of the same size, with
+r = right, g = up, b = toward the viewer, and writes it as <name>_n.png; the picture itself is left
+alone. The cushion normals below are the fallback when no such map exists.
 
 Needs numpy, scipy and opencv-python-headless.
 
@@ -154,12 +160,51 @@ def normals(src, fg):
     return n[idx[0], idx[1]]
 
 
+def take_estimated(path, out_dir, name):
+    """Checks an estimated normal map against the cut-out picture and writes it in the form the shader reads."""
+    pic = cv2.imread(os.path.join(out_dir, name + '.png'), cv2.IMREAD_UNCHANGED)
+    est = cv2.imread(path)
+    if pic is None or est is None:
+        raise SystemExit('need both ' + os.path.join(out_dir, name + '.png') + ' and ' + path)
+    if est.shape[:2] != pic.shape[:2]:
+        raise SystemExit(f'sizes differ: normals {est.shape[1]} x {est.shape[0]}, picture {pic.shape[1]} x {pic.shape[0]}')
+    n = est[..., ::-1].astype(np.float32) / 255 * 2 - 1
+    n[..., 2] = np.maximum(n[..., 2], 0.02)
+    n /= np.linalg.norm(n, axis=2, keepdims=True)
+    fg = pic[..., 3] > 127
+    # a model's map stops at its own idea of the outline: where the picture is solid but the map still shows
+    # its flat backdrop right at the rim, and beyond the rim, carry the nearest normals of the figure outward
+    flat = np.abs(est.astype(np.int32) - np.array([255, 128, 128])).sum(-1) < 6
+    rim = fg & ~ndi.binary_erosion(fg, iterations=4)
+    known = fg & ~(flat & rim)
+    idx = ndi.distance_transform_edt(~known, return_distances=False, return_indices=True)
+    n = n[idx[0], idx[1]]
+    cv2.imwrite(os.path.join(out_dir, name + '_n.png'), ((n[..., ::-1] * 0.5 + 0.5) * 255 + 0.5).astype(np.uint8))
+    # which way the channels run: along the outline the surface must lean outward (to the right on the
+    # right-hand rim, up on the upper rim). A map with green pointing down shows up here.
+    soft = cv2.GaussianBlur(fg.astype(np.float32), (0, 0), 3)
+    out_x = -cv2.Sobel(soft, cv2.CV_32F, 1, 0, ksize=3)
+    out_y = cv2.Sobel(soft, cv2.CV_32F, 0, 1, ksize=3)
+    cx = np.corrcoef(n[..., 0][rim], out_x[rim])[0, 1]
+    cy = np.corrcoef(n[..., 1][rim], out_y[rim])[0, 1]
+    print(f'{name}_n: {est.shape[1]} x {est.shape[0]} taken from {path}')
+    print(f'  red runs {"right" if cx > 0 else "LEFT (looks flipped)"} ({cx:+.2f}), green runs {"up" if cy > 0 else "DOWN (looks flipped)"} ({cy:+.2f})')
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('picture')
+    ap.add_argument('picture', nargs='?')
     ap.add_argument('out_dir')
     ap.add_argument('--name', default='iori_sit')
+    ap.add_argument('--normals', help='an estimated normal map of the cut-out picture, to use instead of the cushion normals')
     a = ap.parse_args()
+    if a.normals:
+        if a.picture:
+            raise SystemExit('--normals works on the cut-out picture already in out_dir: leave <picture> out')
+        take_estimated(a.normals, a.out_dir, a.name)
+        return
+    if not a.picture:
+        raise SystemExit('give a picture, or --normals')
     src = cv2.imread(a.picture)
     if src is None:
         raise SystemExit('cannot read ' + a.picture)
