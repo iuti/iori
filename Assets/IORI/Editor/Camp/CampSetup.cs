@@ -900,6 +900,7 @@ namespace Iori.Camp.EditorTools
                 string dir = ArgValue("-shotDir") ?? Path.GetFullPath("camp-shots");
                 string only = ArgValue("-shots");
                 _flatIori = HasArg("-ioriFlat");
+                _plainFire = HasArg("-ioriPlainFire");
                 var shots = new List<Shot>(DefaultShots);
                 shots.AddRange(FlickerShots());
                 if (!string.IsNullOrEmpty(only))
@@ -915,6 +916,10 @@ namespace Iori.Camp.EditorTools
 
         /// <summary>-ioriFlat: take the pictures with Iori's normals switched off (the board lit as one flat thing), to compare.</summary>
         static bool _flatIori;
+        /// <summary>-ioriPlainFire: take the pictures with the care for the firelight on Iori switched off (lit from where
+        /// the fire is, no glowing border, no glints, no flicker of her own), to compare.</summary>
+        static bool _plainFire;
+        static readonly string[] FireCare = { "_LampFromSide", "_LampUpFade", "_EdgeGlow", "_Glint", "_Flicker", "_Dance" };
 
         public static void Capture(string dir, Shot[] shots)
         {
@@ -943,6 +948,13 @@ namespace Iori.Camp.EditorTools
             var boardMat = board ? board.GetComponent<MeshRenderer>().sharedMaterial : null;
             float oldNormal = boardMat && boardMat.HasProperty("_NormalStrength") ? boardMat.GetFloat("_NormalStrength") : 0f;
             if (_flatIori && boardMat) boardMat.SetFloat("_NormalStrength", 0f);
+            var oldFire = new float[FireCare.Length];
+            if (_plainFire && boardMat)
+                for (int i = 0; i < FireCare.Length; i++)
+                {
+                    oldFire[i] = boardMat.GetFloat(FireCare[i]);
+                    boardMat.SetFloat(FireCare[i], 0f);
+                }
             try
             {
                 foreach (var s in shots)
@@ -993,6 +1005,8 @@ namespace Iori.Camp.EditorTools
             {
                 cam.targetTexture = null;
                 if (_flatIori && boardMat) boardMat.SetFloat("_NormalStrength", oldNormal);
+                if (_plainFire && boardMat)
+                    for (int i = 0; i < FireCare.Length; i++) boardMat.SetFloat(FireCare[i], oldFire[i]);
                 atm.followClock = oldClock; atm.previewHour = oldHour; atm.weather = oldWeather; atm.season = oldSeason; atm.sleep = false; atm.timeOverride = -1f;
                 rig.focus = null; rig.yaw = 0f; rig.autoSway = oldSway;
                 if (atm.look) atm.look.lakeClassic = oldLakeClassic;
