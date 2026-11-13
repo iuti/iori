@@ -36,6 +36,7 @@ Material:
     - _UseDepth: 1
     - _ZTest: 8
     m_Colors:
+    - _Bands: {r: 0.52, g: 0.3, b: 0.14, a: 0.05}
     - _Bright: {r: 3.6, g: 2.6, b: 1.7, a: 0.8}
     - _Core: {r: 1, g: 0.9, b: 0.5, a: 1}
     - _Mid: {r: 1, g: 0.56, b: 0.09999997, a: 1}

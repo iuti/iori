@@ -25,9 +25,11 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _Air: 0.5
     - _Mirror: 0.45
     - _Puddle: 0
     - _Shallow: 0.35
+    - _Streak: 0.11
     - _StrokeTiles: 9
     - _Wobble: 1
     m_Colors:

@@ -22,9 +22,14 @@ Material:
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
-    m_TexEnvs: []
+    m_TexEnvs:
+    - _RidgeTex:
+        m_Texture: {fileID: 2800000, guid: 0cd1a8e2667ba7640a5b4e614158910a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
-    m_Floats: []
+    m_Floats:
+    - _MountTiles: 5
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
