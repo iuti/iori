@@ -38,9 +38,10 @@ Material:
     - _CelEdge: 0.08
     - _CelSoft: 0.07
     - _Cutoff: 0.5
+    - _LampInDaylight: 1.2
     - _NormalStrength: 1
-    - _RimCool: 0.15
-    - _RimWarm: 0.3
+    - _RimCool: 0
+    - _RimWarm: 0.15
     - _SkyBack: 0.3
     - _Wrap: 0.35
     m_Colors: []
