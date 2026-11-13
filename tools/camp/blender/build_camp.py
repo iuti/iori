@@ -88,7 +88,9 @@ def build_props():
     fx, fy = T.FIRE
     fz = gz(fx, fy)
     for name, piece in models_fire.build_fire(rng).items():
-        S.put(name, piece, 'Rock' if name == 'FireStones' else 'Ember', pos=(fx, fy, fz + (0.0 if name != 'FireStones' else 0.0)), anchor='fire')
+        # the logs cast no shadows: the fire's light is one point inside the pile, and their shadows would
+        # fall across the whole camp as hard stripes (a real fire is wide and its light flows around them)
+        S.put(name, piece, 'Rock' if name == 'FireStones' else 'Ember', pos=(fx, fy, fz), anchor='fire', shadows=(name == 'FireStones'))
     # table with the lantern, a mug and the kettle
     tx, ty = T.TABLE
     tz, trot = gz(tx, ty), 10.0
