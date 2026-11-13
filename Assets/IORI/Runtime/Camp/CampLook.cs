@@ -13,7 +13,7 @@ namespace Iori.Camp
     public sealed class CampLook : ScriptableObject
     {
         /// <summary>Raised when the defaults change in code; CampSetup then rewrites an untouched asset.</summary>
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
         [HideInInspector] public int version;
 
         [Serializable]
@@ -28,18 +28,24 @@ namespace Iori.Camp
         public List<Key> keys = new List<Key>();
 
         [Header("灯り(色、強さ、届く距離)")]
-        public Color fireColor = CampPalette.Hex("#ff8a3c");
-        public float fireIntensity = 11f;
-        public float fireRange = 9f;
+        public Color fireColor = CampPalette.Hex("#ff9040");
+        public float fireIntensity = 6f;
+        public float fireRange = 10f;
         public Color lanternColor = CampPalette.Hex("#ffc070");
-        public float lanternIntensity = 2.2f;
+        public float lanternIntensity = 1.3f;
         public float lanternRange = 4.5f;
         public Color tentColor = CampPalette.Hex("#ff9438");
-        public float tentIntensity = 4f;
+        public float tentIntensity = 2.6f;
         public float tentRange = 7f;
+        [Tooltip("灯りの大きさ(m)。大きいほど、灯りのすぐそばの明るさが頭打ちになり、光がなだらかに広がる")]
+        public float lampSize = 0.7f;
+        [Tooltip("照らされた色がこれより明るくなると、白く飛ばさずに色を保ったまま頭打ちにしていく")]
+        public float litKnee = 0.7f;
+        [Tooltip("照らされた色の上限")]
+        public float litTop = 1.3f;
         [Tooltip("テントの布、ランタンのガラス、ラジオの目盛り、熾火そのものの明るさ")]
-        public float tentGlow = 2.4f;
-        public float lanternGlow = 7f;
+        public float tentGlow = 1.5f;
+        public float lanternGlow = 6f;
         public float dialGlow = 2.2f;
         public float emberGlow = 3.2f;
         public float townGlow = 3.5f;

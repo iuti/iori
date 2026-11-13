@@ -69,7 +69,11 @@ Shader "IORI/Camp/Character"
                 float3 mid = TransformObjectToWorld(float3(0.0, v.positionOS.y, 0.0));
                 float3 toCam = normalize(_WorldSpaceCameraPos - mid);
                 float3 n = normalize(float3(toCam.x, 0.25, toCam.z));
-                o.light = IoriLightingSmooth(mid, n, 0.7);
+                // she is a finished drawing with her own shading: the scene's light tints her and sets how
+                // bright she is, but strong light is held back so that she never burns out next to the fire
+                float3 L = IoriLightingSmooth(mid, n, 0.7);
+                float lm = max(L.r, max(L.g, L.b));
+                o.light = L * (1.2 / (1.0 + 0.6 * lm));
                 float3 right = normalize(TransformObjectToWorldDir(float3(1, 0, 0)));
                 float3 toFire = _IoriFirePos.xyz - mid;
                 float fd = dot(toFire, toFire);

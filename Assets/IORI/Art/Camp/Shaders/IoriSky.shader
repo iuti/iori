@@ -4,9 +4,14 @@
 // tree line, and the haze over the water. Being the skybox, all of it is mirrored in the lake
 // and the puddles by the reflection camera at no extra cost.
 // The camp looks toward +z; azimuth 0 is straight across the lake.
+// The mountains' outlines are a drawn composition (tools/camp/make_ridges.py -> iori_ridges.png).
 Shader "IORI/Camp/Sky"
 {
-    Properties { }
+    Properties
+    {
+        [NoScaleOffset] _RidgeTex ("Mountain outlines (iori_ridges.png)", 2D) = "black" {}
+        _MountTiles ("Fineness of the strokes on the mountains", Float) = 5
+    }
     SubShader
     {
         Tags { "Queue" = "Background" "RenderType" = "Background" "PreviewType" = "Skybox" "RenderPipeline" = "UniversalPipeline" }
@@ -30,6 +35,10 @@ Shader "IORI/Camp/Sky"
             float4 _IoriFarNear, _IoriFarFar;   // colors of the nearest and the farthest range
             float4 _IoriTown;          // rgb: town lights (color times level)
             float4 _IoriSkyStroke;     // x: stroke tiles per unit of the dome, y: stroke amount
+            TEXTURE2D(_RidgeTex);
+            CBUFFER_START(UnityPerMaterial)
+                float _MountTiles;
+            CBUFFER_END
 
             struct Attributes { float4 positionOS : POSITION; };
             struct Varyings { float4 positionCS : SV_POSITION; float3 dir : TEXCOORD0; };
@@ -53,15 +62,32 @@ Shader "IORI/Camp/Sky"
                 return float3(h.x * c, s, h.y * c);
             }
 
-            // straight-edged noise: mountain outlines with corners instead of curves
             float Lin1(float x, float seed)
             {
                 float i = floor(x), f = frac(x);
                 return lerp(IoriHash1(float2(i, seed)), IoriHash1(float2(i + 1.0, seed)), f);
             }
-            float RidgeLine(float az, float seed, float freq)
+
+            #define DEG 0.0174533
+            #define RIDGE_W 2048
+            #define RIDGE_MAX_DEG 16.0
+
+            // Outlines at the direction az (radians): top = heights in degrees of the near headlands, the main
+            // range and the far range; slope = how steeply each climbs to the right; town = how many lights, and
+            // how high they climb (degrees). Blended by hand between two texels: straight lines, sharp corners.
+            void Ridges(float az, out float3 top, out float3 slope, out float2 town)
             {
-                return Lin1(az * freq, seed) * 0.6 + Lin1(az * freq * 2.7 + 11.0, seed + 1.0) * 0.28 + Lin1(az * freq * 6.3 + 5.0, seed + 2.0) * 0.12;
+                float x = (az / 6.2831853 + 0.5) * RIDGE_W - 0.5;
+                float fx = floor(x), f = x - fx;
+                int i0 = ((int)fx + RIDGE_W) % RIDGE_W, i1 = (i0 + 1) % RIDGE_W;
+                float4 a0 = LOAD_TEXTURE2D(_RidgeTex, int2(i0, 0)), a1 = LOAD_TEXTURE2D(_RidgeTex, int2(i1, 0));
+                float4 b0 = LOAD_TEXTURE2D(_RidgeTex, int2(i0, 1)), b1 = LOAD_TEXTURE2D(_RidgeTex, int2(i1, 1));
+                const float2 K = float2(65280.0, 255.0) / 65535.0 * RIDGE_MAX_DEG;
+                float3 h0 = float3(dot(a0.rg, K), dot(a0.ba, K), dot(b0.rg, K));
+                float3 h1 = float3(dot(a1.rg, K), dot(a1.ba, K), dot(b1.rg, K));
+                top = lerp(h0, h1, f);
+                slope = (h1 - h0) * (RIDGE_W / 360.0);
+                town = lerp(float2(b0.b, b0.a * (RIDGE_MAX_DEG * 0.25)), float2(b1.b, b1.a * (RIDGE_MAX_DEG * 0.25)), f);
             }
             float Fbm2(float2 p)
             {
@@ -69,8 +95,6 @@ Shader "IORI/Camp/Sky"
                 for (int i = 0; i < 4; i++) { s += a * IoriNoise2(p); p = p * 2.03 + 7.1; a *= 0.5; }
                 return s;
             }
-
-            #define DEG 0.0174533
 
             half4 frag(Varyings i) : SV_Target
             {
@@ -150,56 +174,73 @@ Shader "IORI/Camp/Sky"
                     col = lerp(col, _IoriSunColor.rgb * 6.0, sdsk * sunDisc * clear);
                 }
 
-                // ---- mountains across the lake: far to near, each cut out stroke by stroke
-                float az = atan2(dc.x, dc.z);
-                float el = asin(clamp(dc.y, -1.0, 1.0));
-                float valley = 0.55 + 0.45 * smoothstep(0.1, 0.9, abs(az - 0.25));   // lower straight ahead, so the horizon glow shows
+                // ---- mountains across the lake. The outlines are cut pixel by pixel (crisp, angular);
+                // their faces are filled with a finer set of strokes: a few tones, lighter where a slope turns
+                // toward the light, paler toward the water.
+                float azp = atan2(d.x, d.z), elp = asin(clamp(d.y, -1.0, 1.0)) / DEG;
+                float3 top, slope;
+                float2 town;
+                Ridges(azp, top, slope, town);
+                float4 ms = SAMPLE_TEXTURE2D(_IoriStrokeTex, sampler_trilinear_repeat, float2(azp, elp * DEG) * _MountTiles);
+                float mrnd = ms.b;
+                float elc = elp + (0.5 - ms.g) * (2.0 * IORI_STROKE_MAX_OFF) / _MountTiles / DEG;   // height of the stroke's center
+                float3 lightDir = lerp(sunDir, normalize(_IoriMoonDir.xyz), saturate(moon));
+                float side = sign(azp - atan2(lightDir.x, lightDir.z));
                 float3 air = _IoriFogColor.rgb;
-                float mistBand = 0.0;
-                float ridge = 0.0;
-                for (int k = 3; k >= 1; k--)
+                float3 behind = col;
+                float aa = max(fwidth(elp), 1e-4);
+                for (int k = 2; k >= 0; k--)
                 {
-                    float fk = k;
-                    float top = (0.5 + fk * 0.75 + RidgeLine(az, 20.0 + fk * 7.0, 3.5 + (3.0 - fk) * 2.6) * (1.6 + fk * 1.9) * valley) * DEG;
-                    float inside = step(el, top);
-                    float depth = fk / 3.0;
+                    float tk = k == 2 ? top.z : (k == 1 ? top.y : top.x);
+                    float sk = k == 2 ? slope.z : (k == 1 ? slope.y : slope.x);
+                    float depth = k == 2 ? 1.0 : (k == 1 ? 0.5 : 0.0);
+                    float inside = saturate((tk - elp) / aa + 0.5) * step(0.02, tk);
                     float3 mc = lerp(_IoriFarNear.rgb, _IoriFarFar.rgb, depth);
-                    // strokes near the crest catch a little of the sky; the rest vary a touch
-                    float crest = saturate(1.0 - (top - el) / (1.6 * DEG));
-                    mc = lerp(mc, lerp(mc, col, 0.35), crest * step(0.45, rnd));
-                    mc *= 1.0 + (rnd - 0.5) * 0.16;
-                    // the glow of the light behind the mountains lifts the far ones
-                    mc += glowCol * pow(sdFlat, 4.0) * depth * 0.10;
+                    mc += glowCol * pow(sdFlat, 4.0) * depth * 0.10;                 // the glow behind lifts the far ones
+                    // faces: under the crest, the strokes on the side of the light are lighter; a few are darker
+                    float under = saturate(1.0 - (tk - elc) / (2.2 + depth));
+                    float facing = saturate(sk * side * 1.5 + 0.15);
+                    float faceLit = step(0.42, mrnd) * under * facing;
+                    mc = lerp(mc, lerp(mc, behind, 0.5) * 1.06, faceLit * (0.55 - 0.2 * depth));
+                    mc *= 1.0 + (mrnd - 0.5) * 0.10 - step(mrnd, 0.14) * 0.07 * (1.0 - depth);
+                    // paler toward the water: mist lies on the lake
+                    float low = (1.0 - smoothstep(0.0, 2.8, elc)) * (0.12 + 0.30 * depth);
+                    mc = lerp(mc, _IoriMistColor.rgb, low);
                     col = lerp(col, mc, inside);
-                    ridge = max(ridge, inside);
                 }
 
-                // ---- lights of the town on the far shore (per pixel: they are tiny)
-                float azp = atan2(d.x, d.z), elp = asin(clamp(d.y, -1.0, 1.0));
-                float2 lg = float2(azp, elp) / (0.2 * DEG);
+                // ---- lights of the town (per pixel: they are tiny). Thick near the shore, thinning as they climb.
+                float2 lg = float2(azp / DEG, elp) / 0.2;
                 float2 lid = floor(lg), lf = frac(lg) - 0.5;
                 float lh = IoriHash1(lid + 17.0);
-                float cluster = smoothstep(0.42, 0.75, Lin1(azp * 7.0, 91.0) * 0.7 + Lin1(azp * 23.0, 92.0) * 0.3);
-                float band = smoothstep(-0.25 * DEG, 0.1 * DEG, elp) * (1.0 - smoothstep(0.5 * DEG, (0.7 + 1.6 * cluster) * DEG, elp));
-                float on = step(1.0 - 0.34 * cluster * band, lh);
+                float climb = saturate(1.0 - elp / max(town.y, 0.05));
+                float chance = town.x * (0.45 * pow(climb, 0.8) + 0.35 * step(elp, 0.45));
+                float land = step(elp, max(max(top.x, top.y), 0.5)) * step(-0.05, elp);
+                float on = step(1.0 - chance, lh) * land;
                 float2 lp = (float2(IoriHash1(lid + 2.2), IoriHash1(lid + 6.6)) - 0.5) * 0.6;
-                float ldot = smoothstep(0.34, 0.1, length(lf - lp));
+                float lsize = lerp(0.16, 0.34, IoriHash1(lid + 8.8));
+                float ldot = smoothstep(lsize, lsize * 0.35, length(lf - lp));
                 float lt = 0.8 + 0.2 * sin(t * (0.7 + lh * 2.0) + lh * 30.0);
-                float3 lcol = _IoriTown.rgb * lerp(float3(1.0, 0.72, 0.42), float3(1.0, 0.9, 0.7), IoriHash1(lid + 4.4));
+                float3 lcol = _IoriTown.rgb * lerp(float3(1.0, 0.66, 0.36), float3(1.0, 0.92, 0.74), step(0.7, IoriHash1(lid + 4.4)));
 
-                // ---- the far shore: a low, toothed line of firs right on the water
-                float shore = (0.28 + Lin1(azp * 9.0, 40.0) * 0.5 + Lin1(azp * 31.0, 41.0) * 0.22) * DEG;
-                float tooth = abs(frac(azp * 150.0 + Lin1(azp * 40.0, 44.0) * 3.0) - 0.5) * 2.0;
-                shore += (1.0 - tooth) * (0.10 + 0.22 * Lin1(azp * 55.0, 43.0)) * DEG;
-                float inShore = step(elp, shore);
-                float3 shoreCol = _IoriFarNear.rgb * 0.62;
+                // ---- the far shore: a low, dark line of trees right on the water, every tree its own height
+                float shore = 0.2 + Lin1(azp * 9.0, 40.0) * 0.34 + Lin1(azp * 31.0, 41.0) * 0.16;
+                float tx = azp * 170.0 + Lin1(azp * 40.0, 44.0) * 2.0;
+                float th1 = IoriHash1(float2(floor(tx), 43.0));
+                float tw = 0.22 + 0.25 * IoriHash1(float2(floor(tx), 47.0));
+                shore += saturate(1.0 - abs(frac(tx) - 0.5) / tw) * step(0.3, th1) * th1 * 0.34;
+                float tx2 = azp * 61.0 + 3.7;
+                float th2 = IoriHash1(float2(floor(tx2), 53.0));
+                shore += saturate(1.0 - abs(frac(tx2) - 0.5) / 0.5) * th2 * 0.22;
+                float inShore = saturate((shore - elp) / aa + 0.5);
+                float3 shoreCol = lerp(_IoriFarNear.rgb * 0.7, air, 0.22);
                 col = lerp(col, shoreCol, inShore);
-                col += lcol * (ldot * on * lt) * (1.0 - inShore * 0.5);
+                col += lcol * (ldot * on * lt) * (1.0 - inShore * 0.4);
 
                 // ---- haze low over the water, and plain air below the horizon
-                float haze = (1.0 - smoothstep(0.0, 3.2 * DEG, elp)) * saturate(_IoriFog.y * 14.0);
-                col = lerp(col, _IoriMistColor.rgb, haze * 0.55 * (1.0 - 0.5 * inShore));
-                col = lerp(col, air, smoothstep(-0.2 * DEG, -3.0 * DEG, elp));
+                float haze = (1.0 - smoothstep(0.0, 3.2, elp)) * saturate(_IoriFog.y * 40.0);
+                col = lerp(col, _IoriMistColor.rgb, haze * 0.6 * (1.0 - 0.5 * inShore));
+                col = lerp(col, air, smoothstep(-0.2, -3.0, elp));
                 return half4(col, 1);
             }
             ENDHLSL

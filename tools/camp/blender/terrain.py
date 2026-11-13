@@ -11,8 +11,8 @@ CRATE = (0.80, 0.70)
 STUMP = (0.47, -1.24)
 CHAIR = (0.30, 0.50)
 TENT = (-1.45, 5.60)
-TREE_R = (1.00, 2.30)
-TREE_L = (-1.22, 2.90)
+TREE_R = (1.06, 2.30)
+TREE_L = (-1.40, 2.25)
 
 # x, depth, radius, depth-to-width ratio
 PUDDLES = [

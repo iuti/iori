@@ -8,7 +8,7 @@ Shader "IORI/Camp/Sparks"
         _Color ("Hot color", Color) = (1.0, 0.78, 0.35, 1)
         _ColorEnd ("Cooling color", Color) = (1.0, 0.25, 0.06, 1)
         _Bright ("Brightness", Float) = 5
-        _Size ("Size", Float) = 0.007
+        _Size ("Size", Float) = 0.0035
         _Height ("How high they climb (m)", Float) = 1.9
     }
     SubShader
@@ -63,7 +63,7 @@ Shader "IORI/Camp/Sparks"
                 float3 toCam = normalize(_WorldSpaceCameraPos - p);
                 float3 along = normalize(float3(_IoriWind.x * 0.25, 1.0, _IoriWind.y * 0.25));
                 float3 side = normalize(cross(along, toCam));
-                p += side * (v.corner.x * sz) + along * (v.corner.y * sz * 2.4);
+                p += side * (v.corner.x * sz) + along * (v.corner.y * sz * 1.8);
 
                 float fade = smoothstep(0.0, 0.06, ph) * (1.0 - smoothstep(0.5, 1.0, ph));
                 float flick = 0.7 + 0.3 * sin(t * 23.0 + seed.x * 60.0);

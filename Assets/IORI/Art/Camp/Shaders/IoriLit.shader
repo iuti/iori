@@ -74,7 +74,7 @@ Shader "IORI/Camp/Lit"
                     o.glow = float4(0, 0, 0, v.data.z);
                     o.heat = v.data.y * step(6.5, v.data.x);
                 #else
-                    o.glow = float4(IoriGlowOf(v.data), v.data.z);
+                    o.glow = float4(IoriGlowOf(v.data, o.albedo.rgb), v.data.z);
                     o.heat = 0;
                 #endif
                 return o;
@@ -97,7 +97,7 @@ Shader "IORI/Camp/Lit"
                 float gloss = saturate(i.glow.a + wet * _WetGloss);
 
                 IoriLit L = IoriLighting(st.pos, n, viewDir, st.rnd, i.albedo.a, _Wrap, _Through, gloss);
-                float3 col = albedo * L.diffuse + L.spec;
+                float3 col = IoriSoftClip(albedo * L.diffuse) + L.spec;
 
                 float3 glow = i.glow.rgb;
                 #ifdef _EMBER

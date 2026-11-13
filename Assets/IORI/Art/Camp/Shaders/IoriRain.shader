@@ -42,7 +42,7 @@ Shader "IORI/Camp/Rain"
                 float y = v.positionOS.y - t * v.data.x;
                 y = y - floor(y / _Span) * _Span;
                 float along01 = v.corner.y * 0.5 + 0.5;
-                float3 lean = float3(_IoriWind.x, 0.0, _IoriWind.y) * (0.12 + 0.2 * _IoriWind.z);
+                float3 lean = float3(_IoriWind.x, 0.0, _IoriWind.y) * (0.05 + 0.06 * _IoriWind.z);
                 p.y = y - 0.3 + along01 * _Length;
                 p += lean * (p.y + along01 * _Length);
                 float3 toCam = _WorldSpaceCameraPos - p;
@@ -56,7 +56,9 @@ Shader "IORI/Camp/Rain"
                 // only some of the streaks show in light rain
                 float shown = step(v.data.y, rain);
                 float air = IoriAirAmount(p);
-                o.color = float4(lerp(col, _IoriFogColor.rgb, air), _Alpha * shown * saturate(rain * 3.0) * (0.6 + 0.4 * along01));
+                // streaks right in front of the lens would cross half the picture: they fade out up close
+                float nearFade = smoothstep(0.8, 2.2, length(toCam));
+                o.color = float4(lerp(col, _IoriFogColor.rgb, air), _Alpha * shown * saturate(rain * 3.0) * (0.6 + 0.4 * along01) * nearFade);
                 o.corner = v.corner;
                 o.positionCS = shown > 0.0 ? TransformWorldToHClip(p) : float4(0, 0, 2, 1);
                 return o;

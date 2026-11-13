@@ -74,8 +74,9 @@ radio.json(番組表) ─┐
 
 | もの | 役割 |
 | --- | --- |
-| `tools/camp/blender/build_camp.py` | 形を作る。`camp.iomesh`(全メッシュ)、`camp_layout.json`(置き場所)、`iori_ground.png`(地面の覆いと落ち影)を書き出す。Blender の Python モジュール(`pip install bpy`)で動く |
+| `tools/camp/blender/build_camp.py` | 形を作る。`camp.iomesh`(全メッシュ)、`camp_layout.json`(置き場所)、`iori_ground.png`(地面の覆いと落ち影)を書き出す。Blender の Python モジュール(`pip install bpy`)で動く。`--draft --preview 絵.png` で、何も書き出さずに形だけ確かめられる(`--yaw 20` でカメラを回り込ませる、`--wide` で横長) |
 | `tools/camp/make_strokes.py` | 筆あとの地図 `iori_strokes.png` を作る(どの画素がどの筆あとに属するか) |
+| `tools/camp/make_ridges.py` | 対岸の山並みの輪郭と町の灯りの配置 `iori_ridges.png` を作る(山の形は乱数ではなく、角の点を並べて描いた構図。第 2 引数に画像名を渡すと確認用の絵も出る) |
 | `CampAtmosphere` | 時刻、天気(晴れ、雨、雨上がり)、季節、おやすみモードから、いまの光と色を決める。太陽や月、焚き火、ランタン、テントは本物のライトで、焚き火は影も落とす。Play 中は端末の時計とラジオの天気に合わせる |
 | `CampLook`(`Art/Camp/CampLook.asset`) | 時刻ごとの空と光、灯りの強さ、筆あとの細かさ、雨と季節とおやすみの効き方。見た目の調整はまずここ |
 | `CampProp` | 押せる小物(ラジオ、音楽プレーヤー、ランタン、焚き火、イオリ)。`CampProp.Tapped` で機能のパネルを開く。ランタンはおやすみモードの切り替え |

@@ -27,9 +27,10 @@ float4 _IoriMistColor;       // rgb: color of the low mist
 float4 _IoriFog;             // x: haze per metre, y: mist per metre at the water, z: height where the mist has thinned to 1/e, w: most that air may hide
 float4 _IoriWeather;         // x: rain 0..1, y: wet 0..1, z: sleep 0..1, w: time in seconds
 float4 _IoriWind;            // xy: direction on the ground, z: strength, w: gustiness
-float4 _IoriGlow[8];         // rgb: light given off by each glow channel (see GLOW in campkit.py), already times its level
+float4 _IoriGlow[8];         // rgb: light given off by each glow channel (see GLOW in campkit.py), already times its level; a: 1 = tinted by the surface's own color
 float4 _IoriGroundMap;       // xy: world x,z of the ground texture's corner, z: 1 / its size in metres, w: puddle water height right now
 float4 _IoriFirePos;         // xyz: where the fire's light sits, w: how far it reaches
+float4 _IoriLight;           // x: size of the lamps squared (softens their light close up), y: brightness where colors stop getting lighter and start to hold, z: most a lit color may reach
 
 float IoriTime() { return _IoriWeather.w; }
 
@@ -113,6 +114,21 @@ float3 IoriAmbient(float3 n)
     return lerp(a, _IoriAmbientGround.rgb, saturate(-n.y));
 }
 
+// A lamp is not a point: right next to it the light levels off instead of shooting up without end.
+// URP hands us 1/d^2 (times its fade at the edge of the range); this turns it into 1/(d^2 + size^2).
+float IoriLampFalloff(float att) { return att / (1.0 + att * _IoriLight.x); }
+
+// Keeps a brightly lit color a color: past a knee the whole color is held back together, so ground
+// next to the fire turns deep orange, not white.
+float3 IoriSoftClip(float3 c)
+{
+    float knee = max(_IoriLight.y, 0.05), top = max(_IoriLight.z, knee + 0.01);
+    float m = max(c.r, max(c.g, c.b));
+    if (m <= knee) return c;
+    float over = m - knee, room = top - knee;
+    return c * ((knee + room * over / (over + room)) / m);
+}
+
 // Cuts a brightness into steps that are equal ratios apart (rings of light around the fire).
 // rnd shifts the cut per stroke, so the edge of a ring is made of whole strokes.
 float IoriBand(float x, float rnd)
@@ -164,13 +180,14 @@ IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao
         Light l = GetAdditionalLight(i, sp, half4(1, 1, 1, 1));
         float nl2 = dot(n, l.direction);
         float k2 = saturate((nl2 + wrap) / (1.0 + wrap)) + saturate(-nl2) * through;
-        k2 *= l.distanceAttenuation * l.shadowAttenuation;
+        float reach = IoriLampFalloff(l.distanceAttenuation);
+        k2 *= reach * l.shadowAttenuation;
         k2 = IoriBand(k2, rnd);
         o.diffuse += l.color * (k2 * direct);
         if (gloss > 0.0)
         {
             float3 h2 = normalize(l.direction + viewDir);
-            o.spec += l.color * (step(0.5, pow(saturate(dot(n, h2)), shine)) * gloss * saturate(l.distanceAttenuation * 4.0) * l.shadowAttenuation * saturate(nl2 * 4.0));
+            o.spec += l.color * (step(0.5, pow(saturate(dot(n, h2)), shine)) * gloss * saturate(reach * 2.0) * l.shadowAttenuation * saturate(nl2 * 4.0));
         }
     }
     return o;
@@ -186,7 +203,7 @@ float3 IoriLightingSmooth(float3 posWS, float3 n, float wrap)
     for (uint i = 0u; i < count; ++i)
     {
         Light l = GetAdditionalLight(i, posWS, half4(1, 1, 1, 1));
-        sum += l.color * (saturate((dot(n, l.direction) + wrap) / (1.0 + wrap)) * l.distanceAttenuation * l.shadowAttenuation);
+        sum += l.color * (saturate((dot(n, l.direction) + wrap) / (1.0 + wrap)) * IoriLampFalloff(l.distanceAttenuation) * l.shadowAttenuation);
     }
     return sum;
 }
@@ -221,10 +238,13 @@ float3 IoriAir(float3 col, float3 posWS)
 
 // ---------------------------------------------------------------- helpers for vertex data
 // TEXCOORD1 of the camp meshes: x = glow channel, y = glow strength, z = gloss, w = free
-float3 IoriGlowOf(float4 data)
+// albedo: the surface's own color (linear). Channels whose w is 1 glow in that color (the tent's cloth).
+float3 IoriGlowOf(float4 data, float3 albedo)
 {
     int ch = (int)(data.x + 0.5);
-    return _IoriGlow[clamp(ch, 0, 7)].rgb * data.y * step(0.5, data.x);
+    float4 g = _IoriGlow[clamp(ch, 0, 7)];
+    float3 own = albedo / max(max(albedo.r, albedo.g), max(albedo.b, 1e-3));
+    return g.rgb * lerp(float3(1, 1, 1), own, g.a) * (data.y * step(0.5, data.x));
 }
 
 float3 IoriVertexAlbedo(float3 srgb) { return SRGBToLinear(srgb); }

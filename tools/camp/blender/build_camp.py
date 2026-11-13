@@ -1,6 +1,9 @@
 """Builds every model of the camp and writes them for Unity.
 
-    python tools/camp/blender/build_camp.py [--preview out.png] [--fast]
+    python tools/camp/blender/build_camp.py [--preview out.png] [--wide] [--yaw degrees] [--fast] [--draft]
+
+--fast   fewer plants and a coarser bake (for trying things out)
+--draft  writes nothing but the preview picture
 
 Writes  Assets/IORI/Art/Camp/Models/camp.iomesh       all meshes (read by IoMeshImporter)
         Assets/IORI/Art/Camp/Models/camp_layout.json   where each one goes
@@ -18,6 +21,7 @@ import models_fire, models_props, models_nature as N
 REPO = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 ART = os.path.join(REPO, 'Assets', 'IORI', 'Art', 'Camp')
 FAST = '--fast' in sys.argv
+DRAFT = '--draft' in sys.argv
 
 # the view the scene is composed for (authoring frame: x, depth, height)
 CAM_POS, CAM_TARGET, CAM_FOV = (0.0, -4.67, 1.48), (0.0, 0.0, 0.95), 42.0
@@ -153,23 +157,59 @@ def build_rocks():
 # ------------------------------------------------------------------ trees
 def build_trees():
     wood_all, leaves_all = P(), N.Plants()
-    def add_tree(xy, seed, **kw):
-        r = random.Random(seed)
-        wood, pl = N.tree(r, **kw)
+    def plant(xy, wood, pl):
         x, y = xy
         z = gz(x, y)
         wood.move(x, y, z)
         wood_all.add(wood)
         leaves_all.extend(pl, (x, y, z))
-    # the two trees that frame the view; their lower limbs reach over the camp
-    add_tree(T.TREE_R, 101, height=8.0, base_r=0.105, lean=(-0.010, -0.004), leaf_size=0.15, twig_leaves=38,
-             limbs=[(2.85, (-0.9, -0.9, 0.05), 2.4), (3.05, (-1.0, -0.55, 0.10), 2.9), (3.55, (-0.8, -1.0, 0.15), 3.0), (4.1, (-1.0, -0.3, 0.25), 2.6), (3.3, (0.9, -0.5, 0.2), 2.0), (4.6, (-0.4, -1.0, 0.3), 2.6)])
-    add_tree(T.TREE_L, 202, height=8.6, base_r=0.115, lean=(0.012, -0.006), leaf_size=0.15, twig_leaves=38,
-             limbs=[(3.1, (0.9, -0.9, 0.05), 2.6), (3.3, (1.0, -0.6, 0.10), 3.0), (3.8, (0.8, -1.0, 0.15), 3.2), (4.4, (1.0, -0.4, 0.25), 2.8), (3.5, (-0.9, -0.5, 0.2), 2.2), (4.9, (0.5, -1.0, 0.3), 2.8)])
-    # more trunks further back and to the sides, for depth
-    for i, (xy, h) in enumerate([((-2.6, 0.9), 7.0), ((2.75, 0.5), 7.4), ((-3.5, 4.3), 8.0), ((3.3, 4.8), 7.2), ((4.9, 1.8), 8.4), ((-5.2, 2.2), 8.0), ((-4.4, -1.6), 7.5), ((4.2, -2.0), 7.8), ((6.3, 4.6), 8.5), ((-6.6, 5.2), 8.2)]):
-        add_tree(xy, 300 + i, height=h, base_r=0.10 + 0.04 * rng.random(), lean=(rng.uniform(-.008, .008), rng.uniform(-.006, .006)), leaf_size=0.14, twig_leaves=9,
-                 limbs=[(h * .45, (rng.uniform(-1, 1), rng.uniform(-1, 1), .3), 2.2), (h * .55, (rng.uniform(-1, 1), rng.uniform(-1, 1), .4), 2.0)], crown_leaves=0.8, twigs=False)
+
+    # The two trees that frame the view are drawn by hand. Only their lower three metres are in
+    # the picture, so what shows of them is: the trunk, the fork, and one bough each that arches
+    # toward the camera just above the top edge, with leafy twigs hanging down into the picture
+    # (heavy in the top left corner, light across the middle, where the moon passes).
+    # left: a big tree whose foot stands outside the picture; it leans in as it rises
+    t = N.Tree(random.Random(202), leaf_size=0.15)
+    path, radii = t.limb([(0, 0, -.15), (.03, -.01, .55), (.13, -.03, 1.35), (.29, -.06, 2.15), (.44, -.10, 2.85), (.52, -.08, 3.7), (.46, .02, 4.7), (.62, .10, 5.9), (.50, .20, 7.4)], 0.105, 0.03, sides=9, flare=0.7)
+    t.roots(0.105, 5)
+    t.stubs(path, radii, 3, 0.12, 0.33, 0.3)
+    arch, ar = t.limb([(.44, -.10, 2.85), (.70, -.50, 3.20), (1.00, -1.10, 3.38), (1.30, -1.80, 3.36), (1.50, -2.40, 3.20), (1.60, -2.85, 3.00)], 0.058, 0.012, sides=7)
+    t.hangers(arch, ar, 5, 0.80, 0.12, 0.50, twig_leaves=10)
+    t.hangers(arch, ar, 5, 0.52, 0.50, 1.00, twig_leaves=8)
+    t.spray(arch, ar, 3, 1.1, 0.25, 0.9, 1, 0.2, 0.3, 9, toward=(0.2, -0.4, 1.0))        # the bough's own leaves, above the picture
+    back, br = t.limb([(.29, -.06, 2.15), (-.15, .30, 2.65), (-.80, .65, 3.25), (-1.50, .85, 3.60)], 0.045, 0.012, sides=6)
+    t.spray(back, br, 4, 1.2, 0.3, 1.0, 1, 0.3, 0.3, 9)
+    t.crown(path, radii, 7, 2.1, 0.5, 0.98, 9)
+    plant(T.TREE_L, t.wood, t.pl)
+    # right: a slimmer one, nearly upright, with a slow double bend
+    t = N.Tree(random.Random(101), leaf_size=0.15)
+    path, radii = t.limb([(0, 0, -.15), (-.02, 0, .6), (.04, -.02, 1.4), (-.03, -.03, 2.2), (-.13, -.06, 3.0), (-.12, -.10, 4.0), (-.28, -.10, 5.2), (-.22, 0, 6.6)], 0.075, 0.02, sides=8, flare=0.7)
+    t.roots(0.075, 5)
+    t.stubs(path, radii, 3, 0.2, 0.42, 0.26)
+    arch, ar = t.limb([(-.13, -.06, 3.0), (-.40, -.45, 3.30), (-.65, -1.05, 3.42), (-.80, -1.70, 3.30), (-.85, -2.30, 3.05)], 0.042, 0.010, sides=6)
+    t.hangers(arch, ar, 6, 0.62, 0.15, 1.0, twig_leaves=8)
+    t.spray(arch, ar, 3, 1.0, 0.25, 0.9, 1, 0.2, 0.3, 9, toward=(-0.2, -0.3, 1.0))
+    side, sr = t.limb([(-.03, -.03, 2.2), (.35, .25, 2.7), (.95, .45, 3.2), (1.55, .50, 3.5)], 0.034, 0.010, sides=6)
+    t.spray(side, sr, 4, 1.1, 0.3, 1.0, 1, 0.3, 0.3, 9)
+    t.crown(path, radii, 6, 1.9, 0.5, 0.98, 9)
+    plant(T.TREE_R, t.wood, t.pl)
+
+    # more trees further back and to the sides, for depth when the camera looks around: each leans
+    # and bends its own way, some fork, and a few low limbs keep leaves where the picture can see them
+    spots = [((-2.7, 0.9), 7.0), ((2.85, 0.5), 7.4), ((-3.5, 4.3), 8.0), ((3.3, 4.8), 7.2), ((4.9, 1.8), 8.4), ((-5.2, 2.2), 8.0),
+             ((-4.4, -1.6), 7.5), ((4.2, -2.0), 7.8), ((6.3, 4.6), 8.5), ((-6.6, 5.2), 8.2)]
+    for i, (xy, h) in enumerate(spots):
+        r = random.Random(300 + i)
+        away = 1 if xy[0] > 0 else -1
+        wood, pl = N.tree(r, height=h, base_r=r.uniform(.06, .09), lean=(away * r.uniform(-.04, .12), r.uniform(-.06, .06)), bend=r.uniform(.28, .6),
+                          fork=0.55, leaf_size=0.14, twig_leaves=7, crown_limbs=6, low_limbs=r.randint(1, 3), twigs=False, leaves=0.8)
+        plant(xy, wood, pl)
+    # young trees, whole in the picture: thin stems, few leaves
+    for i, (xy, h) in enumerate([((-3.0, 2.6), 3.2), ((3.7, 2.9), 2.8), ((-2.2, 6.3), 3.4), ((2.7, 6.4), 3.0), ((5.4, 4.0), 3.6), ((-5.0, 4.6), 3.3), ((-3.4, -0.9), 2.6)]):
+        r = random.Random(400 + i)
+        wood, pl = N.tree(r, height=h, base_r=r.uniform(.022, .032), lean=(r.uniform(-.1, .1), r.uniform(-.06, .06)), bend=r.uniform(.08, .16),
+                          fork=0.4, leaf_size=0.13, twig_leaves=6, crown_limbs=5, low_limbs=0, twigs=True, leaves=0.9, crown_length=0.34)
+        plant(xy, wood, pl)
     S.put('TreeWood', wood_all, 'Bark')
     S.put('TreeLeaves', leaves_all.piece(), 'Leaf', ao=False, occluder=False)
 
@@ -254,11 +294,7 @@ build_props()
 build_rocks()
 build_trees()
 build_plants()
-if not FAST:
-    S.bake_ao(samples=24, distance=0.6)
-write_ground_map(ground)
 anchors = dict(fire=T.FIRE, iori=T.IORI, table=T.TABLE, radio=T.CRATE, player=T.STUMP, tent=T.TENT)
-tz = gz(*T.TABLE)
 extra = dict(
     camera=dict(position=[CAM_POS[0], CAM_POS[2], CAM_POS[1]], target=[CAM_TARGET[0], CAM_TARGET[2], CAM_TARGET[1]], fov=CAM_FOV),
     anchors={k: [v[0], gz(*v), v[1]] for k, v in anchors.items()},
@@ -266,22 +302,32 @@ extra = dict(
     waterY=T.WATER_Z, puddleY=T.PUDDLE_Z,
     puddleArea=dict(halfWidth=T.PUDDLE_AREA[0], z0=T.PUDDLE_AREA[1], z1=T.PUDDLE_AREA[2]),
 )
-mesh_path = os.path.join(ART, 'Models', 'camp.iomesh')
-layout_path = os.path.join(ART, 'Models', 'camp_layout.json')
-S.export(mesh_path, layout_path)
-lay = json.load(open(layout_path, encoding='utf-8'))
-# the lantern gets its own anchor position (it sits on the table)
-for o in lay['objects']:
-    if o['name'] == 'Lantern':
-        extra['anchors']['lantern'] = o['position']
-lay.update(extra)
-json.dump(lay, open(layout_path, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+if not DRAFT:
+    if not FAST:
+        S.bake_ao(samples=24, distance=0.6)
+    write_ground_map(ground)
+    mesh_path = os.path.join(ART, 'Models', 'camp.iomesh')
+    layout_path = os.path.join(ART, 'Models', 'camp_layout.json')
+    S.export(mesh_path, layout_path)
+    lay = json.load(open(layout_path, encoding='utf-8'))
+    # the lantern gets its own anchor position (it sits on the table)
+    for o in lay['objects']:
+        if o['name'] == 'Lantern':
+            extra['anchors']['lantern'] = o['position']
+    lay.update(extra)
+    json.dump(lay, open(layout_path, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
 if '--preview' in sys.argv:
     out = sys.argv[sys.argv.index('--preview') + 1]
     fx, fy = T.FIRE
-    lx, ly, lz = extra['anchors']['lantern'][0], extra['anchors']['lantern'][2], extra['anchors']['lantern'][1]
-    lights = [((fx, fy, gz(fx, fy) + 0.35), (1.0, 0.5, 0.2), 60, 0.08), ((lx, ly, lz + 0.14), (1.0, 0.8, 0.55), 6, 0.03)]
+    lights = [((fx, fy, gz(fx, fy) + 0.35), (1.0, 0.5, 0.2), 60, 0.08)]
+    if 'lantern' in extra['anchors']:
+        lx, ly, lz = extra['anchors']['lantern'][0], extra['anchors']['lantern'][2], extra['anchors']['lantern'][1]
+        lights.append(((lx, ly, lz + 0.14), (1.0, 0.8, 0.55), 6, 0.03))
     res = (540, 1200)
     if '--wide' in sys.argv: res = (1280, 720)
-    S.preview(out, CAM_POS, CAM_TARGET, CAM_FOV if res[0] < res[1] else 32, res, 24 if FAST else 64, lights=lights, sky_strength=0.22)
+    # --yaw: walk the camera around the point it looks at, the way dragging does in the app
+    yaw = math.radians(float(sys.argv[sys.argv.index('--yaw') + 1])) if '--yaw' in sys.argv else 0.0
+    ox, oy = CAM_POS[0] - CAM_TARGET[0], CAM_POS[1] - CAM_TARGET[1]
+    pos = (CAM_TARGET[0] + ox * math.cos(yaw) - oy * math.sin(yaw), CAM_TARGET[1] + ox * math.sin(yaw) + oy * math.cos(yaw), CAM_POS[2])
+    S.preview(out, pos, CAM_TARGET, CAM_FOV if res[0] < res[1] else 30, res, 24 if FAST else 64, lights=lights, sky_strength=0.9 if DRAFT else 0.22)

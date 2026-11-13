@@ -3,8 +3,9 @@
 //
 // Water is painted in strokes too, but laid out the way the camera's home position sees the
 // surface, so the dashes stay the same size in the picture from the shore to the far side.
-// Every dash shows the mirror image at its own center, nudged up and down over time: lights on
-// the far shore, the moon and the fire break into trembling columns of dashes.
+// Every dash shows the mirror image at its own center, nudged up and down over time, and a few
+// dashes reach far toward the horizon for what they show: lights on the far shore, the moon and
+// the fire are drawn out into long, trembling columns of dashes, the way ruffled water does it.
 // Where the water is shallow the bottom shows through (needs the depth texture; see _IoriDepthFx).
 Shader "IORI/Camp/Water"
 {
@@ -13,6 +14,8 @@ Shader "IORI/Camp/Water"
         _Puddle ("Puddle (0 lake, 1 puddle)", Float) = 0
         _StrokeTiles ("Dash fineness", Float) = 9
         _Wobble ("Trembling of the mirror image", Float) = 1
+        _Streak ("How far lights are drawn out into columns (part of the picture's height)", Float) = 0.11
+        _Air ("Most that haze may hide of the water", Range(0, 1)) = 0.5
         _Tint ("Tint (lake: set by the scene)", Color) = (0.2, 0.25, 0.5, 1)
         _Mirror ("Mirror strength looking straight down", Range(0, 1)) = 0.45
         _Shallow ("Depth at which the bottom is hidden (m)", Float) = 0.35
@@ -35,7 +38,7 @@ Shader "IORI/Camp/Water"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                float _Puddle, _StrokeTiles, _Wobble, _Mirror, _Shallow;
+                float _Puddle, _StrokeTiles, _Wobble, _Mirror, _Shallow, _Streak, _Air;
                 float4 _Tint;
             CBUFFER_END
             float4 _IoriWaterTint;      // lake tint for the time of day
@@ -107,6 +110,13 @@ Shader "IORI/Camp/Water"
                 wob *= saturate(8.0 / dist + 0.25);
                 float ringsV = rain > 0.01 ? Rings(wp.xz * (puddle ? 1.0 : 0.6), t) * rain * saturate(14.0 / dist) : 0.0;
                 uv += wob + ringsV * 0.01;
+                // most dashes stay close; a few show what lies well toward the horizon (always that way: a
+                // light's column runs from its image toward the viewer). Which ones changes slowly.
+                float r3 = frac(rnd * 13.7 + 0.31);
+                float tail = r3 * r3 * r3 * (0.7 + 0.3 * sin(ph * 0.9 + 2.0));
+                // never past the horizon: above it the mirror image holds nothing
+                float toHorizon = 0.5 * unity_CameraProjection._m11 * max(_WorldSpaceCameraPos.y - wp.y, 0.0) / max(ccs.w, 0.05);
+                uv.y += min(tail * _Streak * (puddle ? 0.4 : 1.0) * (1.0 + rain * 0.6), toHorizon * 0.9);
                 uv.x = 1.0 - uv.x;
                 float3 refl = puddle
                     ? SAMPLE_TEXTURE2D_LOD(_IoriReflectionTexPuddle, sampler_LinearClamp, saturate(uv), 0).rgb
@@ -136,7 +146,9 @@ Shader "IORI/Camp/Water"
                     alpha = saturate(through / max(_Shallow, 0.01) + (rnd - 0.5) * 0.5);
                     alpha = lerp(alpha, 1.0, fres * 0.85);
                 }
-                col = IoriAir(col, wp);
+                // the mirror image already carries the air of what it shows; only part of the haze is laid over it
+                float air = min(IoriAirAmount(wp) * 0.6, _Air);
+                col = lerp(col, lerp(_IoriFogColor.rgb, _IoriMistColor.rgb, 0.5), air);
                 return half4(col, alpha);
             }
             ENDHLSL

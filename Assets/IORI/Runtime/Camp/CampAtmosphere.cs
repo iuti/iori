@@ -121,6 +121,7 @@ namespace Iori.Camp
             public static readonly int Glow = Shader.PropertyToID("_IoriGlow");
             public static readonly int GroundMap = Shader.PropertyToID("_IoriGroundMap");
             public static readonly int FirePos = Shader.PropertyToID("_IoriFirePos");
+            public static readonly int Light = Shader.PropertyToID("_IoriLight");
             public static readonly int Fire = Shader.PropertyToID("_IoriFire");
             public static readonly int SeasonGrass = Shader.PropertyToID("_IoriSeasonGrass");
             public static readonly int SeasonLeaf = Shader.PropertyToID("_IoriSeasonLeaf");
@@ -302,12 +303,13 @@ namespace Iori.Camp
             return new Vector3(Mathf.Sin(az) * Mathf.Cos(el), Mathf.Sin(el), Mathf.Cos(az) * Mathf.Cos(el));
         }
 
-        /// <summary>The moon drifts slowly across the sky over the lake during the night, low enough to be in the picture.</summary>
+        /// <summary>The moon drifts slowly across the sky over the lake during the night: right to left, always inside
+        /// the upright picture (which shows about ten degrees to either side), above the mountains.</summary>
         public static Vector3 MoonDirection(float hour)
         {
-            float n = Mathf.Repeat(hour - 19f, 24f) / 10f;
+            float n = Mathf.Repeat(hour - 18f, 24f) / 11.5f;
             n = Mathf.Clamp01(n);
-            return SkyDirection(Mathf.Lerp(16f, 2f, n), 9f + 3.5f * Mathf.Sin(n * Mathf.PI));
+            return SkyDirection(Mathf.Lerp(6.5f, -4.5f, n), 8.6f + 2f * Mathf.Sin(n * Mathf.PI));
         }
 
         void Push(CampPalette p)
@@ -401,6 +403,7 @@ namespace Iori.Camp
                 tentLight.enabled = tentLevel > 0.01f;
             }
             Shader.SetGlobalVector(Id.FirePos, new Vector4(firePos.x, firePos.y, firePos.z, L.fireRange));
+            Shader.SetGlobalVector(Id.Light, new Vector4(L.lampSize * L.lampSize, L.litKnee, L.litTop, 0f));
             // flame size: a low flame over embers when sleeping, never quite out
             float flameSize = Mathf.Clamp(0.35f + 0.65f * fireLevel, 0.3f, 1.2f) * Mathf.Lerp(1f, 0.55f, sl);
             Shader.SetGlobalVector(Id.Fire, new Vector4(flameSize, Mathf.Lerp(0.85f, 1.1f, Mathf.Clamp01(fireLevel)) * flick, Mathf.Clamp01(fireLevel * (1f - sl * 0.7f)), 0f));
@@ -409,12 +412,15 @@ namespace Iori.Camp
             float lampDim = Mathf.Lerp(1f, 0.75f, Mathf.Clamp01(p.keyIntensity - 1f));
             _glow[0] = Vector4.zero;
             _glow[1] = Lin(L.fireColor, fireLevel * flick);
-            _glow[2] = Lin(L.tentColor, L.tentGlow * tentLevel);
+            // the tent's cloth glows in its own colors (pale where the lamp is close, orange at the rim): w = 1
+            float tg = L.tentGlow * tentLevel;
+            _glow[2] = new Vector4(tg, tg, tg, 1f);
             _glow[3] = Lin(L.lanternColor, L.lanternGlow * lanternLevel);
             _glow[4] = Lin(LampOrange, p.town * L.townGlow);
             _glow[5] = Lin(DialAmber, radioLit ? L.dialGlow * lampDim : 0f);
             _glow[6] = Lin(LampOrange, playerLit ? L.dialGlow * lampDim : 0f);
             _glow[7] = new Vector4(1f, 1f, 1f, 1f) * (L.emberGlow * Mathf.Clamp(fireLevel * 1.2f, 0.5f, 1.3f) * (0.92f + 0.08f * flick));
+            for (int i = 0; i < _glow.Length; i++) if (i != 2) _glow[i].w = 0f;
             Shader.SetGlobalVectorArray(Id.Glow, _glow);
 
             // ---- brush, weather, wind, ground

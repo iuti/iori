@@ -8,16 +8,17 @@ Shader "IORI/Camp/Fire"
 {
     Properties
     {
-        _Scale ("Height of the tallest tongue at full size (m)", Float) = 0.62
-        _Steps ("Steps along the ray", Range(6, 32)) = 22
+        _Scale ("Height of the tallest tongue at full size (m)", Float) = 0.85
+        _Steps ("Steps along the ray", Range(6, 32)) = 24
         _Rise ("Rise speed", Float) = 1.5
         _Stretch ("Tall shapes (smaller = taller)", Float) = 0.42
         _Sway ("Sway", Float) = 0.5
-        _Core ("Core color", Color) = (1.0, 0.90, 0.50, 1)
-        _Mid ("Middle color", Color) = (1.0, 0.56, 0.10, 1)
-        _Outer ("Outer color", Color) = (1.0, 0.26, 0.06, 1)
-        _Rim ("Rim color", Color) = (0.62, 0.10, 0.22, 1)
-        _Bright ("Brightness (core, middle, outer, rim)", Vector) = (3.6, 2.6, 1.7, 0.8)
+        _Core ("Core color", Color) = (1.0, 0.93, 0.62, 1)
+        _Mid ("Middle color", Color) = (1.0, 0.70, 0.18, 1)
+        _Outer ("Outer color", Color) = (1.0, 0.36, 0.06, 1)
+        _Rim ("Rim color", Color) = (0.70, 0.12, 0.10, 1)
+        _Bright ("Brightness (core, middle, outer, rim)", Vector) = (2.2, 1.5, 1.1, 0.7)
+        _Bands ("Heat where each color starts (core, middle, outer, rim)", Vector) = (0.52, 0.30, 0.14, 0.05)
         _FrameRate ("Drawn frames per second (0 = smooth)", Float) = 0
         [Toggle] _UseDepth ("Stop at solid things (needs the depth texture)", Float) = 1
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull (Front with depth, Back without)", Float) = 1
@@ -45,7 +46,7 @@ Shader "IORI/Camp/Fire"
 
             CBUFFER_START(UnityPerMaterial)
                 float _Scale, _Steps, _Rise, _Stretch, _Sway, _FrameRate, _UseDepth, _Cull, _ZTest;
-                float4 _Core, _Mid, _Outer, _Rim, _Bright;
+                float4 _Core, _Mid, _Outer, _Rim, _Bright, _Bands;
             CBUFFER_END
             TEXTURE3D(_IoriNoise3D);
             float4 _IoriFire;          // x: flame size (1 = full), y: brightness
@@ -64,12 +65,15 @@ Shader "IORI/Camp/Fire"
             }
 
             // x, z of each tongue's foot, its height and its radius (metres, at full size)
-            static const float4 TONGUES[4] =
+            #define TONGUE_COUNT 6
+            static const float4 TONGUES[TONGUE_COUNT] =
             {
                 float4(0.00, 0.00, 1.00, 0.30),
                 float4(0.15, 0.04, 0.66, 0.20),
                 float4(-0.14, -0.07, 0.58, 0.19),
-                float4(0.02, 0.13, 0.50, 0.16)
+                float4(0.02, 0.13, 0.50, 0.16),
+                float4(-0.05, -0.15, 0.44, 0.15),
+                float4(0.20, -0.10, 0.36, 0.13)
             };
 
             float FlameHeat(float3 p, float t)
@@ -82,7 +86,7 @@ Shader "IORI/Camp/Fire"
                 float2 sw = SAMPLE_TEXTURE3D_LOD(_IoriNoise3D, sampler_LinearRepeat, q * 0.8 + 0.37, 0).gr - 0.5;
                 float n = (n1 + n2 * 0.35) / 1.35;
                 float best = -1.0;
-                for (int k = 0; k < 4; k++)
+                for (int k = 0; k < TONGUE_COUNT; k++)
                 {
                     float4 c = TONGUES[k];
                     float h = clamp(y / c.z, 0.0, 1.3);
@@ -130,26 +134,36 @@ Shader "IORI/Camp/Fire"
 
                 int steps = (int)clamp(_Steps, 6.0, 32.0);
                 float dt = (t1 - t0) / steps;
-                // start each pixel's walk at a slightly different depth, which hides the step pattern
-                float jitter = frac(52.9829189 * frac(dot(i.positionCS.xy, float2(0.06711056, 0.00583715))));
-                float hottest = 0.0;
                 float inv_size = 1.0 / size;
+                float hottest = 0.0, at = t0;
                 for (int s = 0; s < 32; s++)
                 {
                     if (s >= steps) break;
-                    float3 p = (ro + rd * (t0 + (s + jitter) * dt) - foot) * inv_size;
-                    hottest = max(hottest, FlameHeat(p, time));
+                    float ts = t0 + (s + 0.5) * dt;
+                    float hs = FlameHeat((ro + rd * ts - foot) * inv_size, time);
+                    if (hs > hottest) { hottest = hs; at = ts; }
+                }
+                // look closer on both sides of the hottest step, so the colors meet in clean edges, not in stripes
+                float reach = dt * 0.5;
+                for (int r = 0; r < 3; r++)
+                {
+                    float ta2 = max(at - reach, t0), tb2 = min(at + reach, t1);
+                    float ha = FlameHeat((ro + rd * ta2 - foot) * inv_size, time);
+                    float hb = FlameHeat((ro + rd * tb2 - foot) * inv_size, time);
+                    if (ha > hottest && ha >= hb) { hottest = ha; at = ta2; }
+                    else if (hb > hottest) { hottest = hb; at = tb2; }
+                    reach *= 0.5;
                 }
                 hottest *= saturate(_IoriFire.x * 1.5);
 
-                float w = max(fwidth(hottest) * 0.75, 0.006);
+                float w = max(fwidth(hottest) * 0.75, 0.004);
                 float3 col = 0;
                 float alpha = 0;
                 float m;
-                m = smoothstep(0.05 - w, 0.05 + w, hottest); col = lerp(col, _Rim.rgb * _Bright.w, m * 0.7); alpha = max(alpha, m * 0.7);
-                m = smoothstep(0.20 - w, 0.20 + w, hottest); col = lerp(col, _Outer.rgb * _Bright.z, m); alpha = max(alpha, m);
-                m = smoothstep(0.42 - w, 0.42 + w, hottest); col = lerp(col, _Mid.rgb * _Bright.y, m);
-                m = smoothstep(0.70 - w, 0.70 + w, hottest); col = lerp(col, _Core.rgb * _Bright.x, m);
+                m = smoothstep(_Bands.w - w, _Bands.w + w, hottest); col = lerp(col, _Rim.rgb * _Bright.w, m * 0.75); alpha = max(alpha, m * 0.75);
+                m = smoothstep(_Bands.z - w, _Bands.z + w, hottest); col = lerp(col, _Outer.rgb * _Bright.z, m); alpha = max(alpha, m);
+                m = smoothstep(_Bands.y - w, _Bands.y + w, hottest); col = lerp(col, _Mid.rgb * _Bright.y, m);
+                m = smoothstep(_Bands.x - w, _Bands.x + w, hottest); col = lerp(col, _Core.rgb * _Bright.x, m);
                 col *= _IoriFire.y;
                 // seen through air like everything else, measured at the fire
                 float air = IoriAirAmount(boxC);

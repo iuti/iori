@@ -30,6 +30,7 @@ namespace Iori.Camp.EditorTools
         const string WaterMeshPath = ArtDir + "/Models/camp_water.asset";
         const string StrokePath = ArtDir + "/Textures/iori_strokes.png";
         const string GroundMapPath = ArtDir + "/Textures/iori_ground.png";
+        const string RidgePath = ArtDir + "/Textures/iori_ridges.png";
         const string NoisePath = ArtDir + "/Textures/iori_noise3d.asset";
         const string IoriTexPath = "Assets/IORI/Art/Character/iori_placeholder.png";
         const string UrpAssetPath = "Assets/IORI/Settings/IORI_URP.asset";
@@ -148,6 +149,18 @@ namespace Iori.Camp.EditorTools
                 if (dirty) g.SaveAndReimport();
             }
             else throw new Exception("見つからない: " + GroundMapPath);
+            // the mountains' outlines: numbers again (16 bit split over two channels), read texel by texel
+            if (AssetImporter.GetAtPath(RidgePath) is TextureImporter r)
+            {
+                bool dirty = r.sRGBTexture || r.alphaIsTransparency || r.mipmapEnabled || r.filterMode != FilterMode.Point || r.textureCompression != TextureImporterCompression.Uncompressed
+                             || r.npotScale != TextureImporterNPOTScale.None || r.maxTextureSize != 2048;
+                r.textureType = TextureImporterType.Default;
+                r.sRGBTexture = false; r.alphaSource = TextureImporterAlphaSource.FromInput; r.alphaIsTransparency = false;
+                r.mipmapEnabled = false; r.wrapMode = TextureWrapMode.Repeat; r.filterMode = FilterMode.Point;
+                r.textureCompression = TextureImporterCompression.Uncompressed; r.npotScale = TextureImporterNPOTScale.None; r.maxTextureSize = 2048;
+                if (dirty) r.SaveAndReimport();
+            }
+            else throw new Exception("見つからない: " + RidgePath);
             if (AssetImporter.GetAtPath(IoriTexPath) is TextureImporter t)
             {
                 bool dirty = !t.alphaIsTransparency || t.wrapMode != TextureWrapMode.Clamp;
@@ -350,12 +363,12 @@ namespace Iori.Camp.EditorTools
             d["Lake"] = Mat("CampLake", "IoriWater", reset, m =>
             {
                 m.SetFloat("_Puddle", 0f); m.SetFloat("_StrokeTiles", 9f); m.SetFloat("_Wobble", 1f); m.SetColor("_Tint", Color.white);
-                m.SetFloat("_Mirror", 0.45f); m.SetFloat("_Shallow", 0.35f);
+                m.SetFloat("_Mirror", 0.45f); m.SetFloat("_Shallow", 0.35f); m.SetFloat("_Streak", 0.11f); m.SetFloat("_Air", 0.5f);
             });
             d["Puddle"] = Mat("CampPuddle", "IoriWater", reset, m =>
             {
                 m.SetFloat("_Puddle", 1f); m.SetFloat("_StrokeTiles", 14f); m.SetFloat("_Wobble", 0.6f); m.SetColor("_Tint", Color.white);
-                m.SetFloat("_Mirror", 0.6f); m.SetFloat("_Shallow", 0.02f);
+                m.SetFloat("_Mirror", 0.6f); m.SetFloat("_Shallow", 0.02f); m.SetFloat("_Streak", 0.11f); m.SetFloat("_Air", 0.3f);
             });
             // the flame as the main camera sees it (stops at the logs), and the plain one for mirror images and phones
             d["Flame"] = Mat("CampFlame", "IoriFire", reset, m => { });
@@ -364,7 +377,8 @@ namespace Iori.Camp.EditorTools
             d["FlameMirror"].SetFloat("_UseDepth", 0f); d["FlameMirror"].SetFloat("_Cull", (float)CullMode.Back); d["FlameMirror"].SetFloat("_ZTest", (float)CompareFunction.LessEqual);
             d["Sparks"] = Mat("CampSparks", "IoriSparks", reset, m => { });
             d["Rain"] = Mat("CampRain", "IoriRain", reset, m => { });
-            d["Sky"] = Mat("CampSky", "IoriSky", reset, m => { });
+            d["Sky"] = Mat("CampSky", "IoriSky", reset, m => { m.SetFloat("_MountTiles", 5f); });
+            d["Sky"].SetTexture("_RidgeTex", Load<Texture2D>(RidgePath));
             d["Iori"] = Mat("IoriBoard", "IoriCharacter", reset, m => { m.SetFloat("_Cutoff", 0.5f); });
             foreach (var m in d.Values) EditorUtility.SetDirty(m);
             return d;
