@@ -180,9 +180,9 @@ MonoBehaviour:
       fogFar: 460
       hemiSky: {r: 0.9098039, g: 0.9019608, b: 1, a: 1}
       hemiGround: {r: 0.56078434, g: 0.6039216, b: 0.84705883, a: 1}
-      hemiIntensity: 1.2
+      hemiIntensity: 0.95
       dirColor: {r: 1, g: 0.8784314, b: 0.7529412, a: 1}
-      dirIntensity: 0.8
+      dirIntensity: 0.6
       fire: 0.25
       tent: 0
       town: 0.5
@@ -229,9 +229,9 @@ MonoBehaviour:
       fogFar: 600
       hemiSky: {r: 0.93333334, g: 0.9490196, b: 1, a: 1}
       hemiGround: {r: 0.5411765, g: 0.6039216, b: 0.8392157, a: 1}
-      hemiIntensity: 1.25
+      hemiIntensity: 0.95
       dirColor: {r: 1, g: 0.9411765, b: 0.78431374, a: 1}
-      dirIntensity: 0.95
+      dirIntensity: 0.7
       fire: 0.3
       tent: 0
       town: 0
@@ -278,9 +278,9 @@ MonoBehaviour:
       fogFar: 600
       hemiSky: {r: 0.93333334, g: 0.9490196, b: 1, a: 1}
       hemiGround: {r: 0.5411765, g: 0.6039216, b: 0.8392157, a: 1}
-      hemiIntensity: 1.25
+      hemiIntensity: 0.95
       dirColor: {r: 1, g: 0.9411765, b: 0.78431374, a: 1}
-      dirIntensity: 0.95
+      dirIntensity: 0.7
       fire: 0.3
       tent: 0
       town: 0
@@ -327,9 +327,9 @@ MonoBehaviour:
       fogFar: 460
       hemiSky: {r: 0.9098039, g: 0.9019608, b: 1, a: 1}
       hemiGround: {r: 0.56078434, g: 0.6039216, b: 0.84705883, a: 1}
-      hemiIntensity: 1.2
+      hemiIntensity: 0.95
       dirColor: {r: 1, g: 0.8784314, b: 0.7529412, a: 1}
-      dirIntensity: 0.8
+      dirIntensity: 0.6
       fire: 0.5
       tent: 0.25
       town: 0.9
