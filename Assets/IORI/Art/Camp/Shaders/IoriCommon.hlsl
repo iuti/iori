@@ -30,7 +30,8 @@ float4 _IoriWind;            // xy: direction on the ground, z: strength, w: gus
 float4 _IoriGlow[8];         // rgb: light given off by each glow channel (see GLOW in campkit.py), already times its level; a: 1 = tinted by the surface's own color
 float4 _IoriGroundMap;       // xy: world x,z of the ground texture's corner, z: 1 / its size in metres, w: puddle water height right now
 float4 _IoriFirePos;         // xyz: where the fire's light sits, w: how far it reaches
-float4 _IoriLight;           // x: size of the lamps squared (softens their light close up), y: brightness where colors stop getting lighter and start to hold, z: most a lit color may reach
+float4 _IoriLight;           // x: size of the lamps squared (softens their light close up), y: brightness where colors stop getting lighter and start to hold, z: most a lit color may reach, w: how much of a lamp's color lands on a surface whatever its own color
+float4 _IoriTentLamp;        // xyz: the lamp inside the tent, w: how strongly it burns
 
 float IoriTime() { return _IoriWeather.w; }
 
@@ -148,7 +149,8 @@ float IoriStep(float x, float rnd, float n)
 
 struct IoriLit
 {
-    float3 diffuse;   // light that the surface color tints
+    float3 diffuse;   // light from the sky and the sun or moon
+    float3 lamp;      // light from the fire, the lantern and the tent
     float3 spec;      // highlights (already a color)
 };
 
@@ -158,6 +160,7 @@ IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao
 {
     IoriLit o;
     o.diffuse = IoriAmbient(n) * ao;
+    o.lamp = 0;
     o.spec = 0;
     float direct = lerp(1.0, ao, 0.5);
     float shine = exp2(4.0 + gloss * 6.0);
@@ -183,7 +186,7 @@ IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao
         float reach = IoriLampFalloff(l.distanceAttenuation);
         k2 *= reach * l.shadowAttenuation;
         k2 = IoriBand(k2, rnd);
-        o.diffuse += l.color * (k2 * direct);
+        o.lamp += l.color * (k2 * direct);
         if (gloss > 0.0)
         {
             float3 h2 = normalize(l.direction + viewDir);
@@ -191,6 +194,18 @@ IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao
         }
     }
     return o;
+}
+
+// Puts the light on a surface color. Light from the sky and the sun is multiplied in, the way light
+// works. A lamp's light is partly laid over the color like a glaze of paint (as much as the color is
+// light, whatever its hue): grass by the fire turns a warm color, where plain multiplying gives mud.
+// lampAmount: how much of the lamps this surface takes (logs inside the fire take little: they stay
+// dark against the flame).
+float3 IoriShade(float3 albedo, IoriLit L, float lampAmount)
+{
+    float v = max(albedo.r, max(albedo.g, albedo.b));
+    float3 glazed = lerp(albedo, float3(v, v, v), _IoriLight.w);
+    return IoriSoftClip(albedo * L.diffuse + glazed * (L.lamp * lampAmount)) + L.spec;
 }
 
 // The same light without strokes or steps, for things that must stay smooth (the character).

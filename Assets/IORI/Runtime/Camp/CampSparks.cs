@@ -10,7 +10,7 @@ namespace Iori.Camp
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public sealed class CampSparks : MonoBehaviour
     {
-        [Range(4, 200)] public int count = 40;
+        [Range(4, 200)] public int count = 28;
         public int seed = 7;
 
         Mesh _mesh;

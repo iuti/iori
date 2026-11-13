@@ -65,7 +65,7 @@
    "shadows": true,
    "layer": "",
    "anchor": "fire",
-   "vertices": 3117,
+   "vertices": 3088,
    "triangles": 1436
   },
   {
@@ -150,7 +150,7 @@
    "shadows": true,
    "layer": "",
    "anchor": "iori",
-   "vertices": 2090,
+   "vertices": 2094,
    "triangles": 844
   },
   {

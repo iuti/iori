@@ -1,6 +1,7 @@
 // Solid things in the camp: props, rocks, bark, the tent, the logs in the fire.
 // Colors come from the mesh (vertex color = surface color, alpha = baked shade; TEXCOORD1 = glow
 // channel, glow strength, gloss). Light and shadow are taken one brush stroke at a time (IoriCommon.hlsl).
+// Two special cases: wood that burns (glowing cracks), and cloth with a lamp behind it (the tent).
 Shader "IORI/Camp/Lit"
 {
     Properties
@@ -15,7 +16,15 @@ Shader "IORI/Camp/Lit"
         _Through ("Light shines through (cloth)", Range(0, 1)) = 0
         _WetDarken ("Darker when wet", Range(0, 1)) = 0.3
         _WetGloss ("Shinier when wet", Range(0, 1)) = 0.35
+        _LampAmount ("Lamp light taken (logs in the fire: little)", Range(0, 1)) = 1
         [Toggle(_EMBER)] _Ember ("Glowing cracks (burning wood)", Float) = 0
+        [Toggle(_LAMP_INSIDE)] _LampInside ("Cloth lit from inside (the tent)", Float) = 0
+        _InsideSpot ("  Size of the bright patch in front of the lamp (m)", Float) = 0.8
+        _InsideOutside ("  Light from outside while the lamp is on", Range(0, 1)) = 0.3
+        [HDR] _InsideCore ("  Right in front of the lamp", Color) = (1.75, 1.35, 0.60, 1)
+        [HDR] _InsideHot ("  Near it", Color) = (1.30, 0.66, 0.10, 1)
+        [HDR] _InsideMid ("  Farther", Color) = (0.86, 0.27, 0.035, 1)
+        [HDR] _InsideDeep ("  At the rim", Color) = (0.40, 0.095, 0.02, 1)
     }
     SubShader
     {
@@ -25,7 +34,8 @@ Shader "IORI/Camp/Lit"
         #include "IoriCommon.hlsl"
         CBUFFER_START(UnityPerMaterial)
             float _StrokeScale, _Variation, _TintAmount, _Bristle, _Wrap, _Through, _WetDarken, _WetGloss, _Ember;
-            float4 _TintA, _TintB;
+            float _LampAmount, _LampInside, _InsideSpot, _InsideOutside;
+            float4 _TintA, _TintB, _InsideCore, _InsideHot, _InsideMid, _InsideDeep;
         CBUFFER_END
         ENDHLSL
 
@@ -38,6 +48,7 @@ Shader "IORI/Camp/Lit"
             #pragma vertex vert
             #pragma fragment frag
             #pragma shader_feature_local _EMBER
+            #pragma shader_feature_local _LAMP_INSIDE
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
@@ -70,9 +81,13 @@ Shader "IORI/Camp/Lit"
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.albedo = float4(IoriVertexAlbedo(v.color.rgb), v.color.a);
                 o.positionOS = v.positionOS.xyz;
-                #ifdef _EMBER
+                #if defined(_EMBER)
                     o.glow = float4(0, 0, 0, v.data.z);
                     o.heat = v.data.y * step(6.5, v.data.x);
+                #elif defined(_LAMP_INSIDE)
+                    // how strongly the lamp's light arrives at this piece of cloth (glow channel 2); the rest of the tent has none
+                    o.glow = float4(0, 0, 0, v.data.z);
+                    o.heat = v.data.y * step(1.5, v.data.x) * step(v.data.x, 2.5);
                 #else
                     o.glow = float4(IoriGlowOf(v.data, o.albedo.rgb), v.data.z);
                     o.heat = 0;
@@ -97,10 +112,35 @@ Shader "IORI/Camp/Lit"
                 float gloss = saturate(i.glow.a + wet * _WetGloss);
 
                 IoriLit L = IoriLighting(st.pos, n, viewDir, st.rnd, i.albedo.a, _Wrap, _Through, gloss);
-                float3 col = IoriSoftClip(albedo * L.diffuse) + L.spec;
+                float3 col = IoriShade(albedo, L, _LampAmount);
 
                 float3 glow = i.glow.rgb;
-                #ifdef _EMBER
+                #if defined(_LAMP_INSIDE)
+                    // The tent: its cloth shows the lamp that hangs inside. Where the cloth lies between us and
+                    // the lamp it is pale yellow; away from that the color deepens to orange and to a burnt
+                    // orange at the rim. Taken per stroke, so the patches have painted edges, and the bright
+                    // patch moves over the cloth as the camera moves.
+                    float level = _IoriTentLamp.w;
+                    float3 toLamp = _IoriTentLamp.xyz - st.pos;
+                    float3 ray = normalize(st.pos - _WorldSpaceCameraPos);
+                    float miss = length(toLamp - ray * dot(toLamp, ray));
+                    float front = 1.0 - smoothstep(0.08, max(_InsideSpot, 0.1), miss);
+                    float cloth = step(0.3, i.heat);
+                    float arrive = saturate((i.heat - 0.3) / 0.95);
+                    // cloth seen edge-on at the tent's outline is darker
+                    float edgeOn = 1.0 - saturate(dot(n, viewDir));
+                    float h = saturate(arrive * 0.5 + front * front * 0.55 - edgeOn * edgeOn * 0.3);
+                    h = saturate((floor(h * 7.0 + st.rnd * 0.9) + 0.25) / 7.0);
+                    float3 inside = lerp(_InsideDeep.rgb, _InsideMid.rgb, saturate(h / 0.35));
+                    inside = lerp(inside, _InsideHot.rgb, saturate((h - 0.35) / 0.35));
+                    inside = lerp(inside, _InsideCore.rgb, saturate((h - 0.70) / 0.30));
+                    inside *= 1.0 + st.bristle * 0.12;
+                    // the poles along the seams stay dark lines against the light
+                    inside = lerp(_InsideDeep.rgb * 0.3, inside, cloth);
+                    float lampOn = step(0.05, i.heat) * level;
+                    col *= 1.0 - saturate(lampOn) * (1.0 - _InsideOutside);
+                    glow = inside * lampOn;
+                #elif defined(_EMBER)
                     // burning wood: thin glowing cracks where the wood is charred, and a slow breathing
                     float t = IoriTime();
                     float heat = i.heat;

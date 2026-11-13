@@ -26,6 +26,7 @@ namespace Iori.Camp
         public Material skyMaterial;
         public Texture2D strokeTexture;
         public Texture3D noiseTexture;
+        [Tooltip("山並みの輪郭(iori_ridges.png)")] public Texture2D ridgeTexture;
 
         [Header("時刻")]
         [Tooltip("Play 中は端末の時計(ラジオの時計のずれも反映)に合わせる。オフなら下の時刻")]
@@ -81,6 +82,7 @@ namespace Iori.Camp
         readonly Vector4[] _glow = new Vector4[8];
         Vector3 _fireLightHome;
         bool _fireHomeSet;
+        bool _relight;
 
         // picture finish, on top of the scene's own volume
         GameObject _postGo;
@@ -110,6 +112,8 @@ namespace Iori.Camp
             public static readonly int StrokeOrigin = Shader.PropertyToID("_IoriStrokeOrigin");
             public static readonly int StrokeTex = Shader.PropertyToID("_IoriStrokeTex");
             public static readonly int Noise3D = Shader.PropertyToID("_IoriNoise3D");
+            public static readonly int RidgeTex = Shader.PropertyToID("_IoriRidgeTex");
+            public static readonly int TentLamp = Shader.PropertyToID("_IoriTentLamp");
             public static readonly int AmbientSky = Shader.PropertyToID("_IoriAmbientSky");
             public static readonly int AmbientEquator = Shader.PropertyToID("_IoriAmbientEquator");
             public static readonly int AmbientGround = Shader.PropertyToID("_IoriAmbientGround");
@@ -312,11 +316,34 @@ namespace Iori.Camp
             return SkyDirection(Mathf.Lerp(6.5f, -4.5f, n), 8.6f + 2f * Mathf.Sin(n * Mathf.PI));
         }
 
+        /// <summary>
+        /// A light's strength is meant in linear light here (twice the number, twice the light). The render
+        /// pipeline switches that on whenever it draws a frame the usual way, but not when a script asks
+        /// it for a single picture, as the batch screenshots do; without it a lamp of strength 8 came out
+        /// about a hundred times as bright as a lamp of strength 1. So it is made sure of here.
+        /// </summary>
+        void MakeSureOfLinearLights()
+        {
+            if (QualitySettings.activeColorSpace != ColorSpace.Linear || GraphicsSettings.lightsUseLinearIntensity) return;
+            GraphicsSettings.lightsUseLinearIntensity = true;
+            _relight = true;
+        }
+
+        /// <summary>Makes a light work its color out again (after the rule above changed).</summary>
+        static void Relight(Light l)
+        {
+            if (!l) return;
+            var c = l.color;
+            l.color = Color.black;
+            l.color = c;
+        }
+
         void Push(CampPalette p)
         {
             var L = Look;
             float t = ShaderTime;
             float sl = _sleep, rain = _rain;
+            MakeSureOfLinearLights();
 
             // ---- sky and air, with the rain mixed in
             Color rt = p.rainTint;
@@ -402,8 +429,15 @@ namespace Iori.Camp
                 tentLight.range = L.tentRange;
                 tentLight.enabled = tentLevel > 0.01f;
             }
+            if (_relight)
+            {
+                Relight(keyLight); Relight(fireLight); Relight(lanternLight); Relight(tentLight);
+                _relight = false;
+            }
             Shader.SetGlobalVector(Id.FirePos, new Vector4(firePos.x, firePos.y, firePos.z, L.fireRange));
-            Shader.SetGlobalVector(Id.Light, new Vector4(L.lampSize * L.lampSize, L.litKnee, L.litTop, 0f));
+            Shader.SetGlobalVector(Id.Light, new Vector4(L.lampSize * L.lampSize, L.litKnee, L.litTop, L.lampGlaze));
+            Vector3 tentLamp = tentLight ? tentLight.transform.position : new Vector3(-2.2f, 0.6f, 1.2f);
+            Shader.SetGlobalVector(Id.TentLamp, new Vector4(tentLamp.x, tentLamp.y, tentLamp.z, tentLevel * L.tentGlow));
             // flame size: a low flame over embers when sleeping, never quite out
             float flameSize = Mathf.Clamp(0.35f + 0.65f * fireLevel, 0.3f, 1.2f) * Mathf.Lerp(1f, 0.55f, sl);
             Shader.SetGlobalVector(Id.Fire, new Vector4(flameSize, Mathf.Lerp(0.85f, 1.1f, Mathf.Clamp01(fireLevel)) * flick, Mathf.Clamp01(fireLevel * (1f - sl * 0.7f)), 0f));
@@ -412,7 +446,8 @@ namespace Iori.Camp
             float lampDim = Mathf.Lerp(1f, 0.75f, Mathf.Clamp01(p.keyIntensity - 1f));
             _glow[0] = Vector4.zero;
             _glow[1] = Lin(L.fireColor, fireLevel * flick);
-            // the tent's cloth glows in its own colors (pale where the lamp is close, orange at the rim): w = 1
+            // the tent's cloth is drawn by IoriLit's "lit from inside" (see _IoriTentLamp); this is for anything
+            // else on that channel, glowing in its own color: w = 1
             float tg = L.tentGlow * tentLevel;
             _glow[2] = new Vector4(tg, tg, tg, 1f);
             _glow[3] = Lin(L.lanternColor, L.lanternGlow * lanternLevel);
@@ -428,6 +463,7 @@ namespace Iori.Camp
             Shader.SetGlobalVector(Id.StrokeOrigin, strokeOrigin);
             if (strokeTexture) Shader.SetGlobalTexture(Id.StrokeTex, strokeTexture);
             if (noiseTexture) Shader.SetGlobalTexture(Id.Noise3D, noiseTexture);
+            if (ridgeTexture) Shader.SetGlobalTexture(Id.RidgeTex, ridgeTexture);
             Shader.SetGlobalVector(Id.Weather, new Vector4(rain, _wet, sl, t));
             Vector2 wd = L.windDirection.sqrMagnitude > 1e-6f ? L.windDirection.normalized : Vector2.right;
             Shader.SetGlobalVector(Id.Wind, new Vector4(wd.x, wd.y, Mathf.Lerp(L.wind, L.rainWind, rain), 0f));

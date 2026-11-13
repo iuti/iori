@@ -253,6 +253,8 @@ namespace Iori.Camp.EditorTools
                 EditorUtility.SetDirty(urp);
             }
             else Debug.LogWarning("[IORI] 見つからない: " + UrpAssetPath);
+            // light strengths are meant in linear light (see CampAtmosphere.MakeSureOfLinearLights)
+            GraphicsSettings.lightsUseLinearIntensity = true;
 
             var renderer = AssetDatabase.LoadAssetAtPath<ScriptableObject>(UrpRendererPath);
             if (renderer)
@@ -298,7 +300,14 @@ namespace Iori.Camp.EditorTools
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
             bool fresh = !m || m.shader != shader || reset;
             if (!m) { m = new Material(shader) { name = file }; AssetDatabase.CreateAsset(m, path); }
-            else if (m.shader != shader) m.shader = shader;
+            else if (fresh)
+            {
+                // back to what the shader says: values saved by an older version of the shader must not linger
+                var clean = new Material(shader);
+                EditorUtility.CopySerialized(clean, m);
+                m.name = file;
+                UnityEngine.Object.DestroyImmediate(clean);
+            }
             if (fresh) { setup?.Invoke(m); EditorUtility.SetDirty(m); }
             return m;
         }
@@ -331,10 +340,16 @@ namespace Iori.Camp.EditorTools
                 m.SetFloat("_StrokeScale", 1.5f); m.SetFloat("_Variation", 0.1f); m.SetFloat("_Bristle", 0.12f); m.SetFloat("_Wrap", 0.4f);
                 m.SetFloat("_Through", 0.7f); m.SetFloat("_TintAmount", 0.4f); m.SetFloat("_WetDarken", 0.15f); m.SetFloat("_WetGloss", 0.3f);
             });
+            // the lamp inside shows through the cloth (IoriLit paints that; the lamps' light on the cloth itself is kept low)
+            d["Tent"].SetFloat("_LampAmount", 0.2f);
+            d["Tent"].SetFloat("_LampInside", 1f);
+            d["Tent"].EnableKeyword("_LAMP_INSIDE");
             d["Ember"] = Mat("CampEmber", "IoriLit", reset, m =>
             {
                 m.SetFloat("_StrokeScale", 4f); m.SetFloat("_Variation", 0.18f); m.SetFloat("_Bristle", 0.3f); m.SetFloat("_Wrap", 0.3f);
                 m.SetFloat("_TintAmount", 0.3f); m.SetFloat("_WetDarken", 0.1f); m.SetFloat("_WetGloss", 0f);
+                // logs in the fire stay dark against the flame
+                m.SetFloat("_LampAmount", 0.3f);
             });
             d["Ember"].SetFloat("_Ember", 1f);
             d["Ember"].EnableKeyword("_EMBER");
@@ -363,12 +378,13 @@ namespace Iori.Camp.EditorTools
             d["Lake"] = Mat("CampLake", "IoriWater", reset, m =>
             {
                 m.SetFloat("_Puddle", 0f); m.SetFloat("_StrokeTiles", 9f); m.SetFloat("_Wobble", 1f); m.SetColor("_Tint", Color.white);
-                m.SetFloat("_Mirror", 0.45f); m.SetFloat("_Shallow", 0.35f); m.SetFloat("_Streak", 0.11f); m.SetFloat("_Air", 0.5f);
+                m.SetFloat("_Mirror", 0.45f); m.SetFloat("_Shallow", 0.35f); m.SetFloat("_Streak", 0f); m.SetFloat("_Air", 0.5f);
             });
             d["Puddle"] = Mat("CampPuddle", "IoriWater", reset, m =>
             {
                 m.SetFloat("_Puddle", 1f); m.SetFloat("_StrokeTiles", 14f); m.SetFloat("_Wobble", 0.6f); m.SetColor("_Tint", Color.white);
-                m.SetFloat("_Mirror", 0.6f); m.SetFloat("_Shallow", 0.02f); m.SetFloat("_Streak", 0.11f); m.SetFloat("_Air", 0.3f);
+                m.SetFloat("_Mirror", 0.6f); m.SetFloat("_Shallow", 0.02f); m.SetFloat("_Streak", 0.045f); m.SetFloat("_Air", 0.3f);
+                m.SetFloat("_Columns", 0f); m.SetFloat("_Glitter", 0f); m.SetFloat("_Lanes", 0f);
             });
             // the flame as the main camera sees it (stops at the logs), and the plain one for mirror images and phones
             d["Flame"] = Mat("CampFlame", "IoriFire", reset, m => { });
@@ -378,7 +394,6 @@ namespace Iori.Camp.EditorTools
             d["Sparks"] = Mat("CampSparks", "IoriSparks", reset, m => { });
             d["Rain"] = Mat("CampRain", "IoriRain", reset, m => { });
             d["Sky"] = Mat("CampSky", "IoriSky", reset, m => { m.SetFloat("_MountTiles", 5f); });
-            d["Sky"].SetTexture("_RidgeTex", Load<Texture2D>(RidgePath));
             d["Iori"] = Mat("IoriBoard", "IoriCharacter", reset, m => { m.SetFloat("_Cutoff", 0.5f); });
             foreach (var m in d.Values) EditorUtility.SetDirty(m);
             return d;
@@ -457,8 +472,10 @@ namespace Iori.Camp.EditorTools
             if (meshes.Count == 0) throw new Exception("メッシュが読めない: " + MeshPath);
 
             var look = AssetDatabase.LoadAssetAtPath<CampLook>(LookPath);
+            // when the defaults in the code have moved on, the materials go back to them together with the look
+            if (look && look.version != CampLook.CurrentVersion) resetLook = true;
             if (!look) { look = CampLook.CreateDefault(); look.name = "CampLook"; AssetDatabase.CreateAsset(look, LookPath); }
-            else if (resetLook || look.version != CampLook.CurrentVersion)
+            else if (resetLook)
             {
                 var fresh = CampLook.CreateDefault();
                 EditorUtility.CopySerialized(fresh, look);
@@ -506,6 +523,7 @@ namespace Iori.Camp.EditorTools
             atm.skyMaterial = mats["Sky"];
             atm.strokeTexture = strokeTex;
             atm.noiseTexture = noiseTex;
+            atm.ridgeTexture = Load<Texture2D>(RidgePath);
             atm.strokeOrigin = camHome;
             atm.groundMap = lay.groundMap != null && lay.groundMap.size > 0 ? new Vector3(lay.groundMap.x0, lay.groundMap.z0, lay.groundMap.size) : new Vector3(-9f, -6.5f, 18f);
             atm.puddleY = lay.puddleY;
@@ -812,6 +830,8 @@ namespace Iori.Camp.EditorTools
             // the lake's mirror first: the puddles' one may borrow its picture
             Array.Sort(mirrors, (x, y) => x.followPuddle.CompareTo(y.followPuddle));
 
+            // a single picture asked for by script does not switch this on by itself (see CampAtmosphere)
+            GraphicsSettings.lightsUseLinearIntensity = true;
             // every shader variant must be ready before a picture is taken (no placeholder shaders in the shots)
             bool oldAsync = ShaderUtil.allowAsyncCompilation;
             ShaderUtil.allowAsyncCompilation = false;

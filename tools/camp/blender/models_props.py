@@ -339,24 +339,31 @@ def firewood(rng):
 
 # ------------------------------------------------------------------------------ tent
 def tent(rng, radius=1.15, height=1.38):
-    """Geodesic dome tent glowing from inside. Door toward -Y."""
+    """Geodesic dome tent with a lamp hanging inside. Door toward -Y.
+    The cloth carries how much of the lamp's light arrives at each panel (glow strength 0.3..1.25);
+    the shader turns that, and where the lamp is behind the cloth as seen from the camera, into color."""
     p = P()
-    cloth_hot, cloth_mid, cloth_edge = hexc('#ffd978'), hexc('#ffab3c'), hexc('#e8782a')
+    cloth_hot, cloth_edge = hexc('#f0b658'), hexc('#d8842e')
     dome = ico(1.0, 2)
     bmesh.ops.bisect_plane(dome.bm, geom=dome.bm.verts[:] + dome.bm.edges[:] + dome.bm.faces[:], plane_co=(0, 0, -0.02), plane_no=(0, 0, -1), clear_outer=True)
     dome.scale(radius, radius, height)
     dome.shade(False)
     lamp = Vector((0.0, -0.1, 0.55))
     dome.bm.faces.index_update()
-    tone = {f.index: rng.uniform(-.06, .06) for f in dome.bm.faces}
+    tone = {f.index: rng.uniform(-.07, .07) for f in dome.bm.faces}
+    # light arriving from the lamp: stronger where the cloth is close and faces it
+    def arriving(co, nrm):
+        to = lamp - co
+        d = to.length
+        return abs(nrm.dot(to)) / d / (d * d)
+    most = max(arriving(l.vert.co, f.normal) for f in dome.bm.faces for l in f.loops)
     for f in dome.bm.faces:
         for l in f.loops:
-            dist = (l.vert.co - lamp).length
-            k = sstep(0.55, 1.35, dist)
-            c = mix(cloth_hot, cloth_mid, min(1.0, k * 1.6)) if k < 0.62 else mix(cloth_mid, cloth_edge, (k - 0.62) / 0.38)
+            e = (arriving(l.vert.co, f.normal) / most) ** 1.3
+            c = mix(cloth_edge, cloth_hot, e)
             c = tuple(min(1.0, ch * (1 + tone[f.index])) for ch in c)
             l[dome.col] = (c[0], c[1], c[2], 1.0)
-            l[dome.dat] = (float(GLOW['tent']), 1.25 - 0.85 * k + tone[f.index], 0.0, 0.0)
+            l[dome.dat] = (float(GLOW['tent']), 0.36 + 0.82 * e + tone[f.index], 0.0, 0.0)
     p.add(dome)
     # poles along the panel seams, dark against the light
     seam = hexc('#5a3418')

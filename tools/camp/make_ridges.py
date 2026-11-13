@@ -7,6 +7,10 @@ and writes them into a small texture the shader reads.
 
   row 0: R,G = height of the near headlands (16 bit, R high byte)   B,A = height of the main range
   row 1: R,G = height of the far range                              B = how many town lights, A = how high they climb
+  row 2: R, G, B = which way the main range, the far range and the near headlands climb, taken over
+         about a degree (0.5 = level, above = climbing to the right; SLOPE_RANGE at 0 and 1).
+         The shader lights the mountains' faces by it: big planes that follow the drawn shapes.
+  row 3: unused
 
 Heights are stored as height / MAX_DEG. One texel is 360 / WIDTH degrees; the shader blends
 between texels itself, so the outlines stay straight lines with sharp corners.
@@ -18,7 +22,9 @@ import numpy as np
 from PIL import Image
 
 WIDTH = 2048
-MAX_DEG = 16.0          # must match RIDGE_MAX_DEG in IoriSky.shader
+MAX_DEG = 16.0          # must match IORI_RIDGE_MAX_DEG in IoriFar.hlsl
+SLOPE_RANGE = 2.0       # must match IORI_RIDGE_SLOPE in IoriFar.hlsl (degrees of height per degree to the right)
+SLOPE_OVER = 0.45       # the faces follow the outline smoothed by this much (degrees)
 SEED = 20261113
 
 # ---------------------------------------------------------------- the composition
@@ -115,6 +121,17 @@ def build():
     return az, h_near, h_main, h_far, t_amount, t_climb
 
 
+def lean(h):
+    """Which way an outline climbs, with the small notches smoothed away (degrees per degree)."""
+    step = 360.0 / WIDTH
+    sigma = SLOPE_OVER / step
+    r = int(sigma * 4) + 1
+    k = np.exp(-0.5 * (np.arange(-r, r + 1) / sigma) ** 2)
+    k /= k.sum()
+    sm = np.convolve(np.concatenate([h[-r:], h, h[:r]]), k, mode='valid')
+    return (np.roll(sm, -1) - np.roll(sm, 1)) / (2 * step)
+
+
 def pack16(h):
     v = np.clip(np.round(h / MAX_DEG * 65535.0), 0, 65535).astype(np.int64)
     return (v >> 8).astype(np.uint8), (v & 255).astype(np.uint8)
@@ -122,12 +139,16 @@ def pack16(h):
 
 def write(path):
     az, h_near, h_main, h_far, t_amount, t_climb = build()
-    img = np.zeros((2, WIDTH, 4), np.uint8)
+    img = np.zeros((4, WIDTH, 4), np.uint8)
     img[0, :, 0], img[0, :, 1] = pack16(h_near)
     img[0, :, 2], img[0, :, 3] = pack16(h_main)
     img[1, :, 0], img[1, :, 1] = pack16(h_far)
     img[1, :, 2] = np.clip(np.round(t_amount * 255), 0, 255)
     img[1, :, 3] = np.clip(np.round(t_climb / MAX_DEG * 255 * 4), 0, 255)    # lights never climb past MAX_DEG / 4
+    for ch, h in enumerate((h_main, h_far, h_near)):
+        img[2, :, ch] = np.clip(np.round((lean(h) / SLOPE_RANGE * 0.5 + 0.5) * 255), 0, 255)
+    img[2, :, 3] = 255
+    img[3] = img[2]
     # Unity reads images bottom row first: row 0 of the texture is the last row of the file
     Image.fromarray(img[::-1].copy(), 'RGBA').save(path)
     return az, h_near, h_main, h_far, t_amount, t_climb
@@ -139,7 +160,10 @@ def srgb(hexs):
     return np.array([(v >> 16) & 255, (v >> 8) & 255, v & 255], np.float64) / 255.0
 
 
-def preview(data, path, w=720, h=1600, fov=42.0, pitch=-6.47, yaw=0.0):
+def preview(data, path, w=720, h=1600, fov=42.0, pitch=-6.47, yaw=0.0, light_az=-22.0,
+            strokes='Assets/IORI/Art/Camp/Textures/iori_strokes.png', tiles=5.0, facet_lean=0.7):
+    """A rough picture of the far view at dusk, with the same rules IoriSky.shader uses for the
+    mountains' faces, so a composition can be judged without Unity."""
     az, h_near, h_main, h_far, t_amount, t_climb = data
     rng = np.random.RandomState(3)
     t = np.tan(np.radians(fov / 2))
@@ -156,12 +180,24 @@ def preview(data, path, w=720, h=1600, fov=42.0, pitch=-6.47, yaw=0.0):
     water = el < 0
     el_m = np.abs(el)      # the lake mirrors the far view
 
-    idx = ((a + 180.0) / 360.0 * WIDTH - 0.5)
-    i0 = np.floor(idx).astype(int) % WIDTH
-    i1 = (i0 + 1) % WIDTH
-    f = idx - np.floor(idx)
-    L = lambda arr: arr[i0] * (1 - f) + arr[i1] * f
+    def look(arr, at):
+        idx = ((at + 180.0) / 360.0 * WIDTH - 0.5)
+        i0 = np.floor(idx).astype(int) % WIDTH
+        f = idx - np.floor(idx)
+        return arr[i0] * (1 - f) + arr[(i0 + 1) % WIDTH] * f
+    L = lambda arr: look(arr, a)
     top_near, top_main, top_far = L(h_near), L(h_main), L(h_far)
+
+    # which stroke each pixel belongs to, as the shader looks it up
+    try:
+        st = np.asarray(Image.open(strokes).convert('RGBA'), np.float64) / 255.0
+        u = (np.radians(a) * tiles % 1.0 * st.shape[1]).astype(int) % st.shape[1]
+        v = (np.radians(el_m) * tiles % 1.0 * st.shape[0]).astype(int) % st.shape[0]
+        sm = st[st.shape[0] - 1 - v, u]
+        rnd = sm[..., 2]
+        el_c = el_m + (0.5 - sm[..., 1]) * 0.25 / tiles / np.radians(1.0)
+    except OSError:
+        rnd, el_c = rng.rand(h, w), el_m
 
     horizon, mid, zenith = srgb('#eaa0d6'), srgb('#a58ae8'), srgb('#4a6cdc')
     far_near, far_far, mist = srgb('#2a2c80'), srgb('#7f8ee6'), srgb('#a8a0ee')
@@ -169,11 +205,23 @@ def preview(data, path, w=720, h=1600, fov=42.0, pitch=-6.47, yaw=0.0):
     ss = lambda e0, e1, x: np.clip((x - e0) / (e1 - e0), 0, 1) ** 2 * (3 - 2 * np.clip((x - e0) / (e1 - e0), 0, 1))
     col = horizon + (mid - horizon) * ss(0.0, 0.22, hh)
     col = col + (zenith - col) * ss(0.14, 0.62, hh)
-    for top, depth in ((top_far, 1.0), (top_main, 0.52), (top_near, 0.0)):
-        mc = far_near + (far_far - far_near) * depth
-        low = (1 - np.clip(el_m / 2.6, 0, 1))[..., None] * (0.15 + 0.3 * depth)
+    behind = col.copy()
+    side = np.sign(a - light_az)
+    for hgt, top, depth in ((h_far, top_far, 1.0), (h_main, top_main, 0.5), (h_near, top_near, 0.0)):
+        mc = (far_near + (far_far - far_near) * depth) * np.ones_like(col)
+        ln = lean(hgt)
+        below = np.maximum(top - el_c, 0.0)
+        at = a + below * np.clip(look(ln, a) * 1.5, -1, 1) * facet_lean
+        sk = look(ln, at) if depth > 0 else look(ln, a)
+        under = np.clip(1.0 - (top - el_c) / (2.6 + depth), 0, 1)
+        facing = np.clip(sk * side * 1.5 + 0.15, 0, 1)
+        face = np.clip(np.floor(under * facing * 3.0 + rnd) / 3.0, 0, 1)[..., None] * (0.75 - 0.25 * depth)
+        lit = (mc + (behind - mc) * 0.5) * 1.06
+        mc = mc + (lit - mc) * face
+        mc = mc * (1.0 + (rnd - 0.5) * 0.10 - (rnd < 0.14) * 0.07 * (1 - depth))[..., None]
+        low = (1 - ss(0.0, 2.8, el_c))[..., None] * (0.12 + 0.30 * depth)
         mc = mc + (mist - mc) * low
-        inside = (el_m < top)[..., None]
+        inside = ((el_m < top) & (top > 0.02))[..., None]
         col = np.where(inside, mc, col)
     # lights
     cell = 0.2
@@ -181,7 +229,7 @@ def preview(data, path, w=720, h=1600, fov=42.0, pitch=-6.47, yaw=0.0):
     hsh = rng.rand(4096, 256)[gx % 4096, gy % 256]
     amount, climb = L(t_amount), L(t_climb)
     k = np.clip(1 - el_m / np.maximum(climb, 0.05), 0, 1)
-    on = (hsh > 1 - 0.5 * amount * k ** 0.8) & (el_m < np.maximum(np.maximum(top_main, top_near), 0.5))
+    on = (hsh > 1 - amount * (0.45 * k ** 0.8 + 0.35 * (el_m < 0.45))) & (el_m < np.maximum(np.maximum(top_main, top_near), 0.5))
     fx, fy = a / cell - gx - 0.5, el_m / cell - gy - 0.5
     dot = (np.hypot(fx, fy) < 0.3) & on
     col = np.where(dot[..., None], np.array([1.0, 0.75, 0.45]), col)

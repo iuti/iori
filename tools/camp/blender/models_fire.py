@@ -31,7 +31,7 @@ def rock(size, rng, color, n=20, squash=0.72, bevel=0.08, stretch=1.0):
     return p
 
 
-def log(length, radius, rng, sides=9, bark=hexc('#3d2f2a'), wood=hexc('#b89a72'), char=0.0, char_from=0.5, split=False):
+def log(length, radius, rng, sides=9, bark=hexc('#30252a'), wood=hexc('#7d6046'), char=0.0, char_from=0.5, split=False):
     """A log along +X from 0 to length. char: how burnt the far end is (0..1), starting at char_from.
     Charred parts carry the ember glow in their cracks (glow channel 'ember')."""
     rings = 7
