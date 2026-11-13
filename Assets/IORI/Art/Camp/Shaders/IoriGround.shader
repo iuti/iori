@@ -102,8 +102,8 @@ Shader "IORI/Camp/Ground"
                 albedo *= 1.0 - wet * 0.38;
                 float gloss = wet * (0.35 + 0.45 * cover.r) + rim * 0.3;
 
-                IoriLit L = IoriLighting(st.pos, n, viewDir, st.rnd, ao, _Wrap, 0.0, gloss);
-                float3 col = IoriShade(albedo, L, 1.0);
+                IoriLit L = IoriLightingWrapped(st.pos, n, viewDir, st.rnd, ao, _Wrap, min(_Wrap, _IoriShadeMix.z), 0.0, gloss);
+                float3 col = IoriShade(albedo, L, 1.0, st.rnd);
                 // wet ground mirrors the sky at a low angle
                 float fres = pow(1.0 - saturate(dot(n, viewDir)), 4.0);
                 col += _IoriAmbientSky.rgb * (fres * wet * 0.35 * ao);

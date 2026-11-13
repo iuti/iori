@@ -118,7 +118,7 @@ Shader "IORI/Camp/Lit"
                 float gloss = saturate(i.glow.a + wet * _WetGloss);
 
                 IoriLit L = IoriLighting(st.pos, n, viewDir, st.rnd, i.albedo.a, _Wrap, _Through, gloss);
-                float3 col = IoriShade(albedo, L, _LampAmount);
+                float3 col = IoriShade(albedo, L, _LampAmount, st.rnd);
 
                 float3 glow = i.glow.rgb;
                 #if defined(_LAMP_INSIDE)

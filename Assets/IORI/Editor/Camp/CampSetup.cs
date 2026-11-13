@@ -388,6 +388,9 @@ namespace Iori.Camp.EditorTools
                 m.SetFloat("_Mirror", 0.6f); m.SetFloat("_Shallow", 0.02f); m.SetFloat("_Streak", 0.045f); m.SetFloat("_Air", 0.3f);
                 m.SetFloat("_Columns", 0f); m.SetFloat("_Glitter", 0f); m.SetFloat("_Lanes", 0f);
             });
+            // the lake and the puddles are two versions of the water shader
+            if (d["Lake"].IsKeywordEnabled("_PUDDLE")) { d["Lake"].DisableKeyword("_PUDDLE"); EditorUtility.SetDirty(d["Lake"]); }
+            if (!d["Puddle"].IsKeywordEnabled("_PUDDLE")) { d["Puddle"].EnableKeyword("_PUDDLE"); EditorUtility.SetDirty(d["Puddle"]); }
             // the flame as the main camera sees it (stops at the logs), and the plain one for mirror images and phones
             d["Flame"] = Mat("CampFlame", "IoriFire", reset, m => { });
             d["Flame"].SetFloat("_UseDepth", 1f); d["Flame"].SetFloat("_Cull", (float)CullMode.Front); d["Flame"].SetFloat("_ZTest", (float)CompareFunction.Always);
@@ -790,6 +793,10 @@ namespace Iori.Camp.EditorTools
             new Shot { name = "33_fire_d", hour = 18.6f, focus = CampPropKind.Fire, time = ShotTime + 0.60f, small = true },
             new Shot { name = "34_fire_e", hour = 18.6f, focus = CampPropKind.Fire, time = ShotTime + 2.0f, small = true },
             new Shot { name = "35_fire_f", hour = 18.6f, focus = CampPropKind.Fire, time = ShotTime + 5.0f, small = true },
+            // the lake a moment and a few seconds after 08_night, to see how the water moves (it must not flicker)
+            new Shot { name = "41_lake_b", hour = 22f, time = ShotTime + 0.5f },
+            new Shot { name = "42_lake_c", hour = 22f, time = ShotTime + 4.0f },
+            new Shot { name = "43_landscape_night", hour = 22f, landscape = true },
         };
 
         [MenuItem("IORI/Camp/スクショを撮る")]

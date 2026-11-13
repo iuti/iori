@@ -2,7 +2,8 @@
 // the sky itself (three colors, laid down as large brush strokes), sun glow, moon, stars, clouds,
 // the mountain ranges across the lake with the lights of a town at their feet, the far shore's
 // tree line, and the haze over the water. Being the skybox, all of it is mirrored in the lake
-// and the puddles by the reflection camera at no extra cost.
+// and the puddles by the reflection camera at no extra cost (all but the stars and the town's lights:
+// see "direct" below).
 // The camp looks toward +z; azimuth 0 is straight across the lake.
 // The mountains' outlines are a drawn composition (tools/camp/make_ridges.py -> iori_ridges.png, see IoriFar.hlsl).
 Shader "IORI/Camp/Sky"
@@ -88,6 +89,11 @@ Shader "IORI/Camp/Sky"
                 float3 dc = DomeDir(uv + off * _IoriSkyStroke.y);
                 float rnd = sm.b;
 
+                // The mirror cameras (the only ones that ever sit below the ground) leave out the stars and the
+                // lights of the town: such small points only flicker in a mirror image, and the lake draws the
+                // town's lights on the water itself (IoriWater).
+                float direct = step(0.0, _WorldSpaceCameraPos.y);
+
                 float3 sunDir = normalize(_IoriSunDir.xyz);
                 float glow = _IoriSkyParams.x, moon = _IoriSkyParams.y, stars = _IoriSkyParams.z, sunDisc = _IoriSkyParams.w;
                 float overcast = _IoriCloudParams.y;
@@ -133,7 +139,7 @@ Shader "IORI/Camp/Sky"
                 // the brightest ones get a small cross
                 float2 q = abs(sf - sp);
                 star += big * smoothstep(0.02, 0.0, min(q.x, q.y)) * smoothstep(0.32, 0.0, max(q.x, q.y)) * 0.6;
-                col += float3(0.92, 0.95, 1.0) * (star * stars * twinkle * clear * smoothstep(0.03, 0.2, d.y) * (0.5 + 0.9 * IoriHash1(sid + 1.3)) * 1.6);
+                col += float3(0.92, 0.95, 1.0) * (star * stars * twinkle * clear * direct * smoothstep(0.03, 0.2, d.y) * (0.5 + 0.9 * IoriHash1(sid + 1.3)) * 1.6);
 
                 if (moon > 0.001)
                 {
@@ -211,7 +217,7 @@ Shader "IORI/Camp/Sky"
                 float inShore = saturate((shore - elp) / aa + 0.5);
                 float3 shoreCol = lerp(_IoriFarNear.rgb * 0.7, air, 0.22);
                 col = lerp(col, shoreCol, inShore);
-                col += IoriTownColor(tl.y) * (tl.x * (1.0 - inShore * 0.4));
+                col += IoriTownColor(tl.y) * (tl.x * direct * (1.0 - inShore * 0.4));
 
                 // ---- haze low over the water, and plain air below the horizon
                 float haze = (1.0 - smoothstep(0.0, 3.2, elp)) * saturate(_IoriFog.y * 40.0);

@@ -7,7 +7,8 @@ namespace Iori.Camp
     /// One look of the camp at a given hour: the sky, where the light comes from and its color,
     /// the air, how strong each lamp is, and the finishing touches on the picture.
     /// Things have their own colors (in the models); this only says what light falls on them.
-    /// Rule from the art direction: only light sources are warm; shade is deep indigo, never black.
+    /// Rule from the art direction: only light sources are warm; shade is a clear, deep blue, never
+    /// black and never grey. At dusk and at night the light from the sky therefore holds next to no red.
     /// Colors are authored and blended in sRGB.
     /// </summary>
     [Serializable]
@@ -33,25 +34,27 @@ namespace Iori.Camp
         [Range(0, 1)] public float moon = 0f;
 
         [Header("主な光(太陽、残照、月明かり)")]
-        public Color keyColor = Hex("#ff9ccc");
-        public float keyIntensity = 0.5f;
+        public Color keyColor = Hex("#c8a0f0");
+        public float keyIntensity = 0.3f;
         [Range(0, 1)] public float keyShadow = 0.55f;
 
         [Header("まわりの光(上から、横から、地面から)")]
-        public Color ambientSky = Hex("#58c8f0");
-        public Color ambientEquator = Hex("#7862e8");
-        public Color ambientGround = Hex("#34348c");
-        public float ambientIntensity = 1.5f;
+        public Color ambientSky = Hex("#1a97ff");
+        public Color ambientEquator = Hex("#1c70ee");
+        public Color ambientGround = Hex("#1740a8");
+        public float ambientIntensity = 1.0f;
+        [Tooltip("影に空の色がのる量。0 だと物の色に光を掛け合わせるだけ(昼向き)。上げるほど、物の色に関係なく影が空の青になる(日没後や夜向き)")]
+        [Range(0, 1)] public float shadeGlaze = 0.5f;
 
         [Header("空気")]
-        public Color fog = Hex("#7c84e2");
+        public Color fog = Hex("#6f86e4");
         [Tooltip("1m あたりのかすみ")] public float fogDensity = 0.003f;
-        public Color mist = Hex("#a8a0ee");
+        public Color mist = Hex("#9aa4ee");
         [Tooltip("水面近くの霧")] public float mistDensity = 0.0035f;
 
         [Header("遠くの山(手前と奥)と町の灯り")]
-        public Color farNear = Hex("#2a2c80");
-        public Color farFar = Hex("#748cee");
+        public Color farNear = Hex("#24349a");
+        public Color farFar = Hex("#6a90ee");
         public float town = 1f;
 
         [Header("湖の色")]
@@ -112,6 +115,7 @@ namespace Iori.Camp
             into.keyIntensity = Mathf.Lerp(a.keyIntensity, b.keyIntensity, t);
             into.keyShadow = Mathf.Lerp(a.keyShadow, b.keyShadow, t);
             into.ambientIntensity = Mathf.Lerp(a.ambientIntensity, b.ambientIntensity, t);
+            into.shadeGlaze = Mathf.Lerp(a.shadeGlaze, b.shadeGlaze, t);
             into.fogDensity = Mathf.Lerp(a.fogDensity, b.fogDensity, t);
             into.mistDensity = Mathf.Lerp(a.mistDensity, b.mistDensity, t);
             into.town = Mathf.Lerp(a.town, b.town, t);
@@ -134,7 +138,7 @@ namespace Iori.Camp
             sunAzimuth = beforeDawn ? 150f : -22f,
             sunElevation = beforeDawn ? -6f : -5f,
             sunGlow = beforeDawn ? 0.3f : 0.75f,
-            keyIntensity = beforeDawn ? 0.35f : 0.5f,
+            keyIntensity = beforeDawn ? 0.25f : 0.3f,
             stars = beforeDawn ? 0.45f : 0.6f,
             mistDensity = beforeDawn ? 0.009f : 0.0035f,
         };
@@ -145,11 +149,11 @@ namespace Iori.Camp
             cloud = Hex("#3a48a8"), cloudDark = Hex("#141a55"), cloudAmount = 0.25f, stars = 1f,
             sunAzimuth = -22f, sunElevation = -30f, sunGlowColor = Hex("#e6ecff"), sunGlow = 0f, sunDisc = 0f,
             moon = 1f,
-            keyColor = Hex("#a9bcff"), keyIntensity = 0.55f, keyShadow = 0.7f,
-            ambientSky = Hex("#3a8ad8"), ambientEquator = Hex("#4438b0"), ambientGround = Hex("#1c1c60"), ambientIntensity = 0.95f,
-            fog = Hex("#1e2670"), fogDensity = 0.004f, mist = Hex("#2c3684"), mistDensity = 0.005f,
-            farNear = Hex("#12154a"), farFar = Hex("#2e3e98"), town = 1f,
-            water = Hex("#243090"),
+            keyColor = Hex("#a9bcff"), keyIntensity = 0.5f, keyShadow = 0.7f,
+            ambientSky = Hex("#177be1"), ambientEquator = Hex("#1759cc"), ambientGround = Hex("#102a80"), ambientIntensity = 0.9f, shadeGlaze = 0.5f,
+            fog = Hex("#1a2a78"), fogDensity = 0.004f, mist = Hex("#283a8c"), mistDensity = 0.005f,
+            farNear = Hex("#101a55"), farFar = Hex("#2a44a0"), town = 1f,
+            water = Hex("#223498"),
             fire = 1.15f, tent = 1f, lantern = 1f,
             exposure = 0f, saturation = 6f, contrast = 6f, bloom = 0.5f,
             rainTint = Hex("#232a55"),
@@ -163,7 +167,7 @@ namespace Iori.Camp
             sunAzimuth = 140f, sunElevation = 7f, sunGlowColor = Hex("#ffe9c4"), sunGlow = 0.5f, sunDisc = 1f,
             moon = 0f,
             keyColor = Hex("#ffd0a0"), keyIntensity = 1.5f, keyShadow = 0.8f,
-            ambientSky = Hex("#9cc4ff"), ambientEquator = Hex("#b8a8e8"), ambientGround = Hex("#7078b0"), ambientIntensity = 1.3f,
+            ambientSky = Hex("#9cc4ff"), ambientEquator = Hex("#b8a8e8"), ambientGround = Hex("#7078b0"), ambientIntensity = 1.3f, shadeGlaze = 0.15f,
             fog = Hex("#cfd0f2"), fogDensity = 0.003f, mist = Hex("#e8dcf0"), mistDensity = 0.02f,
             farNear = Hex("#5062b0"), farFar = Hex("#d8c4e4"), town = 0.15f,
             water = Hex("#b4c2f0"),
@@ -180,7 +184,7 @@ namespace Iori.Camp
             sunAzimuth = 75f, sunElevation = 58f, sunGlowColor = Hex("#fff0c8"), sunGlow = 0.35f, sunDisc = 1f,
             moon = 0f,
             keyColor = Hex("#fff2d8"), keyIntensity = 2.4f, keyShadow = 0.85f,
-            ambientSky = Hex("#a8ccff"), ambientEquator = Hex("#a0b0e0"), ambientGround = Hex("#6a7a60"), ambientIntensity = 1.0f,
+            ambientSky = Hex("#a8ccff"), ambientEquator = Hex("#a0b0e0"), ambientGround = Hex("#6a7a60"), ambientIntensity = 1.0f, shadeGlaze = 0f,
             fog = Hex("#bcd0f6"), fogDensity = 0.0022f, mist = Hex("#d0dcf8"), mistDensity = 0.002f,
             farNear = Hex("#4460b4"), farFar = Hex("#acc2ee"), town = 0f,
             water = Hex("#8fb4f0"),
@@ -197,7 +201,7 @@ namespace Iori.Camp
             sunAzimuth = -20f, sunElevation = 7f, sunGlowColor = Hex("#ffd8a0"), sunGlow = 0.9f, sunDisc = 1f,
             moon = 0f,
             keyColor = Hex("#ffb070"), keyIntensity = 1.6f, keyShadow = 0.85f,
-            ambientSky = Hex("#8fb0f0"), ambientEquator = Hex("#b098d8"), ambientGround = Hex("#806890"), ambientIntensity = 1.1f,
+            ambientSky = Hex("#8fb0f0"), ambientEquator = Hex("#b098d8"), ambientGround = Hex("#806890"), ambientIntensity = 1.1f, shadeGlaze = 0.2f,
             fog = Hex("#e8c0c8"), fogDensity = 0.003f, mist = Hex("#f0c8c0"), mistDensity = 0.004f,
             farNear = Hex("#4a4a9a"), farFar = Hex("#c8a8d8"), town = 0.4f,
             water = Hex("#b0a8e0"),

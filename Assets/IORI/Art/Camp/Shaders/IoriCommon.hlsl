@@ -31,7 +31,8 @@ float4 _IoriGlow[8];         // rgb: light given off by each glow channel (see G
 float4 _IoriGroundMap;       // xy: world x,z of the ground texture's corner, z: 1 / its size in metres, w: puddle water height right now
 float4 _IoriFirePos;         // xyz: where the fire's light sits, w: how far it reaches
 float4 _IoriLight;           // x: size of the lamps squared (softens their light close up), y: brightness where colors stop getting lighter and start to hold, z: most a lit color may reach, w: how much of a lamp's color lands on a surface whatever its own color
-float4 _IoriLamp;            // x: how far the sky's light steps back where a lamp is stronger (0..1), y: brightness where lamp-lit colors start to hold, z: most a lamp-lit color may reach
+float4 _IoriLamp;            // x: how far the sky's light steps back on a stroke that belongs to a lamp (0..1), y: brightness where lamp-lit colors start to hold, z: most a lamp-lit color may reach
+float4 _IoriShadeMix;        // x: how much of the sky's color lands on a surface whatever its own color (blue shade at dusk), y: how far a lamp's light steps back on a stroke that belongs to the sky, z: how far a lamp's light creeps over the ground, w: how wide the border is where warm and cool strokes mix
 float4 _IoriTentLamp;        // xyz: the lamp inside the tent, w: how strongly it burns
 float4 _IoriAirFire;         // rgb: light that a metre of air catches right at the fire (0 = none)
 float4 _IoriAirTent;         // rgb: the same for the lamp in the tent
@@ -158,8 +159,10 @@ struct IoriLit
 };
 
 // posWS: the stroke center. wrap: how far light creeps around to the shaded side (0 hard, 0.5 soft).
+// lampWrap: the same for the lamps. On the ground it is kept small: a fire stands low, its light only
+// grazes the ground, and so its pool of light ends a few steps away and the ground beyond stays dark.
 // through: how much light shines through from behind (leaves, cloth). gloss: 0 none .. 1 mirror-like.
-IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao, float wrap, float through, float gloss)
+IoriLit IoriLightingWrapped(float3 posWS, float3 n, float3 viewDir, float rnd, float ao, float wrap, float lampWrap, float through, float gloss)
 {
     IoriLit o;
     o.diffuse = IoriAmbient(n) * ao;
@@ -185,7 +188,7 @@ IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao
     {
         Light l = GetAdditionalLight(i, sp, half4(1, 1, 1, 1));
         float nl2 = dot(n, l.direction);
-        float k2 = saturate((nl2 + wrap) / (1.0 + wrap)) + saturate(-nl2) * through;
+        float k2 = saturate((nl2 + lampWrap) / (1.0 + lampWrap)) + saturate(-nl2) * through;
         float reach = IoriLampFalloff(l.distanceAttenuation);
         k2 *= reach * l.shadowAttenuation;
         k2 = IoriBand(k2, rnd);
@@ -199,14 +202,25 @@ IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao
     return o;
 }
 
+IoriLit IoriLighting(float3 posWS, float3 n, float3 viewDir, float rnd, float ao, float wrap, float through, float gloss)
+{
+    return IoriLightingWrapped(posWS, n, viewDir, rnd, ao, wrap, wrap, through, gloss);
+}
+
 // Puts the light on a surface color. Light from the sky and the sun is multiplied in, the way light
 // works. A lamp's light is partly laid over the color like a glaze of paint (as much as the color is
 // light, whatever its hue): grass by the fire turns a warm color, where plain multiplying gives mud.
-// Two more things a painter does: lamp-lit colors are held at a deep value (ground at the fire is a
-// deep orange, never a pale one), and where a lamp is the stronger light the sky's cool light steps
-// back, so the warm pool stays warm instead of turning salmon.
+// Three more things a painter does:
+// - Lamp-lit colors are held at a deep value (ground at the fire is a deep orange, never a pale one).
+// - At dusk and at night the sky's light is glazed on as well: whatever a thing's own color, its shade
+//   takes the blue of the sky (_IoriShadeMix.x), so the shadows are a clear blue and not a grey.
+// - Warm light and cool light are not stirred together, which would make grey. Every stroke belongs
+//   to one of them: to the lamp where the lamp is the stronger, to the sky where the sky is. On a
+//   lamp's stroke the sky's light steps back, on the sky's stroke the lamp's does. Where the two are
+//   about even, the stroke's own number decides, so the pool of light around the fire ends in single
+//   warm strokes scattered over the blue ground.
 // lampAmount: how much of the lamps this surface takes (logs inside the fire take little: they stay
-// dark against the flame).
+// dark against the flame). rnd: the stroke's number.
 float3 IoriHold(float3 c, float knee, float top)
 {
     float m = max(c.r, max(c.g, c.b));
@@ -215,15 +229,16 @@ float3 IoriHold(float3 c, float knee, float top)
     return c * ((knee + room * over / (over + room)) / m);
 }
 
-float3 IoriShade(float3 albedo, IoriLit L, float lampAmount)
+float3 IoriShade(float3 albedo, IoriLit L, float lampAmount, float rnd)
 {
     float v = max(albedo.r, max(albedo.g, albedo.b));
-    float3 glazed = lerp(albedo, float3(v, v, v), _IoriLight.w);
-    float3 lamp = IoriHold(glazed * (L.lamp * lampAmount), _IoriLamp.y, _IoriLamp.z);
-    float3 sky = albedo * L.diffuse;
+    float3 grey = float3(v, v, v);
+    float3 lamp = IoriHold(lerp(albedo, grey, _IoriLight.w) * (L.lamp * lampAmount), _IoriLamp.y, _IoriLamp.z);
+    float3 sky = lerp(albedo, grey, _IoriShadeMix.x) * L.diffuse;
     float lm = max(lamp.r, max(lamp.g, lamp.b)), sm = max(sky.r, max(sky.g, sky.b));
-    sky *= 1.0 - _IoriLamp.x * lm / (lm + sm + 1e-4);
-    return IoriSoftClip(sky + lamp) + L.spec;
+    float warm = smoothstep(0.44, 0.56, lm / (lm + sm + 1e-4) + (rnd - 0.5) * _IoriShadeMix.w);
+    float3 col = sky * (1.0 - _IoriLamp.x * warm) + lamp * (1.0 - _IoriShadeMix.y * (1.0 - warm));
+    return IoriSoftClip(col) + L.spec;
 }
 
 // The same light without strokes or steps, for things that must stay smooth (the character).

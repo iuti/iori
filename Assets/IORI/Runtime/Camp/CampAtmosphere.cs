@@ -129,6 +129,7 @@ namespace Iori.Camp
             public static readonly int FirePos = Shader.PropertyToID("_IoriFirePos");
             public static readonly int Light = Shader.PropertyToID("_IoriLight");
             public static readonly int Lamp = Shader.PropertyToID("_IoriLamp");
+            public static readonly int ShadeMix = Shader.PropertyToID("_IoriShadeMix");
             public static readonly int Fire = Shader.PropertyToID("_IoriFire");
             public static readonly int SeasonGrass = Shader.PropertyToID("_IoriSeasonGrass");
             public static readonly int SeasonLeaf = Shader.PropertyToID("_IoriSeasonLeaf");
@@ -440,6 +441,7 @@ namespace Iori.Camp
             Shader.SetGlobalVector(Id.FirePos, new Vector4(firePos.x, firePos.y, firePos.z, L.fireRange));
             Shader.SetGlobalVector(Id.Light, new Vector4(L.lampSize * L.lampSize, L.litKnee, L.litTop, L.lampGlaze));
             Shader.SetGlobalVector(Id.Lamp, new Vector4(L.lampWins, L.lampKnee, L.lampTop, 0f));
+            Shader.SetGlobalVector(Id.ShadeMix, new Vector4(p.shadeGlaze, L.lampYields, L.groundLampWrap, L.lightBorder));
             Vector3 tentLamp = tentLight ? tentLight.transform.position : new Vector3(-2.2f, 0.6f, 1.2f);
             Shader.SetGlobalVector(Id.TentLamp, new Vector4(tentLamp.x, tentLamp.y, tentLamp.z, tentLevel * L.tentGlow));
             // the air around the lamps catches their light: more of it in mist and in rain
