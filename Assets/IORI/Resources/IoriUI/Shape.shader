@@ -106,7 +106,8 @@ Shader "IORI/UI/Shape"
 
             float3 unpack(float v)
             {
-                v = floor(v + 0.5);
+                // (the value is a whole number below 2^24 and is not interpolated: adding a half to round it
+                // would itself be rounded away at this size and corrupt the colour)
                 float r = floor(v / 65536.0);
                 float g = floor((v - r * 65536.0) / 256.0);
                 float b = v - r * 65536.0 - g * 256.0;

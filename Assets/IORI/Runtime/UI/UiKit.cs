@@ -101,6 +101,15 @@ namespace Iori.Ui
             return b;
         }
 
+        /// <summary>A button that is only its icon (no disc behind it), with a press area of the given size.</summary>
+        public static UiButton IconButton(string name, Transform parent, float x, float y, float size, string icon, float iconSize, Color32 color, Action onClick, string sound = UiSounds.Tap)
+        {
+            var b = Button(name, parent, x, y, size, size, onClick, sound);
+            float o = (size - iconSize) * 0.5f;
+            b.icon = Icon("Icon", b.visual, o, o, iconSize, icon, color);
+            return b;
+        }
+
         public static float EaseOut(float t) { t = 1f - Mathf.Clamp01(t); return 1f - t * t * t; }
         public static float EaseInOut(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
     }
@@ -110,8 +119,9 @@ namespace Iori.Ui
     {
         public Action onClick;
         public RectTransform visual;
+        public UnityEngine.UI.RawImage icon;
         public string sound = UiSounds.Tap;
-        public float shrink = 0.07f;
+        public float shrink = 0.10f;
         float _press, _target;
 
         public void OnPointerDown(PointerEventData e) => _target = 1f;
@@ -138,16 +148,17 @@ namespace Iori.Ui
     }
 
     /// <summary>
-    /// A volume slider: a thin track, the filled part, and a round knob. The press area is 44 high.
-    /// Dragging anywhere on it moves the knob there.
+    /// A slider: a thin line, the filled part of it, and a small upright bar as the handle. The press
+    /// area is 44 high. Pressing or dragging anywhere on it moves the handle there.
     /// </summary>
     public sealed class UiSlider : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler, IInitializePotentialDragHandler
     {
         public Action<float> onChanged;
         float _value, _width;
         bool _dim;
-        RectTransform _rt, _knob;
-        UiShape _track, _fill, _knobShape;
+        RectTransform _rt;
+        UiShape _track, _fill, _handle;
+        Color32 _fillColor;
         float _press, _pressTarget;
 
         public float Value => _value;
@@ -160,16 +171,23 @@ namespace Iori.Ui
             var th = UiTheme.Current;
             s._rt = rt;
             s._width = w;
-            s._track = UiKit.Box("Track", rt, 0, 20, w, 4, th.track, 2);
-            s._fill = UiKit.Box("Fill", rt, 0, 20, 0, 4, th.text, 2);
-            s._knobShape = UiKit.Shape("Knob", rt, -10, 12, 20, 20, default);
-            s._knob = s._knobShape.rectTransform;
+            s._fillColor = th.text;
+            s._track = UiKit.Box("Track", rt, 0, 21, w, 2, th.track);
+            s._fill = UiKit.Box("Fill", rt, 0, 21, 0, 2, th.text);
+            s._handle = UiKit.Box("Handle", rt, -1.5f, 13, 3, 18, th.textBright);
             s.Paint();
             s.Layout();
             return s;
         }
 
-        /// <summary>Greyed, for a sound that is not playing now (rain while it is not raining). It can still be set.</summary>
+        /// <summary>The colour of the filled part (amber for a playing position).</summary>
+        public void SetFillColor(Color32 c)
+        {
+            _fillColor = c;
+            Paint();
+        }
+
+        /// <summary>Greyed, for a sound that is not heard now (rain while it is not raining). It can still be set.</summary>
         public void SetDim(bool dim)
         {
             if (_dim == dim) return;
@@ -189,15 +207,16 @@ namespace Iori.Ui
         void Paint()
         {
             var th = UiTheme.Current;
-            _track.Style = ShapeStyle.Fill(_dim ? UiTheme.Rgba(255, 255, 255, 0.16f) : th.track, 2);
-            _fill.Style = ShapeStyle.Fill(_dim ? UiTheme.Rgba(241, 238, 255, 0.45f) : th.text, 2);
-            _knobShape.Style = ShapeStyle.Fill(_dim ? th.textDim : th.knob, 10).Glow(th.knobShadow, 8, 2);
+            _track.Style = ShapeStyle.Fill(_dim ? th.trackDim : th.track, 0);
+            _fill.Style = ShapeStyle.Fill(_dim ? th.fillDim : _fillColor, 0);
+            _handle.Style = ShapeStyle.Fill(_dim ? th.textDim : th.textBright, 0);
         }
 
         void Layout()
         {
-            UiKit.Place(_fill.rectTransform, 0, 20, _width * _value, 4);
-            UiKit.Place(_knob, _width * _value - 10, 12, 20, 20);
+            float grow = 4f * UiKit.EaseInOut(_press);
+            UiKit.Place(_fill.rectTransform, 0, 21, _width * _value, 2);
+            UiKit.Place(_handle.rectTransform, _width * _value - 1.5f, 13 - grow * 0.5f, 3, 18 + grow);
         }
 
         void Set(PointerEventData e)
@@ -211,69 +230,14 @@ namespace Iori.Ui
         public void OnDrag(PointerEventData e) => Set(e);
         public void OnPointerUp(PointerEventData e) { _pressTarget = 0f; UiSounds.Play(UiSounds.Slider, 0.7f); }
 
-        void OnDisable() { _press = _pressTarget = 0f; if (_knob) _knob.localScale = Vector3.one; }
+        void OnDisable() { _press = _pressTarget = 0f; if (_handle) Layout(); }
 
         void Update()
         {
             if (Mathf.Approximately(_press, _pressTarget)) return;
+            // the handle grows a little taller while held
             _press = Mathf.MoveTowards(_press, _pressTarget, Time.unscaledDeltaTime * 10f);
-            _knob.localScale = Vector3.one * (1f + 0.18f * UiKit.EaseInOut(_press));
-        }
-    }
-
-    /// <summary>An on/off switch. On is amber and glows (it means something is sounding or lit); off is glass.</summary>
-    public sealed class UiSwitch : MonoBehaviour, IPointerClickHandler
-    {
-        public Action<bool> onChanged;
-        bool _on;
-        float _t;
-        UiShape _track, _knob;
-        ShapeStyle _trackOff, _trackOn, _knobOff, _knobOn;
-
-        public bool On => _on;
-
-        public static UiSwitch Create(string name, Transform parent, float x, float y)
-        {
-            var rt = UiKit.Node(name, parent, x, y, 52f, 44f);
-            rt.gameObject.AddComponent<UiHit>();
-            var s = rt.gameObject.AddComponent<UiSwitch>();
-            var th = UiTheme.Current;
-            s._trackOff = ShapeStyle.Fill(UiTheme.Rgba(255, 255, 255, 0.16f), 15).Ring(0.10f);
-            s._trackOn = ShapeStyle.Gradient(new Color32(0xFF, 0xD5, 0x8A, 255), th.amberDeep, 15).Glow(UiTheme.Rgba(255, 180, 90, 0.45f), 16);
-            s._knobOff = ShapeStyle.Fill(new Color32(0xDC, 0xD8, 0xFA, 255), 11).Glow(UiTheme.Rgba(6, 8, 40, 0.40f), 6, 2);
-            s._knobOn = ShapeStyle.Fill(new Color32(0xFF, 0xF6, 0xE0, 255), 11).Glow(UiTheme.Rgba(90, 40, 0, 0.35f), 6, 2);
-            s._track = UiKit.Shape("Track", rt, 0, 7, 52, 30, s._trackOff);
-            s._knob = UiKit.Shape("Knob", rt, 4, 11, 22, 22, s._knobOff);
-            return s;
-        }
-
-        public void Set(bool on, bool animate = true)
-        {
-            _on = on;
-            if (!animate) { _t = on ? 1f : 0f; Paint(); }
-        }
-
-        public void OnPointerClick(PointerEventData e)
-        {
-            _on = !_on;
-            UiSounds.Play(UiSounds.Toggle);
-            onChanged?.Invoke(_on);
-        }
-
-        void Paint()
-        {
-            float k = UiKit.EaseInOut(_t);
-            _track.Style = ShapeStyle.Lerp(_trackOff, _trackOn, k);
-            _knob.Style = ShapeStyle.Lerp(_knobOff, _knobOn, k);
-            UiKit.Place(_knob.rectTransform, Mathf.Lerp(4f, 26f, k), 11, 22, 22);
-        }
-
-        void Update()
-        {
-            float target = _on ? 1f : 0f;
-            if (Mathf.Approximately(_t, target)) return;
-            _t = Mathf.MoveTowards(_t, target, Time.unscaledDeltaTime / 0.18f);
-            Paint();
+            Layout();
         }
     }
 }

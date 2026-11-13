@@ -92,9 +92,10 @@ namespace Iori.Ui
             _report.AppendLine($"{SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}, {Screen.width}x{Screen.height}, colour space {QualitySettings.activeColorSpace}");
             _report.AppendLine($"fonts: medium {(UiFonts.Medium ? UiFonts.Medium.name : "none")}, regular {(UiFonts.Regular ? UiFonts.Regular.name : "none")}, bold {(UiFonts.Bold ? UiFonts.Bold.name : "none")}, mincho {(UiFonts.Mincho ? UiFonts.Mincho.name : "none")}");
 
-            bool wasOff = radio.Off, wasQuiet = radio.Quiet;
-            radio.SetOff(false);
+            bool wasQuiet = radio.Quiet;
+            string wasWeather = radio.Weather;
             radio.SetQuiet(false);
+            radio.SetWeather(WeatherIds.Clear);
 
             // the look of the proposal: a clear summer evening, the radio's clock at 17:20
             atm.followClock = false; atm.hoursPerSecond = 0f; atm.previewHour = 18.6f;
@@ -112,24 +113,26 @@ namespace Iori.Ui
             yield return Shot("ui_03_radio");
             _report.AppendLine($"backdrop on {Shader.GetGlobalFloat("_IoriUiBackdropOn")}, canvas scale {ui.GetComponent<Canvas>().scaleFactor:0.000}");
 
+            // stopped: the radio keeps the quiet hours
             radio.SetQuiet(true);
-            yield return Wait(0.7f);
+            yield return Wait(0.9f);
             yield return Shot("ui_04_radio_quiet");
             radio.SetQuiet(false);
-            radio.SetOff(true);
-            yield return Wait(0.7f);
-            yield return Shot("ui_05_radio_off");
-            radio.SetOff(false);
             SetRadioClock(radio, 6, 5);
-            yield return Wait(0.7f);
-            yield return Shot("ui_06_radio_early_morning");
+            yield return Wait(0.9f);
+            yield return Shot("ui_05_radio_early_morning");
             SetRadioClock(radio, 17, 20);
             ui.Close();
             yield return Wait(2.5f);
 
             _report.AppendLine("open fire: " + ui.Open(CampPropKind.Fire));
             yield return Wait(3.2f);
-            yield return Shot("ui_07_fire");
+            yield return Shot("ui_06_fire");
+            // (only the radio's weather: the row of the rain wakes up, the scene stays clear)
+            radio.SetWeather(WeatherIds.Rain);
+            yield return Wait(0.7f);
+            yield return Shot("ui_07_fire_rain");
+            radio.SetWeather(WeatherIds.Clear);
             ui.Close();
             yield return Wait(2.5f);
 
@@ -141,20 +144,10 @@ namespace Iori.Ui
             yield return Wait(3.2f);
             yield return Shot("ui_08_radio_night");
             ui.Close();
-            yield return Wait(2.5f);
-
-            // held sideways
-            atm.previewHour = 18.6f;
-            SetRadioClock(radio, 17, 20);
-            Screen.SetResolution(Screen.height, Screen.width, false);
-            yield return Wait(1.5f);
-            ui.Open(CampPropKind.Radio);
-            yield return Wait(3.2f);
-            yield return Shot("ui_09_radio_landscape");
-            ui.Close();
+            yield return Wait(0.5f);
 
             radio.SetClockOffset(0);
-            radio.SetOff(wasOff);
+            radio.SetWeather(wasWeather);
             radio.SetQuiet(wasQuiet);
             yield return null;
             Finish(0);

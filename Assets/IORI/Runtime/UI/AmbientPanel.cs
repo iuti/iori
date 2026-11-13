@@ -1,33 +1,32 @@
-using System;
 using System.Collections.Generic;
 using Iori.Audio;
-using TMPro;
 using UnityEngine;
 
 namespace Iori.Ui
 {
     /// <summary>
-    /// The fire's panel: the sounds around the camp (fire, wind, insects, rain), one slider each.
-    /// A sound that is not heard in this weather (rain while it is clear) is greyed but can still be set.
+    /// The fire's sheet: the sounds around the camp (fire, wind, insects, rain), each a picture and a
+    /// slider and nothing else. The fire's picture is amber while the fire is heard. A sound that is
+    /// not heard in this weather (rain while it is clear) is greyed but can still be set.
     /// </summary>
     public sealed class AmbientPanel : UiPanel
     {
-        static readonly (string id, string label, string icon)[] Known =
+        static readonly (string id, string icon)[] Known =
         {
-            ("fire", "焚き火", "fire"), ("wind", "風", "wind"), ("insects", "虫", "leaf"), ("rain", "雨", "rain"),
+            ("fire", "fire"), ("wind", "wind"), ("insects", "leaf"), ("rain", "rain"),
         };
+
+        const float Pad = 26f, First = 16f, RowHeight = 46f, Last = 24f;
 
         sealed class Row
         {
             public AmbientDef def;
             public UnityEngine.UI.RawImage icon;
-            public TextMeshProUGUI label;
             public UiSlider slider;
             public bool warm;
             public int shown = -1;
         }
 
-        public Action requestClose;
         readonly List<Row> _rows = new List<Row>();
 
         static int LayerCount
@@ -39,23 +38,11 @@ namespace Iori.Ui
             }
         }
 
-        static bool AnyWeatherBound
-        {
-            get
-            {
-                var radio = RadioDirector.Instance;
-                if (!radio || radio.Mixer == null) return true;
-                foreach (var l in radio.Mixer.Layers) if (l.Weathers.Count > 0) return true;
-                return false;
-            }
-        }
-
-        public override float Height => 60f + 58f * LayerCount + (AnyWeatherBound ? 39f : 12f);
+        public override float Height => First + RowHeight * LayerCount + Last;
 
         protected override void Build()
         {
             var th = UiTheme.Current;
-            Header("まわりの音", () => requestClose?.Invoke());
             var radio = RadioDirector.Instance;
             if (!radio || radio.Mixer == null) return;
 
@@ -66,22 +53,19 @@ namespace Iori.Ui
                     if (l.Id == k.id) layers.Add(l);
             foreach (var l in radio.Mixer.Layers) if (!layers.Contains(l)) layers.Add(l);
 
-            float y = 60f;
+            float y = First;
             foreach (var def in layers)
             {
-                string label = def.Id, icon = "wind";
-                foreach (var k in Known) if (k.id == def.Id) { label = k.label; icon = k.icon; }
+                string icon = "wind";
+                foreach (var k in Known) if (k.id == def.Id) icon = k.icon;
                 var row = new Row { def = def, warm = def.Id == "fire" };
-                row.icon = UiKit.Icon("Icon " + def.Id, Content, 22, y + 13, 22, icon, th.text);
-                row.label = UiKit.Text("Label " + def.Id, Content, 58, y + 13.5f, 70, 21, label, UiFonts.Medium, 15, th.text);
-                row.slider = UiSlider.Create("Slider " + def.Id, Content, 130, y + 2, 218);
+                row.icon = UiKit.Icon("Icon " + def.Id, Content, Pad, y + 12, 22, icon, th.text);
+                row.slider = UiSlider.Create("Slider " + def.Id, Content, 66, y + 1, Width - Pad - 66);
                 string id = def.Id;
                 row.slider.onChanged = v => { if (RadioDirector.Instance) RadioDirector.Instance.SetAmbientVolume(id, v); };
                 _rows.Add(row);
-                y += 58f;
+                y += RowHeight;
             }
-            if (AnyWeatherBound)
-                UiKit.Text("Note", Content, 58, y, 290, 19, "雨の音は、雨が降っているときだけ鳴る", UiFonts.Regular, 12.5f, th.textSoft);
         }
 
         protected override void OnOpened()
@@ -98,13 +82,13 @@ namespace Iori.Ui
             var th = UiTheme.Current;
             foreach (var r in _rows)
             {
-                int state = r.def.IsActiveIn(radio.Weather) ? 1 : 0;
+                bool active = r.def.IsActiveIn(radio.Weather);
+                bool heard = active && r.slider.Value > 0.001f;
+                int state = !active ? 0 : heard ? 2 : 1;
                 if (state == r.shown) continue;
                 r.shown = state;
-                bool active = state == 1;
                 r.slider.SetDim(!active);
-                r.label.color = active ? th.text : th.textSoft;
-                r.icon.color = !active ? new Color32(0xB4, 0xB0, 0xE4, 255) : r.warm ? th.amber : th.text;
+                r.icon.color = !active ? th.textDim : r.warm && heard ? th.amber : th.text;
             }
         }
     }

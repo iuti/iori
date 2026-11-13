@@ -72,6 +72,7 @@ namespace Iori.Ui
             }
             if (!asset) return null;
             asset.name = file;
+            if (asset.material) asset.material.SetFloat(ShaderUtilities.ID_FaceDilate, UiTheme.Current.textThin);
             asset.hideFlags = HideFlags.HideAndDontSave;
             return asset;
         }

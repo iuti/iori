@@ -7,9 +7,10 @@ namespace Iori.Ui
 {
     /// <summary>
     /// The production UI of the camp. It makes itself when the camp scene starts: a canvas over the
-    /// scene, the panels (built the first time each opens), and the link to the props: tapping the
-    /// radio or the fire moves the camera in (the camera rig does that) and opens that prop's panel,
-    /// with the prop kept in view above it. Tapping outside the panel, or its close button, closes it.
+    /// scene, the sheets (built the first time each opens), and the link to the props: tapping the
+    /// radio or the fire moves the camera in (the camera rig does that) and raises that prop's sheet
+    /// from the bottom edge, with the prop kept in view above it. A press outside the sheet, or the
+    /// back key, closes it. The layout is for a phone held upright only.
     /// </summary>
     public sealed class UiRoot : MonoBehaviour
     {
@@ -79,10 +80,8 @@ namespace Iori.Ui
             _scrim = scrim.gameObject;
             _scrim.SetActive(false);
 
-            _radio = MakePanel<RadioPanel>("Radio panel");
-            _radio.requestClose = Close;
-            _ambient = MakePanel<AmbientPanel>("Ambient panel");
-            _ambient.requestClose = Close;
+            _radio = MakePanel<RadioPanel>("Radio sheet");
+            _ambient = MakePanel<AmbientPanel>("Ambient sheet");
         }
 
         T MakePanel<T>(string name) where T : UiPanel

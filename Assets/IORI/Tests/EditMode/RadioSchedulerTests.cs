@@ -239,26 +239,6 @@ namespace Iori.Audio.Tests
         }
 
         [Test]
-        public void RadioOff_PlaysNoMusicChimesOrPhrases_ButKeepsAmbientAndPhases()
-        {
-            var on = RadioScheduler.BuildPlan(Program(), Ctx(Jst(11, 13, 17), hours: 30));
-            var ctx = Ctx(Jst(11, 13, 17), hours: 30);
-            ctx.RadioOff = true;
-            var off = RadioScheduler.BuildPlan(Program(), ctx);
-            Assert.That(off.Music, Is.Empty);
-            Assert.That(off.OneShots, Is.Empty);
-            // 時間帯の並びは変わらない(画面の「いまは夕方」はそのまま出せる)。
-            Assert.That(off.Phases.Select(p => p.Phase), Is.EqualTo(on.Phases.Select(p => p.Phase)));
-            Assert.That(off.Phases.Select(p => p.Mode), Is.EqualTo(on.Phases.Select(p => p.Mode)));
-            Assert.That(off.Ambient.Select(a => a.Id), Is.EqualTo(on.Ambient.Select(a => a.Id)));
-
-            // 静けさの時間でも、止めていればピアノのフレーズは鳴らない。
-            var quiet = Ctx(Jst(11, 13, 22), quiet: true, hours: 3);
-            quiet.RadioOff = true;
-            Assert.That(RadioScheduler.BuildPlan(Program(), quiet).OneShots, Is.Empty);
-        }
-
-        [Test]
         public void QuietPhrases_AreStable_WhenPlanIsRebuiltLater()
         {
             var program = Program();
