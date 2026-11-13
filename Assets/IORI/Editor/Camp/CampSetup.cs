@@ -871,7 +871,19 @@ namespace Iori.Camp.EditorTools
             new Shot { name = "43_landscape_night", hour = 22f, landscape = true },
             // the lake painted the earlier way, to compare with 08
             new Shot { name = "44_lake_classic", hour = 22f, lakeClassic = true },
+            // Iori by the fire at night (13 is the same view at twilight)
+            new Shot { name = "45_night_focus_iori", hour = 22f, focus = CampPropKind.Iori },
         };
+
+        /// <summary>Iori by the fire at night, a tenth of a second apart: to see the firelight move on her
+        /// (names 50 to 73, so "-shots 50,51,..." picks them like the others).</summary>
+        static Shot[] FlickerShots()
+        {
+            var shots = new Shot[24];
+            for (int i = 0; i < shots.Length; i++)
+                shots[i] = new Shot { name = (50 + i) + "_iori_flicker", hour = 22f, focus = CampPropKind.Iori, time = ShotTime + 0.1f * i + 0.05f, small = true };
+            return shots;
+        }
 
         [MenuItem("IORI/Camp/スクショを撮る")]
         public static void CaptureMenu()
@@ -889,6 +901,7 @@ namespace Iori.Camp.EditorTools
                 string only = ArgValue("-shots");
                 _flatIori = HasArg("-ioriFlat");
                 var shots = new List<Shot>(DefaultShots);
+                shots.AddRange(FlickerShots());
                 if (!string.IsNullOrEmpty(only))
                 {
                     var keep = new HashSet<string>(only.Split(','));
