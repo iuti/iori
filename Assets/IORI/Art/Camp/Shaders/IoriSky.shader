@@ -60,7 +60,9 @@ Shader "IORI/Camp/Sky"
 
                 float3 sp = floor(d * 300.0);
                 float twinkle = 0.75 + 0.25 * sin(IoriTime() * (1.5 + hash3(sp + 3.0) * 3.0) + hash3(sp) * 40.0);
-                float st = step(0.9968, hash3(sp)) * (0.4 + 0.6 * hash3(sp + 7.0)) * stars * smoothstep(0.05, 0.28, h) * (1 - cm) * twinkle;
+                float3 fp = frac(d * 300.0) - 0.5;
+                float dotMask = smoothstep(0.3, 0.12, length(fp));
+                float st = dotMask * step(0.9968, hash3(sp)) * (0.4 + 0.6 * hash3(sp + 7.0)) * stars * smoothstep(0.05, 0.28, h) * (1 - cm) * twinkle;
                 float3 n1 = normalize(float3(0.34, 0.9, 0.26)), n2 = normalize(float3(-0.22, 0.93, 0.3));
                 float s1 = smoothstep(0.0035, 0.0, abs(dot(d, n1))) * smoothstep(-0.7, 0.1, d.x) * smoothstep(0.95, 0.3, d.x);
                 float s2 = smoothstep(0.0028, 0.0, abs(dot(d, n2))) * smoothstep(-0.3, 0.5, d.x);

@@ -45,11 +45,11 @@ namespace Iori.Camp
         [Range(0, 1)] public float brushStrength = 1f;
         [Tooltip("この距離まで筆あとを細かく出す")] public float brushNear = 3f;
         [Tooltip("この距離で筆あとが消える")] public float brushFar = 16f;
-        public float brushScale = 1.1f;
+        public float brushScale = 0.6f;
         [Tooltip("光の段の数(0 でなめらか)")] [Range(0, 12)] public float lightBands = 6f;
         [Range(0, 2)] public float bandBrush = 0.9f;
         [Range(0, 2)] public float slotSwitch = 1f;
-        [Tooltip("全体の明るさ")] public float exposure = 1.25f;
+        [Tooltip("全体の明るさ")] public float exposure = 1.15f;
 
         [Header("灯りの位置(組み立て係が入れる)")]
         public Transform fire;

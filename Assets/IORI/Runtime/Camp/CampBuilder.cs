@@ -57,7 +57,7 @@ namespace Iori.Camp
         static readonly Vector3 Cen = new Vector3(0, 0, 0.5f);
         static readonly float[][] Pud =
         {
-            new[] { 0.2f, .5f, .34f, .55f }, new[] { -1.35f, .5f, .45f, .7f }, new[] { 1.55f, .55f, .45f, .6f }, new[] { 0.18f, 1.78f, .46f, .5f },
+            new[] { 0.25f, .55f, .5f, .55f }, new[] { -1.35f, .5f, .45f, .7f }, new[] { 1.55f, .55f, .45f, .6f }, new[] { 0.18f, 1.78f, .62f, .5f },
             new[] { -2.1f, -1.2f, .7f, .6f }, new[] { 1.0f, -1.6f, .8f, .5f }, new[] { 2.5f, -.2f, .6f, .8f }, new[] { -2.8f, 1.3f, .6f, .7f },
             new[] { 0.2f, -3.0f, .9f, .5f }, new[] { 3.4f, 1.6f, .7f, .6f }, new[] { -3.6f, -.4f, .6f, .8f },
         };
@@ -417,7 +417,7 @@ namespace Iori.Camp
             FlamesRoot = new GameObject("Flames") { hideFlags = HideFlags.DontSave }.transform;
             FlamesRoot.SetParent(_root, false);
             var prof = new Vector2[9];
-            for (int i = 0; i <= 8; i++) { float t = i / 8f; prof[i] = new Vector2(.2f * Mathf.Pow(Mathf.Sin(Mathf.PI * Mathf.Pow(t, .75f)), .9f) * (1 - t * .25f), t * .95f); }
+            for (int i = 0; i <= 8; i++) { float t = i / 8f; prof[i] = new Vector2(.2f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Mathf.PI * Mathf.Pow(t, .75f))), .9f) * (1 - t * .25f), t * .95f); }
             var flameShape = MeshKit.Lathe(prof, 6);
             var flameMat = Mat(flat, "Flames", m => { m.SetFloat("_FogAmount", 0); m.SetFloat("_Cull", 0); });
             void Flame(string col, float k, float s, float dx, float dz, float lean)
@@ -456,7 +456,7 @@ namespace Iori.Camp
                 {
                     var f = FaceAttr.Of(S.TentCloth, .9f + .2f * Rnd());
                     var c = CampPalette.Hex(warm[Mathf.FloorToInt(Rnd() * warm.Length)]).linear;
-                    f.emit = new Color(c.r * 1.2f, c.g * 1.2f, c.b * 1.2f); f.channel = 1;
+                    f.emit = new Color(c.r * .8f, c.g * .8f, c.b * .8f); f.channel = 1;
                     return f;
                 });
                 glowKit.Billboard(new Vector3(TENT.x, .6f, TENT.z + .5f), CampPalette.Hex("#ff9a3c").linear, new Vector4(6.5f, 1, 0, .5f));

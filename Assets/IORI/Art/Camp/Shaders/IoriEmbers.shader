@@ -2,7 +2,7 @@
 // POSITION = base point, TEXCOORD0.xy = corner, TEXCOORD1.x = particle index
 Shader "IORI/Camp/Embers"
 {
-    Properties { _Size ("Size", Float) = 0.03 }
+    Properties { _Size ("Size", Float) = 0.014 }
     SubShader
     {
         Tags { "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" "Queue" = "Transparent" "IgnoreProjector" = "True" }
@@ -23,7 +23,7 @@ Shader "IORI/Camp/Embers"
             float4 _IoriEmberColor;
 
             struct Attributes { float4 positionOS : POSITION; float2 corner : TEXCOORD0; float4 data : TEXCOORD1; };
-            struct Varyings { float4 positionCS : SV_POSITION; float3 color : TEXCOORD0; };
+            struct Varyings { float4 positionCS : SV_POSITION; float3 color : TEXCOORD0; float2 corner : TEXCOORD1; };
 
             Varyings vert(Attributes v)
             {
@@ -40,10 +40,11 @@ Shader "IORI/Camp/Embers"
                 o.positionCS = TransformWViewToHClip(vs);
                 float fade = (1 - ph) * smoothstep(0.0, 0.08, ph);
                 o.color = _IoriEmberColor.rgb * IoriGlowLevel(6) * fade;
+                o.corner = v.corner;
                 return o;
             }
 
-            half4 frag(Varyings i) : SV_Target { return half4(i.color, 1); }
+            half4 frag(Varyings i) : SV_Target { return half4(i.color * smoothstep(1.0, 0.35, length(i.corner)), 1); }
             ENDHLSL
         }
     }

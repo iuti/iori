@@ -18,7 +18,7 @@ namespace Iori.Camp
         public CampBuilder builder;
         [Range(0.1f, 1f)] public float dryScale = 0.33f;
         [Range(0.1f, 1f)] public float wetScale = 0.5f;
-        public float planeY = -0.03f;
+        public float planeY = -0.015f;
         public float clipOffset = 0.02f;
         public bool obliqueClip = true;
         public LayerMask mask = ~((1 << CampBuilder.GroundLayer) | (1 << CampBuilder.WaterLayer) | (1 << CampBuilder.RainLayer) | (1 << 5));

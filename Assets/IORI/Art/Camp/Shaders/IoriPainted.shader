@@ -60,7 +60,7 @@ Shader "IORI/Camp/Painted"
                 float near = IoriNearFactor(i.positionWS) * _BrushAmount;
                 float brush = IoriBrush(i.positionWS, n) * _IoriBrushParams.x * near;
                 // switch to the neighbouring palette slot where the brush is strong
-                float slot = (brush * _IoriPaintParams.z > 0.13) ? i.data.y : i.data.x;
+                float slot = (brush * _IoriPaintParams.z > 0.19) ? i.data.y : i.data.x;
                 float3 baseCol = IoriPalette(slot) * i.data.z;
 
                 float3 col = baseCol * IoriLight(i.positionWS, n, brush * 2.2);

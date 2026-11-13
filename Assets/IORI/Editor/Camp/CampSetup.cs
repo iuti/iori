@@ -36,7 +36,7 @@ namespace Iori.Camp.EditorTools
 
         public static void BuildSceneBatch()
         {
-            try { BuildScene(); }
+            try { BuildScene(Array.IndexOf(Environment.GetCommandLineArgs(), "-resetLook") >= 0); }
             catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
         }
 
@@ -111,7 +111,10 @@ namespace Iori.Camp.EditorTools
             return profile;
         }
 
-        public static void BuildScene()
+        public static void BuildScene() => BuildScene(false);
+
+        /// <param name="resetLook">overwrite CampLook.asset with the code defaults (only while nobody has tuned it)</param>
+        public static void BuildScene(bool resetLook)
         {
             EnsureLayer(CampBuilder.GroundLayer, "CampGround");
             EnsureFolder(ArtDir + "/Materials");
@@ -120,6 +123,7 @@ namespace Iori.Camp.EditorTools
 
             var look = AssetDatabase.LoadAssetAtPath<CampLook>(LookPath);
             if (!look) { look = CampLook.CreateDefault(); look.name = "CampLook"; AssetDatabase.CreateAsset(look, LookPath); }
+            else if (resetLook) { look.FillDefaultKeys(); EditorUtility.SetDirty(look); }
             var skyMat = EnsureMaterial(SkyMatPath, Load<Shader>(ShaderDir + "/IoriSky.shader"));
             var ioriMat = EnsureMaterial(IoriMatPath, Load<Shader>(ShaderDir + "/IoriCharacter.shader"));
             var ioriTex = Load<Texture2D>(IoriTexPath);
