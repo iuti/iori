@@ -34,22 +34,22 @@ namespace Iori.Camp
         [Range(0, 1)] public float moon = 0f;
 
         [Header("主な光(太陽、残照、月明かり)")]
-        public Color keyColor = Hex("#c8a0f0");
+        public Color keyColor = Hex("#5c9cff");
         public float keyIntensity = 0.3f;
         [Range(0, 1)] public float keyShadow = 0.55f;
 
         [Header("まわりの光(上から、横から、地面から)")]
-        public Color ambientSky = Hex("#1a97ff");
+        public Color ambientSky = Hex("#1a9cff");
         public Color ambientEquator = Hex("#1c70ee");
         public Color ambientGround = Hex("#1740a8");
         public float ambientIntensity = 1.0f;
         [Tooltip("影に空の色がのる量。0 だと物の色に光を掛け合わせるだけ(昼向き)。上げるほど、物の色に関係なく影が空の青になる(日没後や夜向き)")]
-        [Range(0, 1)] public float shadeGlaze = 0.5f;
+        [Range(0, 1)] public float shadeGlaze = 0.75f;
 
         [Header("空気")]
-        public Color fog = Hex("#6f86e4");
-        [Tooltip("1m あたりのかすみ")] public float fogDensity = 0.003f;
-        public Color mist = Hex("#9aa4ee");
+        public Color fog = Hex("#4a80e8");
+        [Tooltip("1m あたりのかすみ")] public float fogDensity = 0.002f;
+        public Color mist = Hex("#7f9ef0");
         [Tooltip("水面近くの霧")] public float mistDensity = 0.0035f;
 
         [Header("遠くの山(手前と奥)と町の灯り")]
@@ -149,8 +149,8 @@ namespace Iori.Camp
             cloud = Hex("#3a48a8"), cloudDark = Hex("#141a55"), cloudAmount = 0.25f, stars = 1f,
             sunAzimuth = -22f, sunElevation = -30f, sunGlowColor = Hex("#e6ecff"), sunGlow = 0f, sunDisc = 0f,
             moon = 1f,
-            keyColor = Hex("#a9bcff"), keyIntensity = 0.5f, keyShadow = 0.7f,
-            ambientSky = Hex("#177be1"), ambientEquator = Hex("#1759cc"), ambientGround = Hex("#102a80"), ambientIntensity = 0.9f, shadeGlaze = 0.5f,
+            keyColor = Hex("#96b6ff"), keyIntensity = 0.5f, keyShadow = 0.7f,
+            ambientSky = Hex("#177be1"), ambientEquator = Hex("#1759cc"), ambientGround = Hex("#102a80"), ambientIntensity = 0.9f, shadeGlaze = 0.75f,
             fog = Hex("#1a2a78"), fogDensity = 0.004f, mist = Hex("#283a8c"), mistDensity = 0.005f,
             farNear = Hex("#101a55"), farFar = Hex("#2a44a0"), town = 1f,
             water = Hex("#223498"),

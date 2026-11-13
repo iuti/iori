@@ -287,7 +287,7 @@ namespace Iori.Camp.EditorTools
             var vig = Get<Vignette>();
             vig.intensity.Override(0.2f); vig.smoothness.Override(0.5f); vig.color.Override(new Color(0.05f, 0.05f, 0.2f));
             var bloom = Get<Bloom>();
-            bloom.threshold.Override(1.0f); bloom.intensity.Override(0.4f); bloom.scatter.Override(0.6f);
+            bloom.threshold.Override(1.0f); bloom.intensity.Override(0.4f); bloom.scatter.Override(0.45f);
             bloom.highQualityFiltering.Override(false);
             EditorUtility.SetDirty(profile);
             return profile;

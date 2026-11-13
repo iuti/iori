@@ -33,6 +33,7 @@ float4 _IoriFirePos;         // xyz: where the fire's light sits, w: how far it 
 float4 _IoriLight;           // x: size of the lamps squared (softens their light close up), y: brightness where colors stop getting lighter and start to hold, z: most a lit color may reach, w: how much of a lamp's color lands on a surface whatever its own color
 float4 _IoriLamp;            // x: how far the sky's light steps back on a stroke that belongs to a lamp (0..1), y: brightness where lamp-lit colors start to hold, z: most a lamp-lit color may reach, w: how much of the lamps' light the ground takes (dark earth: the glow of a fire shows on the things that stand around it)
 float4 _IoriShadeMix;        // x: how much of the sky's color lands on a surface whatever its own color (blue shade at dusk), y: how far a lamp's light steps back on a stroke that belongs to the sky, z: how far a lamp's light creeps over the ground, w: how wide the border is where warm and cool strokes mix
+float4 _IoriFront;           // x: how much of the lamps the ground on the viewer's side of the fire takes (0..1), y: how far toward the viewer from the fire that begins (m), z: where it is complete
 float4 _IoriTentLamp;        // xyz: the lamp inside the tent, w: how strongly it burns
 float4 _IoriAirFire;         // rgb: light that a metre of air catches right at the fire (0 = none)
 float4 _IoriAirTent;         // rgb: the same for the lamp in the tent
@@ -239,6 +240,17 @@ float3 IoriShade(float3 albedo, IoriLit L, float lampAmount, float rnd)
     float warm = smoothstep(0.44, 0.56, lm / (lm + sm + 1e-4) + (rnd - 0.5) * _IoriShadeMix.w);
     float3 col = sky * (1.0 - _IoriLamp.x * warm) + lamp * (1.0 - _IoriShadeMix.y * (1.0 - warm));
     return IoriSoftClip(col) + L.spec;
+}
+
+// A painter keeps the foreground dark, so the eye goes to the lit middle of the picture: the ground and
+// the plants between the fire and the viewer take only part of the lamps' light. The stones of the fire
+// and the grass in front of it then stand as blue shapes against the flame. Measured along the line
+// from the fire to the camera's home, so it stays put when the camera moves.
+float IoriFrontShade(float3 posWS)
+{
+    float2 toHome = _IoriStrokeOrigin.xz - _IoriFirePos.xz;
+    float s = dot(posWS.xz - _IoriFirePos.xz, toHome / max(length(toHome), 1e-3));
+    return lerp(1.0, _IoriFront.x, smoothstep(_IoriFront.y, _IoriFront.z, s));
 }
 
 // The same light without strokes or steps, for things that must stay smooth (the character).
