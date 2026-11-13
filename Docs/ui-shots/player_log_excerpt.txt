@@ -1,15 +1,15 @@
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_early_morning_clear.wav (HTTP/1.1 404 Not Found)
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_evening_clear.wav (HTTP/1.1 404 Not Found)
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_morning_clear.wav (HTTP/1.1 404 Not Found)
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_day_clear.wav (HTTP/1.1 404 Not Found)
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_night_clear.wav (HTTP/1.1 404 Not Found)
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_late_night_clear.wav (HTTP/1.1 404 Not Found)
-[IORI] perf fps=6.0 avg_ms=166.7 worst_ms=2610.9 target=60 screen=540x1080 quality=Full
-[IORI] perf fps=135.9 avg_ms=7.4 worst_ms=132.1 target=60 screen=540x1080 quality=Full
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_01.wav (HTTP/1.1 404 Not Found)
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_03.wav (HTTP/1.1 404 Not Found)
-[IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_02.wav (HTTP/1.1 404 Not Found)
-[IORI] perf fps=138.9 avg_ms=7.2 worst_ms=48.7 target=60 screen=540x1080 quality=Full
-[IORI] perf fps=142.1 avg_ms=7.0 worst_ms=41.7 target=60 screen=540x1080 quality=Full
-[IORI] perf fps=143.7 avg_ms=7.0 worst_ms=13.9 target=60 screen=540x1080 quality=Full
-[IORI] perf fps=142.1 avg_ms=7.0 worst_ms=41.7 target=60 screen=1080x540 quality=Full
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
+UnityEngine.Debug:LogWarning (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:213)
