@@ -526,4 +526,4 @@ MonoBehaviour:
   autumnLeaf: {r: 1.6, g: 0.9, b: 1.05, a: 1}
   winterDesaturate: 0.55
   sleepAmbient: 0.55
-  sleepFire: 0.35
+  sleepFire: 0.2
