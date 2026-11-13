@@ -32,7 +32,7 @@ radio.json(番組表) ─┐
 | `Assets/IORI/Tests/EditMode/` | Core のテスト |
 | `Assets/Plugins/Android/IoriPlayback.androidlib/` | Android のバックグラウンド再生サービス(Java、Media3) |
 | `Assets/StreamingAssets/IORI/radio.json` | 番組表(時間帯、曲、チャイム、静けさの時間のフレーズ、環境音) |
-| `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
+| `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`radio/`(ラジオの曲)、`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
 | `tools/CoreTests/` | Unity なしで Core のテストを動かす .NET プロジェクト |
 
 ## はじめに(デスクトップで)
@@ -61,6 +61,22 @@ radio.json(番組表) ─┐
 時間帯(`phases`)は `start`(HH:mm)の順に並び、次の時間帯まで続く。1 時間刻みにしたければ 24 個書けばよい。
 時間帯が切り替わるとき、前の曲は `crossfadeSeconds`(既定 8 秒)かけてフェードアウトし、次の曲はフェードインせず頭から鳴る(イントロの張りを残すため。フェードインさせたいときは `introFadeSeconds` を指定)。
 `mode: "quiet"` の時間帯は曲を流さず、環境音とたまに鳴るフレーズだけになる(ブレワイ式)。
+
+## ラジオの曲
+
+Suno(v6)の Cover で、時間帯ごとのモチーフの種から作った曲。いまは晴れの 6 曲だけで、雨の日も晴れの曲が流れる。
+
+| ファイル | 時間帯 | 中身 |
+| --- | --- | --- |
+| `radio/early_morning_clear.ogg` | 早朝 4:00 | A♭、約 65 BPM。Rhodes のソロ、ボサノバ寄り(約 1 分 57 秒のループ) |
+| `radio/morning_clear.ogg` | 朝 7:00 | G、約 112 BPM。ボサノバ、ナイロンギターとフルート(約 1 分 34 秒) |
+| `radio/day_clear.ogg` | 昼 11:00 | A、約 103 BPM。軽いジャズフュージョン(約 2 分 14 秒) |
+| `radio/evening_clear.ogg` | 夕方 16:00 | F、約 88 BPM。スムースジャズ、ミュートトランペット(約 1 分 49 秒) |
+| `radio/night_clear.ogg` | 夜 19:00 | E♭、約 88 BPM、3 拍子。ジャズワルツ、ヴィブラフォン(約 1 分 55 秒) |
+| `radio/late_night_clear.ogg` | 深夜 23:00 | D♭、約 57 BPM。Rhodes のトリオ(約 1 分 43 秒) |
+
+どれも小節の頭で切った継ぎ目なしのループ(`"loop": "seamless"`、OGG Vorbis 44.1kHz ステレオ、-16 LUFS)。
+Suno の曲は Pro の月の枠でダウンロードしたものだけ商用で使える。元の WAV はリポジトリに入れていない。
 
 ## 環境音・チャイム・UI の効果音
 
