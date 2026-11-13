@@ -152,27 +152,33 @@ Shader "IORI/Camp/Water"
                 // ---- the lights of the far shore. Each has its mirror image as far below the horizon as it stands
                 // above it, and from there a ladder of dabs toward the viewer: one to a row of ripples, each a little
                 // to the side, fewer and fainter the farther down. The rows drift slowly toward the viewer.
+                // (A bit of water only looks at the lights whose image lies up to a degree and a half above it:
+                // nine cells of the town's grid. Looking at every light in its column cost several times as much.)
                 float3 top, slope;
                 float2 town;
                 IoriRidges(azW * IORI_DEG, top, slope, town);
-                if (town.x > 0.01 && _Columns > 0.001)
+                float landTop = max(top.x, top.y);
+                float jhead = floor(depW / 0.2);
+                float jtop = min(floor(IoriTownTop(town, landTop) / 0.2), 19.0);
+                if (town.x > 0.01 && _Columns > 0.001 && jhead - 7.0 <= jtop)
                 {
-                    float landTop = max(top.x, top.y);
                     float lgx = azW / 0.2;
                     float lidx = floor(lgx), lfx = frac(lgx) - 0.5;
                     float sr = Rows(depH, 10.0) - t * 0.10 + IoriHash1(float2(lidx, 91.0));
                     float srow = floor(sr), sfr = frac(sr);
                     float rowh = RowHeight(depH, 10.0);
-                    float jmax = min(floor((depW + 0.1) / 0.2), 19.0);
                     float3 lights = 0;
-                    for (int j = 0; j < 20; j++)
+                    for (int k = -1; k < 8; k++)
                     {
-                        float fj = j;
-                        if (fj > jmax) break;
+                        float fj = jhead - k;
+                        if (fj < 0.0) break;
+                        if (fj > jtop) continue;
                         float2 lid = float2(lidx, fj);
+                        float lh;
+                        if (IoriTownOn(lid, town, landTop, lh) < 0.5) continue;
                         float2 lp;
-                        float lsize, lh;
-                        if (IoriTownCell(lid, town, landTop, lp, lsize, lh) < 0.5) continue;
+                        float lsize;
+                        IoriTownPlace(lid, lp, lsize);
                         float d = depW - (fj + 0.5 + lp.y) * 0.2;          // degrees below the light's mirror image
                         float hl = IoriHash1(lid + float2(5.5, 12.1));
                         float len = max(_ColumnLength, 0.05) * (0.25 + 1.4 * hl * hl * hl);
@@ -188,11 +194,11 @@ Shader "IORI/Camp/Water"
                         // (a dab is wider than it is high: its height goes by its width, not by the row)
                         float thick = min(0.38, wv * 0.11 / rowh) * (1.0 - u * u * u);
                         float dab = smoothstep(-0.04, 0.06, thick - abs(sfr - 0.5)) * step(u, 0.999);
-                        float keep = smoothstep(0.0, 0.1, exp(-max(d, 0.0) / len) * 1.15 - b);
+                        float fall = exp(-max(d, 0.0) / len);
+                        float keep = smoothstep(0.0, 0.1, fall * 1.15 - b) * smoothstep(1.7, 1.2, d);
                         float below = smoothstep(lsize * 0.1, lsize * 0.25, d);
-                        float level = 0.55 + 0.45 * exp(-max(d, 0.0) / (len * 0.6));
-                        float k = max(head, dab * keep * below * level) * (0.85 + 0.15 * sin(t * (0.7 + lh * 2.0) + lh * 30.0));
-                        lights += IoriTownColor(step(0.7, IoriHash1(lid + 4.4))) * k;
+                        float k1 = max(head, dab * keep * below * (0.55 + 0.45 * fall * fall)) * (0.85 + 0.15 * sin(t * (0.7 + lh * 2.0) + lh * 30.0));
+                        lights += IoriTownColor(step(0.7, IoriHash1(lid + 4.4))) * k1;
                     }
                     col += lights * (_Columns * 0.75 * (1.0 - rain * 0.5));
                 }

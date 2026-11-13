@@ -93,10 +93,11 @@ Shader "IORI/Camp/Foliage"
                 albedo *= 1.0 - _IoriWeather.y * _WetDarken;
                 float ao = lerp(_BaseShade, 1.0, saturate(tone * 1.4));
 
-                // grass takes the lamps much as the ground under it does (see IoriLightingWrapped), a little more as it stands up
+                // grass takes the lamps much as the ground under it does (see IoriLightingWrapped and _IoriLamp.w), a little more as it stands up
                 float lampWrap = lerp(_Wrap, min(_Wrap, _IoriShadeMix.z + 0.15), _UpNormal);
+                float lampAmount = lerp(1.0, min(_IoriLamp.w * 1.3, 1.0), _UpNormal);
                 IoriLit L = IoriLightingWrapped(centerWS + float3(0, 0.03, 0), n, viewDir, rnd, ao, _Wrap, lampWrap, _Through, 0.0);
-                float3 col = IoriShade(albedo, L, 1.0, rnd);
+                float3 col = IoriShade(albedo, L, lampAmount, rnd);
                 // the air is also taken once per piece
                 float3 fogged = IoriAir(col, centerWS);
                 o.color = float4(fogged, 1);

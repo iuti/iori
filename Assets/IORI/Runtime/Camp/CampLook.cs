@@ -13,7 +13,7 @@ namespace Iori.Camp
     public sealed class CampLook : ScriptableObject
     {
         /// <summary>Raised when the defaults change in code; CampSetup then rewrites an untouched asset.</summary>
-        public const int CurrentVersion = 8;
+        public const int CurrentVersion = 9;
         [HideInInspector] public int version;
 
         [Serializable]
@@ -35,8 +35,8 @@ namespace Iori.Camp
         public float lanternIntensity = 1.3f;
         public float lanternRange = 4.5f;
         public Color tentColor = CampPalette.Hex("#ff9438");
-        public float tentIntensity = 22f;
-        public float tentRange = 8f;
+        public float tentIntensity = 12f;
+        public float tentRange = 6f;
         [Tooltip("灯りの大きさ(m)。大きいほど、灯りのすぐそばの明るさが頭打ちになり、光がなだらかに広がる")]
         public float lampSize = 0.7f;
         [Tooltip("照らされた色がこれより明るくなると、白く飛ばさずに色を保ったまま頭打ちにしていく")]
@@ -55,6 +55,8 @@ namespace Iori.Camp
         [Range(0, 1)] public float lightBorder = 0.5f;
         [Tooltip("灯りの光が地面をどこまで這うか。小さいほど焚き火の光の輪が小さくなり、手前の地面が暗く残る")]
         [Range(0, 0.5f)] public float groundLampWrap = 0.1f;
+        [Tooltip("地面と草が灯りを受ける量。小さいほど焚き火やテントのまわりの地面が暗く残り、灯りはまわりに立っているものにだけ映る")]
+        [Range(0, 1)] public float groundLampAmount = 0.45f;
         [Tooltip("灯りの色ののり方。0 だと物の色に掛け合わせるだけ(緑の草は暗い茶色になる)。上げるほど、物の色に関係なく灯りの色がのる(絵の具を重ねたように)")]
         [Range(0, 1)] public float lampGlaze = 0.35f;
         [Tooltip("灯りのまわりの空気そのものが光る量(1m の空気が受け止める光の割合)。霧や雨のときは自動で増える。0 で切る")]

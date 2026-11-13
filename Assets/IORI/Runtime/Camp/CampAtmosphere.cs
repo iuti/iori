@@ -440,7 +440,7 @@ namespace Iori.Camp
             }
             Shader.SetGlobalVector(Id.FirePos, new Vector4(firePos.x, firePos.y, firePos.z, L.fireRange));
             Shader.SetGlobalVector(Id.Light, new Vector4(L.lampSize * L.lampSize, L.litKnee, L.litTop, L.lampGlaze));
-            Shader.SetGlobalVector(Id.Lamp, new Vector4(L.lampWins, L.lampKnee, L.lampTop, 0f));
+            Shader.SetGlobalVector(Id.Lamp, new Vector4(L.lampWins, L.lampKnee, L.lampTop, L.groundLampAmount));
             Shader.SetGlobalVector(Id.ShadeMix, new Vector4(p.shadeGlaze, L.lampYields, L.groundLampWrap, L.lightBorder));
             Vector3 tentLamp = tentLight ? tentLight.transform.position : new Vector3(-2.2f, 0.6f, 1.2f);
             Shader.SetGlobalVector(Id.TentLamp, new Vector4(tentLamp.x, tentLamp.y, tentLamp.z, tentLevel * L.tentGlow));

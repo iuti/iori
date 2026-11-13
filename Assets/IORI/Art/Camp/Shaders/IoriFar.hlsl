@@ -45,19 +45,27 @@ float3 IoriRidgeLean(float az)
 }
 
 // The lights of the town sit in a grid of 0.2 degree cells (x: azimuth, y: height), thick near the shore
-// and thinning as they climb the slopes. This says whether the cell lid holds a light (1 or 0), and
-// where in the cell it sits (lp, -0.3..0.3), how large it is (lsize, in cells) and its own number (lh).
+// and thinning as they climb the slopes. IoriTownOn says whether the cell lid holds a light (1 or 0) and
+// gives the light's own number (lh); IoriTownPlace says where in the cell it sits (lp, -0.3..0.3) and
+// how large it is (lsize, in cells).
 // town: from IoriRidges. landTop: height of the land here (no lights in the sky).
-float IoriTownCell(float2 lid, float2 town, float landTop, out float2 lp, out float lsize, out float lh)
+float IoriTownOn(float2 lid, float2 town, float landTop, out float lh)
 {
     float el = (lid.y + 0.5) * 0.2;
     lh = IoriHash1(lid + 17.0);
     float climb = saturate(1.0 - el / max(town.y, 0.05));
     float chance = town.x * (0.45 * pow(climb, 0.8) + 0.35 * step(el, 0.45));
-    lp = (float2(IoriHash1(lid + 2.2), IoriHash1(lid + 6.6)) - 0.5) * 0.6;
-    lsize = lerp(0.16, 0.34, IoriHash1(lid + 8.8));
     return step(1.0 - chance, lh) * step(el, max(landTop, 0.5)) * step(0.0, el);
 }
+
+void IoriTownPlace(float2 lid, out float2 lp, out float lsize)
+{
+    lp = (float2(IoriHash1(lid + 2.2), IoriHash1(lid + 6.6)) - 0.5) * 0.6;
+    lsize = lerp(0.16, 0.34, IoriHash1(lid + 8.8));
+}
+
+// No light of the town stands higher than this (degrees).
+float IoriTownTop(float2 town, float landTop) { return max(min(town.y, max(landTop, 0.5)), 0.45); }
 
 // A light keeps breathing a little.
 float IoriTownBreath(float lh, float t) { return 0.8 + 0.2 * sin(t * (0.7 + lh * 2.0) + lh * 30.0); }
@@ -70,7 +78,8 @@ float2 IoriTownLight(float2 azel, float2 town, float landTop, float wide, float 
     float2 lid = floor(lg), lf = frac(lg) - 0.5;
     float2 lp;
     float lsize, lh;
-    float on = IoriTownCell(lid, town, landTop, lp, lsize, lh);
+    float on = IoriTownOn(lid, town, landTop, lh);
+    IoriTownPlace(lid, lp, lsize);
     float2 q = lf - lp;
     q.x /= wide;
     float ldot = smoothstep(lsize, lsize * 0.35, length(q));

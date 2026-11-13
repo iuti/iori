@@ -793,9 +793,11 @@ namespace Iori.Camp.EditorTools
             new Shot { name = "33_fire_d", hour = 18.6f, focus = CampPropKind.Fire, time = ShotTime + 0.60f, small = true },
             new Shot { name = "34_fire_e", hour = 18.6f, focus = CampPropKind.Fire, time = ShotTime + 2.0f, small = true },
             new Shot { name = "35_fire_f", hour = 18.6f, focus = CampPropKind.Fire, time = ShotTime + 5.0f, small = true },
-            // the lake a moment and a few seconds after 08_night, to see how the water moves (it must not flicker)
-            new Shot { name = "41_lake_b", hour = 22f, time = ShotTime + 0.5f },
-            new Shot { name = "42_lake_c", hour = 22f, time = ShotTime + 4.0f },
+            // the lake late at night (the moon's path lies clear of Iori then), and a moment and a few seconds later:
+            // to see how the water moves (it must not flicker)
+            new Shot { name = "40_lake_a", hour = 2.5f },
+            new Shot { name = "41_lake_b", hour = 2.5f, time = ShotTime + 0.5f },
+            new Shot { name = "42_lake_c", hour = 2.5f, time = ShotTime + 4.0f },
             new Shot { name = "43_landscape_night", hour = 22f, landscape = true },
         };
 
