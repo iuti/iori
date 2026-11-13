@@ -3,9 +3,9 @@ using UnityEngine;
 namespace Iori.Camp
 {
     /// <summary>
-    /// Iori as a 2D board standing in the scene (placeholder until the livliv model renders into a
+    /// Iori as a 2D board standing in the scene (a placeholder until her real model is drawn into a
     /// texture). Turns around the vertical axis to face the main camera, so it also faces the same
-    /// way in the mirrored reflection. Its feet sit on the generated ground.
+    /// way in the mirror images. Its feet stand on its parent (the anchor sits on the ground).
     /// </summary>
     [ExecuteAlways]
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
@@ -13,9 +13,9 @@ namespace Iori.Camp
     public sealed class CampBillboard : MonoBehaviour
     {
         public Texture2D picture;
-        [Tooltip("板の高さ(m)")] public float height = 1.66f;
-        public CampBuilder builder;
+        [Tooltip("板の高さ(m)")] public float height = 1.6f;
         [Tooltip("足もとの高さの調整")] public float footOffset = -0.02f;
+        public Camera viewer;
 
         Mesh _mesh;
         Texture2D _builtFor;
@@ -54,9 +54,8 @@ namespace Iori.Camp
             if (_builtFor != picture || !Mathf.Approximately(_builtHeight, height) || !_mesh) BuildMesh();
             var parent = transform.parent;
             Vector3 basePos = parent ? parent.position : transform.position;
-            float gy = builder ? builder.GroundH(basePos.x, -basePos.z) : 0f;
-            transform.position = new Vector3(basePos.x, gy + height / 2 + footOffset, basePos.z);
-            var cam = Camera.main;
+            transform.position = new Vector3(basePos.x, basePos.y + height / 2 + footOffset, basePos.z);
+            var cam = viewer ? viewer : Camera.main;
             if (!cam) return;
             var d = transform.position - cam.transform.position;
             d.y = 0;

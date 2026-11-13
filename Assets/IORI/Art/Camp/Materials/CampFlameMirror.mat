@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CampFlameMirror
+  m_Shader: {fileID: 4800000, guid: 36ad99c1f399aba418fa33445afb2c73, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _Bite: 1.4
+    - _Breath: 0.18
+    - _Cool: 0.5
+    - _Cull: 2
+    - _Curl: 0.16
+    - _FrameRate: 0
+    - _Inner: 0.28
+    - _Lean: 0.45
+    - _Rise: 1.5
+    - _Scale: 0.82
+    - _Soft: 0.05
+    - _Steps: 22
+    - _Stretch: 0.28
+    - _Sway: 0.7
+    - _UseDepth: 0
+    - _ZTest: 4
+    m_Colors:
+    - _Bands: {r: 0.68, g: 0.38, b: 0.16, a: 0.08}
+    - _Bright: {r: 1.3, g: 1.2, b: 1.1, a: 1}
+    - _Core: {r: 1, g: 0.94, b: 0.67, a: 1}
+    - _Mid: {r: 1, g: 0.77, b: 0.26999995, a: 1}
+    - _Outer: {r: 0.97999996, g: 0.56, b: 0.14999998, a: 1}
+    - _Rim: {r: 0.8399999, g: 0.35999998, b: 0.11999995, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

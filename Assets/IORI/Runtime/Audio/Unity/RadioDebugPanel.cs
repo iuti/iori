@@ -4,16 +4,21 @@ using UnityEngine;
 namespace Iori.Audio
 {
     /// <summary>
-    /// 段階 1 の動作確認用パネル(景色ができるまでの仮 UI)。
+    /// 段階 1 の動作確認用パネル(景色がないシーン用の仮 UI)。
     /// 天気と静けさモードの切り替え、時計を進めて時間帯の切り替わりを聞く、音量の調整ができる。
+    /// キャンプ地のシーンでは景色のパネル(CampDebugPanel)の「音」タブが同じ操作を持つので、こちらは出さない。
     /// </summary>
     public sealed class RadioDebugPanel : MonoBehaviour
     {
-        bool _open = true;
+        /// <summary>ほかのパネルが同じ操作を持っている間は true。二つのパネルが重ならないよう、こちらは描かない。</summary>
+        public static bool HostedElsewhere;
+
+        bool _open;
         Vector2 _scroll;
 
         void OnGUI()
         {
+            if (HostedElsewhere) return;
             var director = RadioDirector.Instance;
             if (director == null) return;
 
