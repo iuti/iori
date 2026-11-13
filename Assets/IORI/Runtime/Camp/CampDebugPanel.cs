@@ -16,7 +16,9 @@ namespace Iori.Camp
         [Tooltip("上の一行(いまの景色)も隠す")] public bool hidden;
 
         Vector2 _scroll;
-        Rect _barRect, _sheetRect;
+        Rect _barRect, _sheetRect, _sliderRect;
+        bool _pressed, _scrolling;
+        float _pressY;
         float _scale = 1f;
         CampCameraRig _rig;
         CampProp[] _props;
@@ -172,11 +174,43 @@ namespace Iori.Camp
                 GUILayout.BeginArea(_sheetRect, _s.sheet);
                 _scroll = GUILayout.BeginScrollView(_scroll, GUIStyle.none, GUIStyle.none);
                 float inner = _sheetRect.width - 32;
+                DragToScroll();
                 DrawSheet(atm, inner);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
             }
             GUI.matrix = old;
+        }
+
+        /// <summary>Scrolls the open sheet: 0 is the top, 1 the bottom.</summary>
+        public void ScrollTo(float t) => _scroll.y = Mathf.Clamp01(t) * 4000f;
+
+        /// <summary>
+        /// A finger has no wheel: dragging up or down anywhere on the sheet scrolls it. Called inside the
+        /// scroll view before its buttons, so a drag that has turned into a scroll does not press one.
+        /// The time slider keeps its own (sideways) drag.
+        /// </summary>
+        void DragToScroll()
+        {
+            var e = Event.current;
+            switch (e.type)
+            {
+                case EventType.MouseDown:
+                    _pressed = !_sliderRect.Contains(e.mousePosition);
+                    _scrolling = false;
+                    _pressY = e.mousePosition.y + _scroll.y;
+                    break;
+                case EventType.MouseDrag:
+                    if (!_pressed) break;
+                    float moved = e.mousePosition.y + _scroll.y - _pressY;
+                    if (!_scrolling && Mathf.Abs(moved) > 12f) { _scrolling = true; GUIUtility.hotControl = 0; }
+                    if (_scrolling) { _scroll.y = Mathf.Max(0f, _scroll.y - e.delta.y); e.Use(); }
+                    break;
+                case EventType.MouseUp:
+                    if (_scrolling) e.Use();
+                    _pressed = false; _scrolling = false;
+                    break;
+            }
         }
 
         static string Clock(float hour)
@@ -234,6 +268,11 @@ namespace Iori.Camp
             }, 3);
             float hour = atm.CurrentHour;
             float picked = GUILayout.HorizontalSlider(hour, 0f, 24f, _s.sliderTrack, _s.sliderThumb);
+            if (Event.current.type == EventType.Repaint)
+            {
+                _sliderRect = GUILayoutUtility.GetLastRect();
+                _sliderRect.yMin -= 14; _sliderRect.yMax += 14;
+            }
             if (Mathf.Abs(picked - hour) > 0.001f) { atm.followClock = false; atm.hoursPerSecond = 0f; atm.previewHour = Mathf.Clamp(picked, 0f, 23.99f); }
             GUILayout.BeginHorizontal();
             GUILayout.Space(4);

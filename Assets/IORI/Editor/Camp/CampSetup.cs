@@ -891,6 +891,33 @@ namespace Iori.Camp.EditorTools
             Debug.Log($"[IORI] stats total {renderers} renderers, {tris} tris; mirror image {reflRenderers} renderers, {reflTris} tris");
         }
 
+        // ------------------------------------------------------------------ desktop play test
+
+        /// <summary>
+        /// A Windows player of the camp scene for checking the real, running thing (the on-screen panel,
+        /// the fire moving, rain coming on). Start it with
+        ///   IoriCamp.exe -ioriShots C:\\path -screen-width 540 -screen-height 1200 -screen-fullscreen 0
+        /// and CampShotRunner takes pictures by itself and quits. -exe says where to build it.
+        /// </summary>
+        public static void BuildWindowsPlayBatch()
+        {
+            string exe = ArgValue("-exe") ?? Path.GetFullPath("Builds/campplay/IoriCamp.exe");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(exe));
+                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = new[] { ScenePath },
+                    target = BuildTarget.StandaloneWindows64,
+                    locationPathName = exe,
+                    options = BuildOptions.Development,
+                });
+                Debug.Log("[IORI] windows build " + report.summary.result + " " + report.summary.totalSize + " bytes, " + report.summary.totalTime);
+                if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded) EditorApplication.Exit(1);
+            }
+            catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
         // ------------------------------------------------------------------ phone performance test
 
         /// <summary>
