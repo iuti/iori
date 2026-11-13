@@ -31,7 +31,6 @@ Material:
     m_Floats:
     - _Breath: 1
     - _Cutoff: 0.5
-    - _FireSide: 1
     - _RimCool: 0.35
     - _RimWarm: 0.7
     m_Colors: []

@@ -26,10 +26,14 @@ Material:
     m_Ints: []
     m_Floats:
     - _Air: 0.3
+    - _ColumnStretch: 6
+    - _Columns: 0
+    - _Glitter: 0
+    - _Lanes: 0
     - _Mirror: 0.6
     - _Puddle: 1
     - _Shallow: 0.02
-    - _Streak: 0.11
+    - _Streak: 0.045
     - _StrokeTiles: 14
     - _Wobble: 0.6
     m_Colors:
