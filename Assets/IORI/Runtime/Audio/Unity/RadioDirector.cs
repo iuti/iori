@@ -28,6 +28,8 @@ namespace Iori.Audio
 
         public string Weather { get; private set; } = WeatherIds.Clear;
         public bool Quiet { get; private set; }
+        /// <summary>音楽プレーヤーが自分の曲を鳴らしている間は true。ラジオは黙り、環境音だけ鳴る。保存しない。</summary>
+        public bool PlayerOn { get; private set; }
         public float MusicVolume { get; private set; } = 1f;
         /// <summary>動作確認用の時計のずれ。保存しない。</summary>
         public long ClockOffsetMs { get; private set; }
@@ -121,6 +123,7 @@ namespace Iori.Audio
                 TimeZone = TimeZoneInfo.Local,
                 Weather = Weather,
                 QuietOverride = Quiet,
+                PlayerOn = PlayerOn,
                 ClockOffsetMs = ClockOffsetMs,
                 MusicVolume = MusicVolume,
                 Audio = _audioIndex,
@@ -141,6 +144,14 @@ namespace Iori.Audio
         {
             Quiet = quiet;
             PlayerPrefs.SetInt(PrefQuiet, quiet ? 1 : 0);
+            Rebuild();
+        }
+
+        /// <summary>音楽プレーヤーが鳴らし始めたとき true、止めたとき false にする。</summary>
+        public void SetPlayerOn(bool on)
+        {
+            if (PlayerOn == on) return;
+            PlayerOn = on;
             Rebuild();
         }
 
