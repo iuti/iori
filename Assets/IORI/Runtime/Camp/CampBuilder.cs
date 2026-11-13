@@ -401,8 +401,8 @@ namespace Iori.Camp
             for (int i = 0; i < 5; i++)
             {
                 float a = i / 5f * Mathf.PI * 2 + .3f;
-                var p = new Vector3(FIRE.x + Mathf.Cos(a) * .15f, .27f, FIRE.z + Mathf.Sin(a) * .15f);
-                kit.Add(MeshKit.Cylinder(.04f, .055f, .68f, 5), MeshKit.TRS(p, -Mathf.Sin(a) * .55f, 0, Mathf.Cos(a) * .55f), FaceAttr.Of(S.Log));
+                var p = new Vector3(FIRE.x + Mathf.Cos(a) * .17f, .17f, FIRE.z + Mathf.Sin(a) * .17f);
+                kit.Add(MeshKit.Cylinder(.04f, .055f, .5f, 5), MeshKit.TRS(p, -Mathf.Sin(a) * .85f, 0, Mathf.Cos(a) * .85f), FaceAttr.Of(S.Log));
             }
             // a few glowing coals between the logs
             for (int i = 0; i < 7; i++)
