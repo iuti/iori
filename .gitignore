@@ -42,3 +42,7 @@ crashlytics-buildid.txt
 Thumbs.db
 *.slnx
 /.utmp/
+
+# Python
+__pycache__/
+*.pyc
