@@ -56,6 +56,9 @@ namespace Iori.Camp
         public Light tentLight;
         public Transform fire;
         public Renderer puddle;
+        [Tooltip("湖と、その描き方ふたつ(今の版、前の版)。CampLook の lakeClassic で切り替わる")] public Renderer lake;
+        public Material lakeMaterial;
+        public Material lakeClassicMaterial;
         [Tooltip("水たまりがいちばん満ちたときの水面の高さ")] public float puddleY = -0.03f;
         [Tooltip("地面の模様の画像が覆う範囲(左下の x, z と一辺の長さ)")] public Vector3 groundMap = new Vector3(-9f, -6.5f, 18f);
         [Tooltip("筆あとの大きさを測る基準の位置(カメラのいつもの位置)")] public Vector3 strokeOrigin = new Vector3(0f, 1.48f, -4.67f);
@@ -131,6 +134,7 @@ namespace Iori.Camp
             public static readonly int Lamp = Shader.PropertyToID("_IoriLamp");
             public static readonly int ShadeMix = Shader.PropertyToID("_IoriShadeMix");
             public static readonly int Front = Shader.PropertyToID("_IoriFront");
+            public static readonly int MirrorLights = Shader.PropertyToID("_IoriMirrorLights");
             public static readonly int Fire = Shader.PropertyToID("_IoriFire");
             public static readonly int SeasonGrass = Shader.PropertyToID("_IoriSeasonGrass");
             public static readonly int SeasonLeaf = Shader.PropertyToID("_IoriSeasonLeaf");
@@ -473,6 +477,14 @@ namespace Iori.Camp
             Shader.SetGlobalVectorArray(Id.Glow, _glow);
 
             // ---- brush, weather, wind, ground
+            // the lake's two ways of painting
+            bool classic = L.lakeClassic && lakeClassicMaterial;
+            Shader.SetGlobalFloat(Id.MirrorLights, classic ? 1f : 0f);
+            if (lake)
+            {
+                Material want = classic ? lakeClassicMaterial : lakeMaterial;
+                if (want && lake.sharedMaterial != want) lake.sharedMaterial = want;
+            }
             Shader.SetGlobalVector(Id.Stroke, new Vector4(L.strokeTiles, L.strokeNear, L.strokeAmount, L.lightBands));
             Shader.SetGlobalVector(Id.StrokeOrigin, strokeOrigin);
             if (strokeTexture) Shader.SetGlobalTexture(Id.StrokeTex, strokeTexture);

@@ -92,7 +92,8 @@ Shader "IORI/Camp/Sky"
                 // The mirror cameras (the only ones that ever sit below the ground) leave out the stars and the
                 // lights of the town: such small points only flicker in a mirror image, and the lake draws the
                 // town's lights on the water itself (IoriWater).
-                float direct = step(0.0, _WorldSpaceCameraPos.y);
+                // (The earlier water shader, IoriWaterClassic, has no lights of its own: for it they are drawn after all.)
+                float direct = max(step(0.0, _WorldSpaceCameraPos.y), _IoriMirrorLights);
 
                 float3 sunDir = normalize(_IoriSunDir.xyz);
                 float glow = _IoriSkyParams.x, moon = _IoriSkyParams.y, stars = _IoriSkyParams.z, sunDisc = _IoriSkyParams.w;

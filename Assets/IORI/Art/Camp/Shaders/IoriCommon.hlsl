@@ -34,6 +34,7 @@ float4 _IoriLight;           // x: size of the lamps squared (softens their ligh
 float4 _IoriLamp;            // x: how far the sky's light steps back on a stroke that belongs to a lamp (0..1), y: brightness where lamp-lit colors start to hold, z: most a lamp-lit color may reach, w: how much of the lamps' light the ground takes (dark earth: the glow of a fire shows on the things that stand around it)
 float4 _IoriShadeMix;        // x: how much of the sky's color lands on a surface whatever its own color (blue shade at dusk), y: how far a lamp's light steps back on a stroke that belongs to the sky, z: how far a lamp's light creeps over the ground, w: how wide the border is where warm and cool strokes mix
 float4 _IoriFront;           // x: how much of the lamps the ground on the viewer's side of the fire takes (0..1), y: how far toward the viewer from the fire that begins (m), z: where it is complete
+float _IoriMirrorLights;     // 1: the mirror cameras draw the stars and the town's lights as well (for the earlier water shader)
 float4 _IoriTentLamp;        // xyz: the lamp inside the tent, w: how strongly it burns
 float4 _IoriAirFire;         // rgb: light that a metre of air catches right at the fire (0 = none)
 float4 _IoriAirTent;         // rgb: the same for the lamp in the tent

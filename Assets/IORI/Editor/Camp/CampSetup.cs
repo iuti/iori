@@ -36,7 +36,7 @@ namespace Iori.Camp.EditorTools
         const string UrpAssetPath = "Assets/IORI/Settings/IORI_URP.asset";
         const string UrpRendererPath = "Assets/IORI/Settings/IORI_URP_Renderer.asset";
 
-        static readonly string[] ShaderFiles = { "IoriLit", "IoriGround", "IoriFoliage", "IoriSky", "IoriWater", "IoriFire", "IoriSparks", "IoriRain", "IoriCharacter" };
+        static readonly string[] ShaderFiles = { "IoriLit", "IoriGround", "IoriFoliage", "IoriSky", "IoriWater", "IoriWaterClassic", "IoriFire", "IoriSparks", "IoriRain", "IoriCharacter" };
 
         // ------------------------------------------------------------------ layout file
 
@@ -382,6 +382,12 @@ namespace Iori.Camp.EditorTools
                 m.SetFloat("_Puddle", 0f); m.SetFloat("_StrokeTiles", 9f); m.SetFloat("_Wobble", 1f); m.SetColor("_Tint", Color.white);
                 m.SetFloat("_Mirror", 0.45f); m.SetFloat("_Shallow", 0.35f); m.SetFloat("_Streak", 0f); m.SetFloat("_Air", 0.5f);
             });
+            // the earlier way of painting the lake, kept to switch back to (CampLook.lakeClassic)
+            d["LakeClassic"] = Mat("CampLakeClassic", "IoriWaterClassic", reset, m =>
+            {
+                m.SetFloat("_Puddle", 0f); m.SetFloat("_StrokeTiles", 9f); m.SetFloat("_Wobble", 1f); m.SetColor("_Tint", Color.white);
+                m.SetFloat("_Mirror", 0.45f); m.SetFloat("_Shallow", 0.35f); m.SetFloat("_Streak", 0f); m.SetFloat("_Air", 0.5f);
+            });
             d["Puddle"] = Mat("CampPuddle", "IoriWater", reset, m =>
             {
                 m.SetFloat("_Puddle", 1f); m.SetFloat("_StrokeTiles", 14f); m.SetFloat("_Wobble", 0.6f); m.SetColor("_Tint", Color.white);
@@ -659,7 +665,8 @@ namespace Iori.Camp.EditorTools
                 r.lightProbeUsage = LightProbeUsage.Off; r.reflectionProbeUsage = ReflectionProbeUsage.Off;
                 return r;
             }
-            Water("湖", lakeMesh, mats["Lake"], lay.waterY);
+            atm.lake = Water("湖", lakeMesh, mats["Lake"], lay.waterY);
+            atm.lakeMaterial = mats["Lake"]; atm.lakeClassicMaterial = mats["LakeClassic"];
             var puddle = Water("水たまり", puddleMesh, mats["Puddle"], lay.puddleY);
             atm.puddle = puddle;
 
@@ -758,6 +765,8 @@ namespace Iori.Camp.EditorTools
             public float time;
             /// <summary>Smaller picture (for sequences).</summary>
             public bool small;
+            /// <summary>The lake painted the earlier way (CampLook.lakeClassic).</summary>
+            public bool lakeClassic;
         }
 
         const float ShotTime = 37.3f;
@@ -799,6 +808,8 @@ namespace Iori.Camp.EditorTools
             new Shot { name = "41_lake_b", hour = 2.5f, time = ShotTime + 0.5f },
             new Shot { name = "42_lake_c", hour = 2.5f, time = ShotTime + 4.0f },
             new Shot { name = "43_landscape_night", hour = 22f, landscape = true },
+            // the lake painted the earlier way, to compare with 08
+            new Shot { name = "44_lake_classic", hour = 22f, lakeClassic = true },
         };
 
         [MenuItem("IORI/Camp/スクショを撮る")]
@@ -850,6 +861,7 @@ namespace Iori.Camp.EditorTools
 
             bool oldClock = atm.followClock; float oldHour = atm.previewHour; var oldWeather = atm.weather; var oldSeason = atm.season;
             bool oldSway = rig.autoSway; var oldLevel = quality.level;
+            bool oldLakeClassic = atm.look && atm.look.lakeClassic;
             try
             {
                 foreach (var s in shots)
@@ -865,6 +877,7 @@ namespace Iori.Camp.EditorTools
                     atm.followClock = false; atm.previewHour = s.hour; atm.weather = s.weather; atm.sleep = s.sleep;
                     atm.season = s.season == CampSeason.Auto ? CampSeason.Summer : s.season;
                     atm.timeOverride = s.time > 0f ? s.time : ShotTime;
+                    if (atm.look) atm.look.lakeClassic = s.lakeClassic;
                     atm.Snap();
                     rig.autoSway = false;
                     rig.focus = null;
@@ -900,6 +913,7 @@ namespace Iori.Camp.EditorTools
                 cam.targetTexture = null;
                 atm.followClock = oldClock; atm.previewHour = oldHour; atm.weather = oldWeather; atm.season = oldSeason; atm.sleep = false; atm.timeOverride = -1f;
                 rig.focus = null; rig.yaw = 0f; rig.autoSway = oldSway;
+                if (atm.look) atm.look.lakeClassic = oldLakeClassic;
                 quality.level = oldLevel;
                 quality.Apply();
                 atm.Snap();

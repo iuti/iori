@@ -86,6 +86,10 @@ namespace Iori.Camp
         [Tooltip("空の筆あとの細かさ")] public float skyStrokeTiles = 0.33f;
         [Range(0, 1)] public float skyStrokeAmount = 1f;
 
+        [Header("湖")]
+        [Tooltip("湖面を前の版の描き方に戻す(筆あと一枚ごとに鏡像を取る、灯りが縦の筋になる版)。切ると今の版(静かな鏡と点の列)")]
+        public bool lakeClassic = false;
+
         [Header("風")]
         public Vector2 windDirection = new Vector2(0.8f, 0.6f);
         public float wind = 1f;
