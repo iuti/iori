@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CampGround
+  m_Shader: {fileID: 4800000, guid: 1f123f4e34129ea4cbc50fdef59b25d3, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _GroundMap:
+        m_Texture: {fileID: 2800000, guid: af1cf00161660744cadbf6b002d8e3c5, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Bristle: 0.3
+    - _StrokeScale: 1
+    - _Variation: 0.22
+    - _Wrap: 0.35
+    m_Colors:
+    - _Dirt: {r: 0.35999998, g: 0.28999996, b: 0.24999997, a: 1}
+    - _DirtB: {r: 0.29999998, g: 0.23999995, b: 0.23999995, a: 1}
+    - _Grass: {r: 0.19999996, g: 0.32999998, b: 0.21999997, a: 1}
+    - _GrassB: {r: 0.25999996, g: 0.39999998, b: 0.23999995, a: 1}
+    - _Moss: {r: 0.23999995, g: 0.39999998, b: 0.29999998, a: 1}
+    - _Mud: {r: 0.12999997, g: 0.10999996, b: 0.11999995, a: 1}
+    - _Sand: {r: 0.54999995, g: 0.52, b: 0.45, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
