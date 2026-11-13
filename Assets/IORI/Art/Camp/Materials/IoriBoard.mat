@@ -38,7 +38,14 @@ Material:
     - _CelEdge: 0.08
     - _CelSoft: 0.07
     - _Cutoff: 0.5
+    - _Dance: 1
+    - _EdgeGlow: 0.9
+    - _EdgeWidth: 0.12
+    - _Flicker: 1
+    - _Glint: 3
+    - _LampFromSide: 0.6
     - _LampInDaylight: 1.2
+    - _LampUpFade: 0.3
     - _NormalStrength: 1
     - _RimCool: 0
     - _RimWarm: 0.15
