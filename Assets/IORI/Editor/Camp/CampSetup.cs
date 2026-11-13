@@ -46,7 +46,7 @@ namespace Iori.Camp.EditorTools
         const string UrpAssetPath = "Assets/IORI/Settings/IORI_URP.asset";
         const string UrpRendererPath = "Assets/IORI/Settings/IORI_URP_Renderer.asset";
 
-        static readonly string[] ShaderFiles = { "IoriLit", "IoriGround", "IoriFoliage", "IoriSky", "IoriWater", "IoriWaterClassic", "IoriFire", "IoriSparks", "IoriRain", "IoriCharacter" };
+        static readonly string[] ShaderFiles = { "IoriLit", "IoriGround", "IoriFoliage", "IoriSky", "IoriWater", "IoriWaterClassic", "IoriFire", "IoriSparks", "IoriRain", "IoriCharacter", "IoriContact" };
 
         // ------------------------------------------------------------------ layout file
 
@@ -440,6 +440,7 @@ namespace Iori.Camp.EditorTools
             d["Rain"] = Mat("CampRain", "IoriRain", reset, m => { });
             d["Sky"] = Mat("CampSky", "IoriSky", reset, m => { m.SetFloat("_MountTiles", 5f); });
             d["Iori"] = Mat("IoriBoard", "IoriCharacter", reset, m => { m.SetFloat("_Cutoff", 0.5f); });
+            d["Contact"] = Mat("IoriContact", "IoriContact", reset, m => { });
             foreach (var m in d.Values) EditorUtility.SetDirty(m);
             return d;
         }
@@ -538,8 +539,9 @@ namespace Iori.Camp.EditorTools
             // with her normals the fire and the sky light her side by side; the rims drawn from her outline step back
             mats["Iori"].SetTexture("_NormalTex", sitting ? Load<Texture2D>(IoriSitNormalPath) : null);
             mats["Iori"].SetFloat("_NormalStrength", sitting ? 1f : 0f);
-            mats["Iori"].SetFloat("_RimWarm", sitting ? 0.3f : 0.7f);
-            mats["Iori"].SetFloat("_RimCool", sitting ? 0.15f : 0.35f);
+            // (the cool rim is off: her normals already turn the far side blue, and both together read as a pale outline)
+            mats["Iori"].SetFloat("_RimWarm", sitting ? 0.15f : 0.7f);
+            mats["Iori"].SetFloat("_RimCool", sitting ? 0f : 0.35f);
             EditorUtility.SetDirty(mats["Iori"]);
             var volume = EnsureVolume();
             EnsureWaterMeshes(lay, out var lakeMesh, out var puddleMesh);
@@ -737,6 +739,22 @@ namespace Iori.Camp.EditorTools
                 bb.picture = ioriTex;
                 if (sitting) bb.height = IoriSitHeight;
                 bb.viewer = cam;
+            }
+            // the shade under her and her chair (a flat picture cannot shade the ground under itself)
+            if (sitting)
+            {
+                var shade = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                shade.name = "イオリの足もとの影";
+                UnityEngine.Object.DestroyImmediate(shade.GetComponent<Collider>());
+                shade.transform.SetParent(ioriAnchor, false);
+                // lying on the ground, a little behind the board (the chair has depth) and toward the chair's side of the picture
+                shade.transform.localPosition = new Vector3(0.04f, 0.02f, 0.12f);
+                shade.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                shade.transform.localScale = new Vector3(1.0f, 0.62f, 1f);
+                var sr = shade.GetComponent<MeshRenderer>();
+                sr.sharedMaterial = mats["Contact"];
+                sr.shadowCastingMode = ShadowCastingMode.Off;
+                sr.receiveShadows = false;
             }
 
             // ---- mirror images for the lake and for the puddles

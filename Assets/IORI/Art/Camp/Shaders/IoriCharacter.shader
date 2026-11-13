@@ -22,6 +22,7 @@ Shader "IORI/Camp/Character"
         _CelSoft ("Cel edge softness", Range(0.01, 0.5)) = 0.07
         _Wrap ("Light wrap of the smooth part", Range(0, 1)) = 0.35
         _SkyBack ("Sky light stepping back where a lamp lights her", Range(0, 1)) = 0.3
+        _LampInDaylight ("Lamps fading on her as the sun or moon gets brighter", Range(0, 4)) = 1.2
     }
     SubShader
     {
@@ -34,7 +35,7 @@ Shader "IORI/Camp/Character"
             float4 _MainTex_ST;
             float4 _MainTex_TexelSize;
             float _Cutoff, _Breath, _RimWarm, _RimCool;
-            float _NormalStrength, _Cel, _CelEdge, _CelSoft, _Wrap, _SkyBack;
+            float _NormalStrength, _Cel, _CelEdge, _CelSoft, _Wrap, _SkyBack, _LampInDaylight;
         CBUFFER_END
         TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
         TEXTURE2D(_NormalTex); SAMPLER(sampler_NormalTex);
@@ -119,6 +120,9 @@ Shader "IORI/Camp/Character"
                     Light l = GetAdditionalLight(k, sp, half4(1, 1, 1, 1));
                     lamp += l.color * (IoriCel(dot(n, l.direction)) * IoriLampFalloff(l.distanceAttenuation) * l.shadowAttenuation);
                 }
+                // in daylight a fire hardly shows on a person next to it: the brighter the sun or the moon stands
+                // (whether or not it reaches her), the less of the lamps she takes. Without this she turns orange at noon.
+                lamp /= 1.0 + _LampInDaylight * max(m.color.r, max(m.color.g, m.color.b));
                 // where a lamp lights her the sky's blue steps back a little, so the lit side is clearly warm
                 float lw = max(lamp.r, max(lamp.g, lamp.b)), sw = max(sky.r, max(sky.g, sky.b));
                 float warm = smoothstep(0.35, 0.65, lw / (lw + sw + 1e-4));
