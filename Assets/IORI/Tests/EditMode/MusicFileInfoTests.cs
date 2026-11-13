@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 namespace Iori.Audio.Tests
 {
-    public class AudioFileInfoTests
+    public class MusicFileInfoTests
     {
         // ---- 小さな音楽ファイルを組み立てる道具
 
@@ -48,7 +48,7 @@ namespace Iori.Audio.Tests
 
         static readonly byte[] Jpeg = { 0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4, 5, 6, 7, 8, 0xFF, 0xD9 };
 
-        static MusicTrack Read(byte[] file, string path) => AudioFileInfo.Read(new MemoryStream(file), path);
+        static MusicTrack Read(byte[] file, string path) => MusicFileInfo.Read(new MemoryStream(file), path);
 
         // ---- MP3
 

@@ -10,7 +10,7 @@ namespace Iori.Audio
     /// 読めるのは PC の Unity が鳴らせる形式: MP3(ID3v2 のタグ)、OGG Vorbis(コメント)、WAV(LIST/INFO)。
     /// タグが無ければ、曲名はファイル名、アルバムはフォルダ名にする。壊れたファイルでも例外は出さず、読めた分だけ返す。
     /// </summary>
-    public static class AudioFileInfo
+    public static class MusicFileInfo
     {
         /// <summary>タグとして読み込む大きさの上限(絵の入った大きなタグでもここまで)。</summary>
         const int MaxTagBytes = 24 * 1024 * 1024;

@@ -42,10 +42,10 @@ namespace Iori.Audio
                 var lookedForArt = false;
                 foreach (var file in files)
                 {
-                    if (!AudioFileInfo.IsSupported(file)) continue;
+                    if (!MusicFileInfo.IsSupported(file)) continue;
                     if (found.Count >= maxTracks || (cancelled != null && cancelled())) break;
                     MusicTrack t;
-                    try { t = AudioFileInfo.Read(file); }
+                    try { t = MusicFileInfo.Read(file); }
                     catch (IOException) { continue; }
                     catch (UnauthorizedAccessException) { continue; }
                     if (t.ArtLength == 0)
