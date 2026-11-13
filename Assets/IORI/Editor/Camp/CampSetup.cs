@@ -251,6 +251,9 @@ namespace Iori.Camp.EditorTools
             new Shot { name = "10_day_rain", hour = 12f, weather = CampWeather.Rain },
             new Shot { name = "11_focus_radio", hour = 18.6f, focus = CampPropKind.Radio },
             new Shot { name = "12_landscape", hour = 18.6f, landscape = true },
+            new Shot { name = "13_autumn", hour = 18.6f, season = CampSeason.Autumn },
+            new Shot { name = "14_winter_day", hour = 12f, season = CampSeason.Winter },
+            new Shot { name = "15_spring_dawn", hour = 6.4f, season = CampSeason.Spring },
         };
 
         [MenuItem("IORI/Camp/スクショを撮る")]
@@ -337,6 +340,40 @@ namespace Iori.Camp.EditorTools
             rig.focus = null;
             atm.Snap();
             Debug.Log("[IORI] shots saved to " + dir);
+        }
+
+        // ------------------------------------------------------------------ phone performance test
+
+        /// <summary>
+        /// Development APK of the camp scene under a separate package id (com.iuti.iori.bgtest), so it
+        /// does not replace the installed app. -apk path. The frame rate shows up in logcat as "[IORI] perf".
+        /// </summary>
+        public static void BuildAndroidPerfBatch()
+        {
+            string apk = ArgValue("-apk") ?? Path.GetFullPath("Builds/iori-bgtest.apk");
+            string oldId = PlayerSettings.GetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget.Android);
+            string oldName = PlayerSettings.productName;
+            try
+            {
+                PlayerSettings.SetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget.Android, "com.iuti.iori.bgtest");
+                PlayerSettings.productName = "IORI bg test";
+                Directory.CreateDirectory(Path.GetDirectoryName(apk));
+                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = new[] { ScenePath },
+                    target = BuildTarget.Android,
+                    locationPathName = apk,
+                    options = BuildOptions.Development,
+                });
+                Debug.Log("[IORI] apk build " + report.summary.result + " " + report.summary.totalSize + " bytes, " + report.summary.totalTime);
+                if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded) EditorApplication.Exit(1);
+            }
+            catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+            finally
+            {
+                PlayerSettings.SetApplicationIdentifier(UnityEditor.Build.NamedBuildTarget.Android, oldId);
+                PlayerSettings.productName = oldName;
+            }
         }
 
         static void RenderCamera(Camera c, RenderTexture target)
