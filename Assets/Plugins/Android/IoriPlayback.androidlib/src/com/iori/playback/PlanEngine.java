@@ -33,6 +33,8 @@ final class PlanEngine {
 
     private static final String TAG = "IoriPlayback";
     private static final int JOIN_FADE_MS = 1500;
+    /** この時間より遅れて鳴らし始めたクリップは「途中参加」としてフェードインする(UnityAudioBackend と同じ)。 */
+    private static final int JOIN_TOLERANCE_MS = 1000;
     private static final int REMOVED_FADE_MS = 1000;
     private static final long ONE_SHOT_LATE_LIMIT_MS = 2000;
     private static final long FAST_TICK_MS = 40;
@@ -193,7 +195,7 @@ final class PlanEngine {
             if (clip.loop && duration <= 0) pos = 0; // 長さが分からないループは頭から
             v.player.seekTo(pos);
             v.player.setPlayWhenReady(true);
-            if (t - clip.start > clip.fadeIn) v.joinedAt = t;
+            if (t - clip.start > clip.fadeIn + JOIN_TOLERANCE_MS) v.joinedAt = t;
             voices.put(clip.id, v);
         }
 

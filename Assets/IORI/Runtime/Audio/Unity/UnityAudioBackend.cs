@@ -14,6 +14,8 @@ namespace Iori.Audio
     public sealed class UnityAudioBackend : MonoBehaviour, IPlaybackBackend
     {
         const int JoinFadeMs = 1500;
+        /// <summary>この時間より遅れて鳴らし始めたクリップは「途中参加」としてフェードインする。</summary>
+        const int JoinToleranceMs = 1000;
         const int RemovedFadeMs = 1000;
         const long OneShotLateLimitMs = 2000;
         const float AmbientSmoothing = 4f; // 1 秒あたり
@@ -128,7 +130,7 @@ namespace Iori.Audio
                 var pos = clip.PositionAt(t, clip.Loop ? durationMs : 0);
                 if (pos >= durationMs) { Destroy(v.Source); continue; } // もう曲が終わっている
                 v.Source.time = pos / 1000f;
-                if (t - clip.StartMs > clip.FadeInMs) v.JoinedAtMs = t;
+                if (t - clip.StartMs > clip.FadeInMs + JoinToleranceMs) v.JoinedAtMs = t;
                 v.Source.volume = 0f;
                 v.Source.Play();
                 _voices[clip.Id] = v;

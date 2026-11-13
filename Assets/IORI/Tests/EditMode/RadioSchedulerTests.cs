@@ -137,6 +137,7 @@ namespace Iori.Audio.Tests
             var dayClips = plan.Music.Where(c => c.File == "m/day_clear.ogg" && c.StartMs < Ms(Jst(11, 13, 16))).ToList();
             Assert.That(dayClips.Count, Is.GreaterThan(2));
             Assert.That(dayClips.All(c => !c.Loop));
+            Assert.That(dayClips.All(c => c.FadeOutMs == 8000));
             for (var i = 1; i < dayClips.Count; i++)
             {
                 Assert.That(dayClips[i].StartMs - dayClips[i - 1].StartMs, Is.EqualTo(172_000), "180 秒の曲を 8 秒重ねて繰り返す");

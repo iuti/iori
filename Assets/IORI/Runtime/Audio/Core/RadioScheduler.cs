@@ -78,10 +78,11 @@ namespace Iori.Audio
 
             // 2. 曲のクリップ。
             var crossfadeMs = (int)Math.Round(program.CrossfadeSeconds * 1000);
+            var introFadeMs = (int)Math.Round(program.IntroFadeSeconds * 1000);
             foreach (var run in runs)
             {
                 if (run.Track == null) continue;
-                AddClips(plan, run, audio.DurationOf(run.Track.File), crossfadeMs, nowMs, endMs);
+                AddClips(plan, run, audio.DurationOf(run.Track.File), crossfadeMs, introFadeMs, nowMs, endMs);
                 var d = audio.DurationOf(run.Track.File);
                 if (d > 0) plan.Durations[run.Track.File] = d;
             }
@@ -115,9 +116,9 @@ namespace Iori.Audio
         /// <summary>
         /// [run.StartMs, run.EndMs) の間、曲を鳴らすクリップを並べる。最後のクリップは次の時間帯の頭と
         /// 重なるため run.EndMs + crossfade まで伸び、そこでフェードアウトする。
-        /// 時間帯の頭(各 run の最初の回)はフェードインしない。イントロの張りをそのまま聞かせるため。
+        /// 時間帯の頭(各 run の最初の回)は introFadeMs(既定 0)で入る。イントロの張りをそのまま聞かせるため。
         /// </summary>
-        static void AddClips(PlaybackPlan plan, Run run, long durationMs, int crossfadeMs, long nowMs, long endMs)
+        static void AddClips(PlaybackPlan plan, Run run, long durationMs, int crossfadeMs, int introFadeMs, long nowMs, long endMs)
         {
             var t = run.Track;
             var x = crossfadeMs;
@@ -131,7 +132,7 @@ namespace Iori.Audio
                     EndMs = runEndWithTail,
                     File = t.File,
                     Volume = t.Volume,
-                    FadeInMs = 0,
+                    FadeInMs = introFadeMs,
                     FadeOutMs = x,
                     Loop = true,
                     Phase = run.Phase,
@@ -159,8 +160,8 @@ namespace Iori.Audio
                     EndMs = end,
                     File = t.File,
                     Volume = t.Volume,
-                    // 同じ曲の繰り返しで重ねるときだけフェードインする(時間帯の頭はしない)。
-                    FadeInMs = k > 0 && overlap > 0 ? x : 0,
+                    // 同じ曲の繰り返しで重ねるときだけクロスフェードで入る(時間帯の頭は introFadeMs)。
+                    FadeInMs = k == 0 ? introFadeMs : overlap > 0 ? x : 0,
                     FadeOutMs = end < naturalEnd || overlap > 0 ? x : 0,
                     Loop = false,
                     Phase = run.Phase,
