@@ -25,12 +25,12 @@ namespace Iori.Ui
 
         TextMeshProUGUI _name;
         readonly UiShape[] _bars = new UiShape[3];
-        UnityEngine.UI.RawImage _weather;
-        Texture2D _sunIcon, _rainIcon, _pauseIcon, _playIcon;
+        UiShape _weather;
+        Texture _sunIcon, _moonIcon, _rainIcon, _pauseIcon, _playIcon;
         UiButton _play;
         RadioDial _dial;
         UiSlider _volume;
-        bool _shownOnce, _shownQuiet, _shownRain;
+        bool _shownOnce, _shownQuiet, _shownRain, _shownDark;
         string _shownPhase;
         float _level;
 
@@ -49,11 +49,12 @@ namespace Iori.Ui
                 _bars[i] = UiKit.Box("Bar", Content, Pad + i * (BarWidth + BarGap), BarFloor - 2f, BarWidth, 2f, th.amber);
             _name = UiKit.Text("Name", Content, 49, 24, 200, 44, "", UiFonts.Mincho, 34, th.textBright, TextAlignmentOptions.Left, 0.04f);
             _weather = UiKit.Icon("Weather", Content, 49, 36, 20, "sun", th.textSoft);
-            _sunIcon = _weather.texture as Texture2D;
+            _sunIcon = _weather.Picture;
+            _moonIcon = UiKit.LoadIcon("moon");
             _rainIcon = UiKit.LoadIcon("rain");
 
             _play = UiKit.IconButton("Play", Content, Width - Pad - 44 + 7, 24, 44, "pause", 30, th.text, TogglePlay, UiSounds.Toggle);
-            _pauseIcon = _play.icon.texture as Texture2D;
+            _pauseIcon = _play.icon.Picture;
             _playIcon = UiKit.LoadIcon("play");
 
             // the day's programme
@@ -91,6 +92,8 @@ namespace Iori.Ui
             string phase = span?.Phase;
             bool quiet = span == null || span.Mode == RadioMode.Quiet;
             bool rain = radio.Weather == WeatherIds.Rain;
+            // (a clear sky shows the sun by day and the moon after dark)
+            bool dark = local.Hour < 5 || local.Hour >= 19;
 
             // the level bars move while a song is on and lie flat while it is quiet
             _level = Mathf.MoveTowards(_level, quiet ? 0f : 1f, Time.unscaledDeltaTime * 4f);
@@ -106,14 +109,14 @@ namespace Iori.Ui
             _dial.SetTime(local.Hour * 60 + local.Minute + local.Second / 60f);
 
             // the rest changes only when the slot, the weather or the button changes
-            if (_shownOnce && phase == _shownPhase && quiet == _shownQuiet && rain == _shownRain) return;
-            _shownOnce = true; _shownPhase = phase; _shownQuiet = quiet; _shownRain = rain;
+            if (_shownOnce && phase == _shownPhase && quiet == _shownQuiet && rain == _shownRain && dark == _shownDark) return;
+            _shownOnce = true; _shownPhase = phase; _shownQuiet = quiet; _shownRain = rain; _shownDark = dark;
 
             _name.text = NameOf(phase);
             float w = _name.GetPreferredValues(_name.text).x;
             UiKit.Place(_weather.rectTransform, 49 + w + 12, 36, 20, 20);
-            _weather.texture = rain ? _rainIcon : _sunIcon;
-            _play.icon.texture = quiet ? _playIcon : _pauseIcon;
+            _weather.Picture = rain ? _rainIcon : dark && _moonIcon ? _moonIcon : _sunIcon;
+            _play.icon.Picture = quiet ? _playIcon : _pauseIcon;
             _dial.SetState(phase, !quiet);
         }
     }
@@ -131,7 +134,7 @@ namespace Iori.Ui
 
         readonly RectTransform _root;
         readonly UiShape _under, _needle;
-        readonly UnityEngine.UI.RawImage _marker;
+        readonly UiShape _marker;
         readonly TextMeshProUGUI[] _numbers;
         readonly string[] _ids;
         readonly float[] _startX, _endX;
@@ -230,7 +233,7 @@ namespace Iori.Ui
             var th = UiTheme.Current;
             Color32 now = _lit ? th.amber : th.textSoft;
             _needle.Style = ShapeStyle.Fill(now, 0f);
-            _marker.color = now;
+            UiKit.Tint(_marker, now);
 
             int cur = Array.IndexOf(_ids, _phase);
             _under.gameObject.SetActive(cur >= 0);

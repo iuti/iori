@@ -21,7 +21,7 @@ namespace Iori.Ui
         sealed class Row
         {
             public AmbientDef def;
-            public UnityEngine.UI.RawImage icon;
+            public UiShape icon;
             public UiSlider slider;
             public bool warm;
             public int shown = -1;
@@ -88,7 +88,7 @@ namespace Iori.Ui
                 if (state == r.shown) continue;
                 r.shown = state;
                 r.slider.SetDim(!active);
-                r.icon.color = !active ? th.textDim : r.warm && heard ? th.amber : th.text;
+                UiKit.Tint(r.icon, !active ? th.textDim : r.warm && heard ? th.amber : th.text);
             }
         }
     }

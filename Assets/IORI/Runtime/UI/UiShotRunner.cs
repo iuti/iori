@@ -138,6 +138,7 @@ namespace Iori.Ui
 
             // night: the glass over a dark scene
             atm.previewHour = 22f;
+            atm.Snap();
             SetRadioClock(radio, 22, 10);
             yield return Wait(1.5f);
             ui.Open(CampPropKind.Radio);

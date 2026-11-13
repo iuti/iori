@@ -37,7 +37,8 @@ namespace Iori.Ui
             Medium = Make("ZenKakuGothicNew-Medium", 48, 5, 1024) ?? fallback;
             Regular = Make("ZenKakuGothicNew-Regular", 48, 5, 1024) ?? Medium;
             Bold = Make("ZenKakuGothicNew-Bold", 48, 5, 1024) ?? Medium;
-            Mincho = Make("ShipporiMincho-SemiBold", 72, 7, 1024) ?? Medium;
+            // (the mincho's hair strokes are thin already: it is not thinned)
+            Mincho = Make("ShipporiMincho-SemiBold", 72, 7, 1024, 0f) ?? Medium;
 
             // a letter one face lacks is taken from the next
             Chain(Mincho, Medium);
@@ -53,7 +54,7 @@ namespace Iori.Ui
             if (!font.fallbackFontAssetTable.Contains(next)) font.fallbackFontAssetTable.Add(next);
         }
 
-        static TMP_FontAsset Make(string file, int size, int padding, int sheet)
+        static TMP_FontAsset Make(string file, int size, int padding, int sheet, float? thin = null)
         {
             var font = Resources.Load<Font>("IoriUI/Fonts/" + file);
             if (!font)
@@ -72,7 +73,7 @@ namespace Iori.Ui
             }
             if (!asset) return null;
             asset.name = file;
-            if (asset.material) asset.material.SetFloat(ShaderUtilities.ID_FaceDilate, UiTheme.Current.textThin);
+            if (asset.material) asset.material.SetFloat(ShaderUtilities.ID_FaceDilate, thin ?? UiTheme.Current.textThin);
             asset.hideFlags = HideFlags.HideAndDontSave;
             return asset;
         }

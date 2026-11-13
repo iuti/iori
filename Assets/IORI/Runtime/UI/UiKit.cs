@@ -75,19 +75,25 @@ namespace Iori.Ui
         {
             var tex = Resources.Load<Texture2D>("IoriUI/Icons/" + icon);
             if (!tex) Debug.LogWarning("[IORI] アイコンが見つかりません: IoriUI/Icons/" + icon);
+            // (the pictures are drawn much smaller than they are stored: lean towards the sharper size)
+            else tex.mipMapBias = -0.5f;
             return tex;
         }
 
-        public static UnityEngine.UI.RawImage Icon(string name, Transform parent, float x, float y, float size, string icon, Color32 color)
+        /// <summary>
+        /// An icon: a white picture tinted with a colour. It is drawn by the shape shader, like everything
+        /// else, so its thin lines get the same weight as in the look proposal. Change it later with
+        /// <see cref="Tint"/> and <see cref="UiShape.Picture"/>.
+        /// </summary>
+        public static UiShape Icon(string name, Transform parent, float x, float y, float size, string icon, Color32 color)
         {
-            var rt = Node(name, parent, x, y, size, size);
-            var img = rt.gameObject.AddComponent<UnityEngine.UI.RawImage>();
-            img.texture = LoadIcon(icon);
-            img.color = color;
-            img.raycastTarget = false;
-            if (!img.texture) img.enabled = false;
-            return img;
+            var shape = Shape(name, parent, x, y, size, size, ShapeStyle.Fill(color, 0f));
+            shape.Picture = LoadIcon(icon);
+            if (!shape.Picture) shape.enabled = false;
+            return shape;
         }
+
+        public static void Tint(UiShape icon, Color32 color) => icon.Style = ShapeStyle.Fill(color, 0f);
 
         /// <summary>A press area. Put the things that should shrink a little while pressed under <see cref="UiButton.visual"/>.</summary>
         public static UiButton Button(string name, Transform parent, float x, float y, float w, float h, Action onClick, string sound = UiSounds.Tap)
@@ -119,7 +125,7 @@ namespace Iori.Ui
     {
         public Action onClick;
         public RectTransform visual;
-        public UnityEngine.UI.RawImage icon;
+        public UiShape icon;
         public string sound = UiSounds.Tap;
         public float shrink = 0.10f;
         float _press, _target;
