@@ -1,0 +1,14 @@
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_early_morning_clear.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_evening_clear.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_morning_clear.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_day_clear.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_night_clear.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/music_late_night_clear.wav (HTTP/1.1 404 Not Found)
+NVIDIA GeForce RTX 3070, Direct3D12, 540x1080, colour space Linear
+fonts: medium ZenKakuGothicNew-Medium, regular ZenKakuGothicNew-Regular, bold ZenKakuGothicNew-Bold, mincho ShipporiMincho-SemiBold
+open radio: True
+backdrop on 1, canvas scale 1.385
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_01.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_03.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_02.wav (HTTP/1.1 404 Not Found)
+open fire: True
