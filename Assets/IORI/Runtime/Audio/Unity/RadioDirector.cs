@@ -45,6 +45,7 @@ namespace Iori.Audio
             var go = new GameObject("IORI Radio");
             DontDestroyOnLoad(go);
             go.AddComponent<RadioDirector>();
+            go.AddComponent<MusicDirector>();
             go.AddComponent<RadioDebugPanel>();
         }
 

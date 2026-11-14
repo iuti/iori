@@ -13,6 +13,10 @@ namespace Iori.Ui
     /// A development aid for desktop builds: started with "-ioriUiShots folder", the player opens
     /// each panel by itself, saves pictures of the real running UI (to compare with the look
     /// proposal), writes a short report and quits. Without that argument it does nothing.
+    /// The music player is shown with made-up songs written to a temporary folder (silent files with
+    /// names and jackets), never with the songs of the computer it runs on, and the queue the user
+    /// was listening to is left alone. With "-ioriUiShotJackets folder" the jackets are taken from
+    /// that folder (jacket_1.jpg to jacket_6.jpg; they are in Docs/ui-shots/sample-jackets).
     /// Not compiled into phone builds.
     /// </summary>
     public sealed class UiShotRunner : MonoBehaviour
@@ -28,12 +32,218 @@ namespace Iori.Ui
             string dir = null;
             for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-ioriUiShots") dir = args[i + 1];
             if (string.IsNullOrEmpty(dir)) return;
+            // before the music player looks for songs: give it the made-up ones, and keep it from saving anything
+            MusicDirector.Persist = false;
+            string jackets = null;
+            for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-ioriUiShotJackets") jackets = args[i + 1];
+            try
+            {
+                UnityMusicBackend.FolderOverride = MakeSampleMusic(jackets);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[IORI] 見本の曲を作れませんでした: " + e.Message);
+            }
             var go = new GameObject("UI shot runner");
             DontDestroyOnLoad(go);
             go.AddComponent<UiShotRunner>()._dir = dir;
         }
 
         static WaitForSecondsRealtime Wait(float s) => new WaitForSecondsRealtime(s);
+
+        // ---- made-up songs for the pictures of the music player
+
+        /// <summary>(title, artist, album, number in the album, seconds). The albums are numbered in the order they first appear.</summary>
+        static readonly (string title, string artist, string album, int number, int seconds)[] SampleSongs =
+        {
+            ("遠まわりの帰り道", "みなと通りトリオ", "港の見える坂", 1, 228),
+            ("山の向こうの灯り", "みなと通りトリオ", "山あいの夜", 1, 252),
+            ("朝のコーヒーは二杯", "小舟ラジオ楽団", "小舟ラジオ", 1, 177),
+            ("雨やどりのワルツ", "小舟ラジオ楽団", "小舟ラジオ", 2, 211),
+            ("引き潮のサンバ", "かなた ゆづき", "潮目", 1, 304),
+            ("夜行バスの窓", "かなた ゆづき", "潮目", 2, 266),
+            ("縁側と扇風機", "はこにわ", "夏の箱庭", 1, 195),
+            ("星を数える係", "はこにわ", "夏の箱庭", 2, 362),
+            ("最終便のあとで", "北の停車場", "終着駅", 1, 288),
+            ("灯台までの地図", "小舟ラジオ楽団", "小舟ラジオ", 3, 220),
+            ("川べりの自転車", "みなと通りトリオ", "山あいの夜", 2, 202),
+        };
+        const string SampleFirst = "遠まわりの帰り道", SampleAlbum = "小舟ラジオ";
+
+        static string MakeSampleMusic(string jackets)
+        {
+            string root = Path.Combine(Application.temporaryCachePath, "ui-shot-music");
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+            Directory.CreateDirectory(root);
+            var albums = new System.Collections.Generic.List<string>();
+            foreach (var song in SampleSongs)
+            {
+                int album = albums.IndexOf(song.album);
+                string folder = Path.Combine(root, song.album);
+                if (album < 0)
+                {
+                    album = albums.Count;
+                    albums.Add(song.album);
+                    Directory.CreateDirectory(folder);
+                    string jacket = string.IsNullOrEmpty(jackets) ? null : Path.Combine(jackets, $"jacket_{album + 1}.jpg");
+                    if (jacket != null && File.Exists(jacket)) File.Copy(jacket, Path.Combine(folder, "cover.jpg"));
+                }
+                WriteSilentSong(Path.Combine(folder, $"{song.number:00} {song.title}.wav"), song.title, song.artist, song.album, song.number, song.seconds);
+            }
+            return root;
+        }
+
+        /// <summary>A WAV file of silence of the given length, with its names in a LIST/INFO chunk.</summary>
+        static void WriteSilentSong(string path, string title, string artist, string album, int number, int seconds)
+        {
+            const int rate = 8000;
+            var info = new MemoryStream();
+            void Tag(string id, string text)
+            {
+                var bytes = Encoding.UTF8.GetBytes(text);
+                int n = bytes.Length + 1;
+                info.Write(Encoding.ASCII.GetBytes(id), 0, 4);
+                info.Write(BitConverter.GetBytes(n), 0, 4);
+                info.Write(bytes, 0, bytes.Length);
+                info.WriteByte(0);
+                if ((n & 1) == 1) info.WriteByte(0);
+            }
+            Tag("INAM", title);
+            Tag("IART", artist);
+            Tag("IPRD", album);
+            Tag("ITRK", number.ToString());
+            int dataBytes = rate * 2 * seconds;
+            int listBytes = 4 + (int)info.Length;
+            using (var file = new FileStream(path, FileMode.Create, FileAccess.Write))
+            using (var w = new BinaryWriter(file))
+            {
+                w.Write(Encoding.ASCII.GetBytes("RIFF"));
+                w.Write(4 + (8 + 16) + (8 + listBytes) + (8 + dataBytes));
+                w.Write(Encoding.ASCII.GetBytes("WAVE"));
+                w.Write(Encoding.ASCII.GetBytes("fmt "));
+                w.Write(16);
+                w.Write((short)1);          // PCM
+                w.Write((short)1);          // one channel
+                w.Write(rate);
+                w.Write(rate * 2);
+                w.Write((short)2);
+                w.Write((short)16);
+                w.Write(Encoding.ASCII.GetBytes("LIST"));
+                w.Write(listBytes);
+                w.Write(Encoding.ASCII.GetBytes("INFO"));
+                w.Write(info.ToArray());
+                w.Write(Encoding.ASCII.GetBytes("data"));
+                w.Write(dataBytes);
+                w.Flush();
+                // (the rest of the file is zeros: silence)
+                file.SetLength(file.Position + dataBytes);
+            }
+        }
+
+        static bool OnlySampleSongs(MusicDirector music)
+        {
+            string root = UnityMusicBackend.FolderOverride;
+            if (string.IsNullOrEmpty(root) || music.Library.Count != SampleSongs.Length) return false;
+            foreach (var t in music.Library.Songs)
+                if (!t.Uri.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return false;
+            return true;
+        }
+
+        IEnumerator WaitForSongs(MusicDirector music)
+        {
+            float waited = 0f;
+            yield return null;
+            while ((music.Scanning || !music.Scanned) && waited < 20f)
+            {
+                yield return null;
+                waited += Time.unscaledDeltaTime;
+            }
+        }
+
+        /// <summary>The music player's screens: the list, a song playing, the player, the albums, the home screen with the strip, the radio meanwhile.</summary>
+        IEnumerator MusicShots(UiRoot ui, RadioDirector radio)
+        {
+            var music = MusicDirector.Instance;
+            if (!music || music.Backend == null || string.IsNullOrEmpty(UnityMusicBackend.FolderOverride))
+            {
+                _report.AppendLine("music player: not shown (no player on this device, or the made-up songs could not be written)");
+                yield break;
+            }
+            yield return WaitForSongs(music);
+            if (!OnlySampleSongs(music))
+            {
+                music.Rescan();
+                yield return WaitForSongs(music);
+            }
+            if (!OnlySampleSongs(music))
+            {
+                _report.AppendLine($"music player: not shown (the made-up songs were not read: {music.Library.Count} songs found)");
+                yield break;
+            }
+            _report.AppendLine($"music: {music.Library.Count} songs, {music.Library.Albums.Count} albums, {music.Library.Artists.Count} artists, {music.Backend.Name}");
+
+            // no song chosen yet: the music player opens its list
+            _report.AppendLine("open player: " + ui.Open(CampPropKind.Player));
+            yield return Wait(0.14f);
+            yield return Shot("ui_09_library_opening");
+            yield return Wait(3.2f);
+            yield return Shot("ui_10_library");
+
+            int first = 0;
+            for (int i = 0; i < music.Library.Songs.Count; i++) if (music.Library.Songs[i].Title == SampleFirst) first = i;
+            ui.Library.PressItem(first);
+            yield return Wait(1.2f);
+            music.Seek(72f / 228f);
+            yield return Wait(1.3f);
+            yield return Shot("ui_11_library_playing");
+            _report.AppendLine($"playing: {(music.Current != null ? music.Current.Title : "none")}, {music.Backend.Status}, player has the floor {music.Active}, radio silent {radio.PlayerOn}");
+
+            ui.ShowPlayer();
+            yield return Wait(0.16f);
+            yield return Shot("ui_12_player_opening");
+            yield return Wait(2.4f);
+            yield return Shot("ui_13_player");
+            _report.AppendLine("player: " + music.Backend.Status);
+
+            music.Pause();
+            music.SetShuffle(true);
+            music.CycleRepeat();
+            music.CycleRepeat();
+            yield return Wait(0.8f);
+            yield return Shot("ui_14_player_paused_shuffle_repeat_one");
+            music.SetShuffle(false);
+            music.CycleRepeat();
+            music.Play();
+            yield return Wait(0.5f);
+
+            ui.ShowLibrary();
+            yield return Wait(1.6f);
+            ui.Library.ShowTab(1);
+            yield return Wait(1.2f);
+            yield return Shot("ui_15_albums");
+            int album = 0;
+            for (int i = 0; i < music.Library.Albums.Count; i++) if (music.Library.Albums[i].Title == SampleAlbum) album = i;
+            ui.Library.PressItem(album);
+            yield return Wait(1.2f);
+            yield return Shot("ui_16_album");
+            ui.Library.ShowTab(2);
+            yield return Wait(1.2f);
+            yield return Shot("ui_17_artists");
+            ui.Library.ShowTab(0);
+            ui.Close();
+            yield return Wait(3.4f);
+
+            // home, with the strip of the song that is on
+            yield return Shot("ui_18_home_playing");
+            _report.AppendLine("open radio while the player plays: " + ui.Open(CampPropKind.Radio));
+            yield return Wait(3.2f);
+            yield return Shot("ui_19_radio_while_player");
+            ui.Close();
+            yield return Wait(1.0f);
+            music.Release();
+            yield return Wait(1.0f);
+            _report.AppendLine($"released: player has the floor {music.Active}, radio silent {radio.PlayerOn}");
+        }
 
         IEnumerator Shot(string name)
         {
@@ -47,6 +257,11 @@ namespace Iori.Ui
         void Finish(int code)
         {
             File.WriteAllText(Path.Combine(_dir, "ui_report.txt"), _report.ToString());
+            try
+            {
+                if (!string.IsNullOrEmpty(UnityMusicBackend.FolderOverride)) Directory.Delete(UnityMusicBackend.FolderOverride, true);
+            }
+            catch (Exception) { } // (a song may still be held open: the next run clears the folder)
             Application.Quit(code);
         }
 
@@ -145,7 +360,14 @@ namespace Iori.Ui
             yield return Wait(3.2f);
             yield return Shot("ui_08_radio_night");
             ui.Close();
-            yield return Wait(0.5f);
+            yield return Wait(2.5f);
+
+            // the music player, in the evening again
+            atm.previewHour = 18.6f;
+            atm.Snap();
+            SetRadioClock(radio, 17, 20);
+            yield return Wait(1.5f);
+            yield return MusicShots(ui, radio);
 
             radio.SetClockOffset(0);
             radio.SetWeather(wasWeather);

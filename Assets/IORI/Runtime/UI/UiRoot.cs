@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Iori.Audio;
 using Iori.Camp;
 using UnityEngine;
@@ -10,7 +11,10 @@ namespace Iori.Ui
     /// scene, the sheets (built the first time each opens), and the link to the props: tapping the
     /// radio or the fire moves the camera in (the camera rig does that) and raises that prop's sheet
     /// from the bottom edge, with the prop kept in view above it. A press outside the sheet, or the
-    /// back key, closes it. The layout is for a phone held upright only.
+    /// back key, closes it. Tapping the music player raises a sheet over the whole screen: the player
+    /// if a song is chosen, the list of songs if not; the one can be opened over the other. While the
+    /// music player has the floor, a strip along the bottom of the home screen shows its song.
+    /// The layout is for a phone held upright only.
     /// </summary>
     public sealed class UiRoot : MonoBehaviour
     {
@@ -21,7 +25,6 @@ namespace Iori.Ui
         public static UiRoot Instance { get; private set; }
 
         Canvas _canvas;
-        RectTransform _canvasRect;
         UiBackdrop _backdrop;
         CampCameraRig _rig;
         CampDebugPanel _debug;
@@ -29,12 +32,20 @@ namespace Iori.Ui
         GameObject _scrim;
         RadioPanel _radio;
         AmbientPanel _ambient;
-        UiPanel _open;
+        PlayerPanel _player;
+        LibraryPanel _library;
+        MiniBar _bar;
+        UiPanel[] _panels;
+        /// <summary>The open sheets, the one on top last (only the music player's two screens lie over one another).</summary>
+        readonly List<UiPanel> _stack = new List<UiPanel>();
         int _screenW, _screenH;
         Rect _safe;
 
-        public UiPanel OpenPanel => _open;
+        /// <summary>The open sheet (the one on top), or null.</summary>
+        public UiPanel OpenPanel => _stack.Count > 0 ? _stack[_stack.Count - 1] : null;
         public UiBackdrop Backdrop => _backdrop;
+        public LibraryPanel Library => _library;
+        public MiniBar HomeBar => _bar;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Forget() => Instance = null;
@@ -58,7 +69,6 @@ namespace Iori.Ui
             // the shape shader reads its numbers from these extra vertex channels
             _canvas.additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1 | AdditionalCanvasShaderChannels.TexCoord2 | AdditionalCanvasShaderChannels.TexCoord3;
             gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-            _canvasRect = (RectTransform)transform;
 
             if (!FindFirstObjectByType<EventSystem>())
             {
@@ -80,8 +90,14 @@ namespace Iori.Ui
             _scrim = scrim.gameObject;
             _scrim.SetActive(false);
 
+            // (under the sheets: it slides away as one of them comes up)
+            _bar = MiniBar.Create(transform, true, 16f, () => Open(CampPropKind.Player));
+
             _radio = MakePanel<RadioPanel>("Radio sheet");
             _ambient = MakePanel<AmbientPanel>("Ambient sheet");
+            _player = MakePanel<PlayerPanel>("Player screen");
+            _library = MakePanel<LibraryPanel>("Library screen");
+            _panels = new UiPanel[] { _radio, _ambient, _player, _library };
         }
 
         T MakePanel<T>(string name) where T : UiPanel
@@ -112,7 +128,7 @@ namespace Iori.Ui
 
         void OnPropTapped(CampProp prop)
         {
-            if (_open) return;
+            if (_stack.Count > 0) return;
             Open(prop.kind, prop);
         }
 
@@ -122,7 +138,11 @@ namespace Iori.Ui
             {
                 case CampPropKind.Radio: return _radio;
                 case CampPropKind.Fire: return _ambient;
-                default: return null; // the music player, the lantern and Iori have no panel yet
+                case CampPropKind.Player:
+                    var music = MusicDirector.Instance;
+                    if (!music || music.Backend == null) return null; // this device has no way to play its songs yet
+                    return music.Current != null ? (UiPanel)_player : _library;
+                default: return null; // the lantern and Iori have no panel yet
             }
         }
 
@@ -131,23 +151,26 @@ namespace Iori.Ui
         {
             var panel = PanelFor(kind);
             if (!panel) return false;
-            var radio = RadioDirector.Instance;
-            if (!radio || radio.Program == null) return false; // the programme is still being read
-            if (_open && _open != panel) _open.Close();
+            if (panel == _radio || panel == _ambient)
+            {
+                var radio = RadioDirector.Instance;
+                if (!radio || radio.Program == null) return false; // the programme is still being read
+            }
+            bool wasOpen = _stack.Count > 0;
+            foreach (var p in _stack) if (p != panel) p.Close();
+            _stack.Clear();
 
             if (!prop)
                 foreach (var p in FindObjectsByType<CampProp>(FindObjectsSortMode.None))
                     if (p.kind == kind) prop = p;
             if (_rig && prop) _rig.focus = prop;
 
-            if (!_open && _debug)
+            if (!wasOpen && _debug)
             {
                 _debugWasHidden = _debug.hidden;
                 _debug.hidden = true;
             }
-            _open = panel;
-            Fit(true);
-            panel.Open();
+            Push(panel);
             _scrim.SetActive(true);
             CampCameraRig.UiBlocked = true;
             _backdrop.wanted = true;
@@ -155,11 +178,69 @@ namespace Iori.Ui
             return true;
         }
 
+        void Push(UiPanel panel)
+        {
+            panel.transform.SetAsLastSibling();
+            _stack.Add(panel);
+            Fit(true);
+            panel.Open();
+        }
+
+        /// <summary>Brings one of the music player's two screens to the top: back down to it if it lies under the open one, else up over it.</summary>
+        void Show(UiPanel panel)
+        {
+            if (_stack.Count == 0) return;
+            int at = _stack.IndexOf(panel);
+            if (at < 0)
+            {
+                Push(panel);
+                return;
+            }
+            for (int i = _stack.Count - 1; i > at; i--)
+            {
+                _stack[i].Close();
+                _stack.RemoveAt(i);
+            }
+            panel.Covered = false;
+        }
+
+        /// <summary>From the list of songs: the player (if a song is chosen).</summary>
+        public void ShowPlayer()
+        {
+            var music = MusicDirector.Instance;
+            if (music && music.Current != null) Show(_player);
+        }
+
+        /// <summary>From the player: the list of songs.</summary>
+        public void ShowLibrary() => Show(_library);
+
+        /// <summary>Puts the sheet on top away. The one under it shows again; if there is none, the UI closes.</summary>
+        public void Pop()
+        {
+            if (_stack.Count <= 1)
+            {
+                Close();
+                return;
+            }
+            _stack[_stack.Count - 1].Close();
+            _stack.RemoveAt(_stack.Count - 1);
+            _stack[_stack.Count - 1].Covered = false;
+        }
+
+        /// <summary>The back key: the sheet on top may use it itself (to leave an opened album); otherwise it is put away.</summary>
+        public void Back()
+        {
+            var top = OpenPanel;
+            if (!top || top.Back()) return;
+            Pop();
+        }
+
+        /// <summary>Closes every open sheet.</summary>
         public void Close()
         {
-            if (!_open) return;
-            _open.Close();
-            _open = null;
+            if (_stack.Count == 0) return;
+            foreach (var p in _stack) p.Close();
+            _stack.Clear();
             _scrim.SetActive(false);
             if (_rig)
             {
@@ -178,28 +259,46 @@ namespace Iori.Ui
             _safe = Screen.safeArea;
             float scale = Mathf.Max(0.1f, Mathf.Min(_screenW / DesignWidth, _screenH / MinHeight));
             _canvas.scaleFactor = scale;
-            float inset = Mathf.Max(0f, _safe.yMin) / scale;
-            _radio.SetBottomInset(inset);
-            _ambient.SetBottomInset(inset);
+            float bottom = Mathf.Max(0f, _safe.yMin) / scale;
+            float top = Mathf.Max(0f, _screenH - _safe.yMax) / scale;
+            foreach (var p in _panels) p.SetScreen(_screenH / scale, bottom, top);
+            _bar.SetInset(bottom);
         }
 
         void Update()
         {
             Fit();
-            bool showing = _radio.IsShowing || _ambient.IsShowing;
-            // the camera keeps its hands off until the panel has gone and the finger is up
-            if (!_open && !showing && CampCameraRig.UiBlocked && !Input.GetMouseButton(0) && Input.touchCount == 0)
-                CampCameraRig.UiBlocked = false;
-            if (!showing) _backdrop.wanted = false;
+            bool showing = false;
+            foreach (var p in _panels) showing |= p.IsShowing;
+            var top = OpenPanel;
 
-            if (_open && _rig)
+            // a sheet over the whole screen hides the one under it: that one need not be drawn
+            for (int i = 0; i < _stack.Count - 1; i++) _stack[i].Covered = top.FullScreen && top.IsSettled;
+
+            // the strip of the song that is on, while the music player has the floor and nothing is open
+            var music = MusicDirector.Instance;
+            _bar.shown = music && music.Active && music.Current != null && !showing;
+            // (a press that starts on the strip is the strip's, not the camera's)
+            if (_bar.Visible && !showing && Input.GetMouseButtonDown(0) && _bar.Contains(Input.mousePosition))
+                CampCameraRig.UiBlocked = true;
+
+            // the camera keeps its hands off until the panel has gone and the finger is up
+            if (!top && !showing && CampCameraRig.UiBlocked && !Input.GetMouseButton(0) && Input.touchCount == 0)
+                CampCameraRig.UiBlocked = false;
+            _backdrop.wanted = showing || _bar.Visible;
+
+            if (top && _rig)
             {
-                // keep the prop in the part of the screen the panel leaves free
+                // keep the prop in the part of the screen the panel leaves free (a sheet over the whole screen leaves none)
                 float canvasHeight = _screenH / _canvas.scaleFactor;
-                _rig.panelCover = Mathf.Clamp01(_open.Top / Mathf.Max(1f, canvasHeight));
+                _rig.panelCover = top.FullScreen ? 0f : Mathf.Clamp01(top.Top / Mathf.Max(1f, canvasHeight));
             }
 
-            if (_open && Input.GetKeyDown(KeyCode.Escape)) Close();
+            if (top && Input.GetKeyDown(KeyCode.Escape))
+            {
+                UiSounds.Play(UiSounds.Close);
+                Back();
+            }
         }
     }
 }

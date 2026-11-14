@@ -9,7 +9,8 @@ namespace Iori.Ui
     /// The radio's sheet. It says what is on by its layout, not by words: the name of the time slot
     /// that is playing, the day's programme as a fine scale with a needle at the present time, one
     /// button that stops the songs (the radio then keeps the quiet hours: the fire, the wind and now
-    /// and then a piano) and the music volume. The amber marks are lit only while a song is on.
+    /// and then a piano) and the music volume. The amber marks are lit only while a song of the radio
+    /// is on (not while the music player plays its own songs: the button then gives the radio the floor back).
     /// </summary>
     public sealed class RadioPanel : UiPanel
     {
@@ -73,11 +74,22 @@ namespace Iori.Ui
             if (radio) _volume.SetValue(radio.MusicVolume);
         }
 
-        /// <summary>Stopping the radio is going over to the quiet hours; starting it is leaving them.</summary>
+        /// <summary>
+        /// Stopping the radio is going over to the quiet hours; starting it is leaving them. While the
+        /// music player has the floor the radio is silent, and its button takes the floor back.
+        /// </summary>
         void TogglePlay()
         {
             var radio = RadioDirector.Instance;
-            if (radio) radio.SetQuiet(!radio.Quiet);
+            if (!radio) return;
+            if (radio.PlayerOn)
+            {
+                var music = MusicDirector.Instance;
+                if (music) music.Release();
+                radio.SetPlayerOn(false);
+                radio.SetQuiet(false);
+            }
+            else radio.SetQuiet(!radio.Quiet);
         }
 
         protected override void Refresh()
@@ -90,7 +102,8 @@ namespace Iori.Ui
             var local = TimeZoneInfo.ConvertTime(now, TimeZoneInfo.Local);
             var span = radio.Plan.SpanAt(radio.Plan.ToPlanTime(now.ToUnixTimeMilliseconds()));
             string phase = span?.Phase;
-            bool quiet = span == null || span.Mode == RadioMode.Quiet;
+            // (no song of the radio is on in its quiet hours, nor while the music player plays its own)
+            bool quiet = span == null || span.Mode == RadioMode.Quiet || radio.PlayerOn;
             bool rain = radio.Weather == WeatherIds.Rain;
             // (a clear sky shows the sun by day and the moon after dark)
             bool dark = local.Hour < 5 || local.Hour >= 19;

@@ -71,6 +71,9 @@ namespace Iori.Ui
             return t;
         }
 
+        /// <summary>A text too long for its box ends in "…" instead of running out of it.</summary>
+        public static void Clip(TextMeshProUGUI t) => t.overflowMode = TextOverflowModes.Ellipsis;
+
         public static Texture2D LoadIcon(string icon)
         {
             var tex = Resources.Load<Texture2D>("IoriUI/Icons/" + icon);
@@ -160,7 +163,9 @@ namespace Iori.Ui
     public sealed class UiSlider : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler, IInitializePotentialDragHandler
     {
         public Action<float> onChanged;
-        float _value, _width;
+        /// <summary>Called when the finger lets go, with the value it was left at.</summary>
+        public Action<float> onReleased;
+        float _value, _width, _handleHeight = 18f;
         bool _dim;
         RectTransform _rt;
         UiShape _track, _fill, _handle;
@@ -168,8 +173,11 @@ namespace Iori.Ui
         float _press, _pressTarget;
 
         public float Value => _value;
+        /// <summary>True while a finger is on it.</summary>
+        public bool IsHeld => _pressTarget > 0f;
 
-        public static UiSlider Create(string name, Transform parent, float x, float y, float w)
+        /// <summary>The line is 21 below y, in the middle of the press area. handle is the height of the upright bar.</summary>
+        public static UiSlider Create(string name, Transform parent, float x, float y, float w, float handle = 18f)
         {
             var rt = UiKit.Node(name, parent, x, y, w, 44f);
             rt.gameObject.AddComponent<UiHit>();
@@ -177,10 +185,11 @@ namespace Iori.Ui
             var th = UiTheme.Current;
             s._rt = rt;
             s._width = w;
+            s._handleHeight = handle;
             s._fillColor = th.text;
             s._track = UiKit.Box("Track", rt, 0, 21, w, 2, th.track);
             s._fill = UiKit.Box("Fill", rt, 0, 21, 0, 2, th.text);
-            s._handle = UiKit.Box("Handle", rt, -1.5f, 13, 3, 18, th.textBright);
+            s._handle = UiKit.Box("Handle", rt, -1.5f, 22 - handle * 0.5f, 3, handle, th.textBright);
             s.Paint();
             s.Layout();
             return s;
@@ -222,7 +231,7 @@ namespace Iori.Ui
         {
             float grow = 4f * UiKit.EaseInOut(_press);
             UiKit.Place(_fill.rectTransform, 0, 21, _width * _value, 2);
-            UiKit.Place(_handle.rectTransform, _width * _value - 1.5f, 13 - grow * 0.5f, 3, 18 + grow);
+            UiKit.Place(_handle.rectTransform, _width * _value - 1.5f, 22 - (_handleHeight + grow) * 0.5f, 3, _handleHeight + grow);
         }
 
         void Set(PointerEventData e)
@@ -234,7 +243,12 @@ namespace Iori.Ui
         public void OnInitializePotentialDrag(PointerEventData e) => e.useDragThreshold = false;
         public void OnPointerDown(PointerEventData e) { _pressTarget = 1f; Set(e); }
         public void OnDrag(PointerEventData e) => Set(e);
-        public void OnPointerUp(PointerEventData e) { _pressTarget = 0f; UiSounds.Play(UiSounds.Slider, 0.7f); }
+        public void OnPointerUp(PointerEventData e)
+        {
+            _pressTarget = 0f;
+            UiSounds.Play(UiSounds.Slider, 0.7f);
+            onReleased?.Invoke(_value);
+        }
 
         void OnDisable() { _press = _pressTarget = 0f; if (_handle) Layout(); }
 
