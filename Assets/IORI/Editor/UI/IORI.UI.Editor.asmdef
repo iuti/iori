@@ -1,0 +1,20 @@
+{
+    "name": "IORI.UI.Editor",
+    "rootNamespace": "Iori.Ui.EditorTools",
+    "references": [
+        "IORI.UI",
+        "Unity.TextMeshPro",
+        "Unity.TextMeshPro.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

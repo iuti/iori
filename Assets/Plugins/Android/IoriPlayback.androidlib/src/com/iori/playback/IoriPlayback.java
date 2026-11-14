@@ -19,7 +19,7 @@ public final class IoriPlayback {
     private static final String TAG = "IoriPlayback";
     private static final String PLAN_FILE = "iori_plan.json";
     private static final Handler main = new Handler(Looper.getMainLooper());
-    private static IoriPlaybackService service;
+    private static volatile IoriPlaybackService service;
 
     private IoriPlayback() {
     }
@@ -30,6 +30,11 @@ public final class IoriPlayback {
 
     static void onServiceCreated(IoriPlaybackService s) {
         service = s;
+        IoriMusic.onServiceCreated();
+    }
+
+    static IoriPlaybackService service() {
+        return service;
     }
 
     static void onServiceDestroyed(IoriPlaybackService s) {

@@ -28,11 +28,13 @@ radio.json(番組表) ─┐
 | --- | --- |
 | `Assets/IORI/Runtime/Audio/Core/` | 選曲の頭脳(番組表、予定表、ミキサー、仮素材の合成)。UnityEngine を参照しない |
 | `Assets/IORI/Runtime/Audio/Unity/` | 司令塔 `RadioDirector`(どのシーンでも自動で作られる)、PC の再生係、Android への橋渡し、動作確認パネル |
-| `Assets/IORI/Editor/` | メニュー「IORI/Audio」 |
+| `Assets/IORI/Runtime/UI/` | 本番の UI。小物(ラジオ、焚き火)を押すと、カメラが寄って下からガラスのシートが出る。uGUI と TextMeshPro をコードで組み、形はシェーダー `Resources/IoriUI/Shape.shader` 1 本で描く。色と寸法は `UiTheme` |
+| `Assets/IORI/Editor/` | メニュー「IORI/Audio」「IORI/UI」 |
 | `Assets/IORI/Tests/EditMode/` | Core のテスト |
 | `Assets/Plugins/Android/IoriPlayback.androidlib/` | Android のバックグラウンド再生サービス(Java、Media3) |
 | `Assets/StreamingAssets/IORI/radio.json` | 番組表(時間帯、曲、チャイム、静けさの時間のフレーズ、環境音) |
 | `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`radio/`(ラジオの曲)、`voice/`(イオリの声)、`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
+| `Docs/ui-shots/` | デスクトップのビルドを `-ioriUiShots <フォルダ>` で起動して撮った、実際の UI の画面 |
 | `tools/CoreTests/` | Unity なしで Core のテストを動かす .NET プロジェクト |
 
 ## はじめに(デスクトップで)

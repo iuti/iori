@@ -1,0 +1,22 @@
+{
+    "name": "IORI.UI",
+    "rootNamespace": "Iori.Ui",
+    "references": [
+        "IORI.Audio.Core",
+        "IORI.Audio",
+        "IORI.Camp",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -26,10 +26,18 @@ namespace Iori.Camp
         public LayerMask mask = CampLayers.MirrorMask;
         [Tooltip("使わないあいだ、代わりにこの鏡像を貸す")] public CampReflection fallback;
         [Tooltip("オフにすると鏡像を作らず、fallback を使う(軽くする用)")] public bool render = true;
+        [Tooltip("カメラが止まっている間、何フレームに 1 回描き直すか(1 = 毎フレーム)。間のフレームは前の鏡像を使う。カメラが動いている間は毎フレーム描く")]
+        [Min(1)] public int interval = 1;
 
         Camera _cam;
         RenderTexture _rt;
         int _id;
+
+        Vector3 _lastPos;
+        Quaternion _lastRot;
+        float _lastFov;
+        int _stillFrames;
+        RenderTexture _drawn;
 
         public Camera ReflectionCamera => _cam;
         public RenderTexture Texture => _rt;
@@ -95,6 +103,18 @@ namespace Iori.Camp
                 _rt = new RenderTexture(w, h, 16, RenderTextureFormat.DefaultHDR) { name = "IORI mirror " + textureName, hideFlags = HideFlags.DontSave, wrapMode = TextureWrapMode.Clamp };
                 _rt.Create();
             }
+            // (still camera: the mirror image changes slowly, so it need not be drawn anew every frame)
+            var view = source.transform;
+            // (the view's slow sway does not count as moving: a few frames late cannot be seen there)
+            float dt = Mathf.Max(Time.unscaledDeltaTime, 1e-4f);
+            bool moved = (view.position - _lastPos).magnitude / dt > 0.25f || Quaternion.Angle(view.rotation, _lastRot) / dt > 4f
+                         || Mathf.Abs(source.fieldOfView - _lastFov) > 0.01f;
+            _lastPos = view.position; _lastRot = view.rotation; _lastFov = source.fieldOfView;
+            if (moved) _stillFrames = 0; else _stillFrames++;
+            bool fresh = _rt != _drawn;
+            _cam.enabled = interval <= 1 || fresh || _stillFrames < 2 || Time.frameCount % interval == 0;
+            _drawn = _rt;
+
             _cam.targetTexture = _rt;
             _cam.cullingMask = mask;
             _cam.depth = source.depth - 1;
