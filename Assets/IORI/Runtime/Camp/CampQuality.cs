@@ -29,11 +29,15 @@ namespace Iori.Camp
         [Tooltip("スマホでは、炎を立体の計算ではなく、前もって焼いた連番の絵(tools/camp/bake_fire.py)の板で出す")]
         public bool flameCardOnPhone = true;
         [Tooltip("スマホで、カメラが止まっている間、湖の鏡像を何フレームに 1 回描き直すか")]
-        [Min(1)] public int phoneMirrorInterval = 2;
+        [Min(1)] public int phoneMirrorInterval = 3;
         [Tooltip("スマホで、湖の鏡像を画面の何倍の大きさで描くか")]
         [Range(0.1f, 0.5f)] public float phoneMirrorScale = 0.3f;
-        [Tooltip("スマホで、景色を画面の何倍の大きさで描くか(UI は画面どおり)")]
+        [Tooltip("スマホで、景色を画面の何倍の大きさで描くか(UI は画面どおり)。下の「重さに合わせる」がオンなら、ここから始める")]
         [Range(0.4f, 1f)] public float phoneRenderScale = 0.7f;
+        [Tooltip("スマホで、描く大きさを機種の速さに合わせて上下させる(30fps に届かなければ小さく、余裕があれば大きく)")]
+        public bool adaptScaleOnPhone = true;
+        [Tooltip("重さに合わせるときの、描く大きさの下限と上限")]
+        public Vector2 phoneScaleRange = new Vector2(0.5f, 0.85f);
         [Tooltip("スマホでは、空と遠景を毎フレーム描かず、少しずつ描きためた絵から読む(CampSkyCache)")]
         public bool skyCacheOnPhone = true;
         [Tooltip("スマホでは、主な光の影を 1 枚の小さな影の地図で描く(影は筆の跡ごとに取るので、粗くても見た目は変わらない)")]
@@ -59,6 +63,10 @@ namespace Iori.Camp
         public static CampQuality Instance { get; private set; }
         /// <summary>Set by the UI while a sheet covers the whole screen: the scene shows only through the blurred glass then.</summary>
         public static bool SceneCovered;
+        /// <summary>Set while measuring (PerfSweep): the render scale stays at phoneRenderScale.</summary>
+        public static bool AdaptPaused;
+        /// <summary>How much smaller than the screen the scene is drawn right now (1 = as the screen).</summary>
+        public float Scale { get; private set; } = 1f;
 
         public CampQualityLevel Applied { get; private set; }
         public float Fps { get; private set; }
@@ -72,6 +80,11 @@ namespace Iori.Camp
         bool _cardFailed;
         CampSkyCache _sky;
         bool _covered;
+        // fitting the render scale to the device
+        readonly FrameTiming[] _timing = new FrameTiming[1];
+        float _fit = -1f, _fitFrom = -1f, _fitT, _fitGpu, _fitWait = 6f;
+        int _fitFrames, _fitGpuFrames;
+        bool _fitPaused;
         CampQualityLevel _last = (CampQualityLevel)(-1);
         MaterialPropertyBlock _block;
 
@@ -214,7 +227,12 @@ namespace Iori.Camp
                 {
                     urp.supportsCameraDepthTexture = full;
                     urp.msaaSampleCount = full ? 4 : 2;
-                    urp.renderScale = full ? 1f : (covered ? Mathf.Min(phoneCoveredScale, phoneRenderScale) : phoneRenderScale);
+                    // (the fitted scale starts over when the starting value is changed)
+                    if (_fit < 0f || !Mathf.Approximately(_fitFrom, phoneRenderScale)) { _fit = phoneRenderScale; _fitFrom = phoneRenderScale; }
+                    _fitPaused = AdaptPaused;
+                    float phone = adaptScaleOnPhone && !AdaptPaused ? _fit : phoneRenderScale;
+                    Scale = full ? 1f : (covered ? Mathf.Min(phoneCoveredScale, phone) : phone);
+                    urp.renderScale = Scale;
                     urp.shadowDistance = full ? 28f : 16f;
                     bool lightShadows = !full && lightShadowsOnPhone;
                     urp.shadowCascadeCount = lightShadows ? 1 : 2;
@@ -250,10 +268,53 @@ namespace Iori.Camp
             _sky.Step(cam, RenderSettings.skybox, phoneRenderScale, phoneMirrorScale);
         }
 
+        /// <summary>
+        /// Phones differ a lot in speed. Every two seconds: if the graphics chip needs more than a frame's
+        /// time (30 fps) the scene is drawn a step smaller, and if it has room to spare, a step larger.
+        /// Not while a sheet covers the scene (that has its own, small size).
+        /// </summary>
+        void FitScale()
+        {
+            float dt = Time.unscaledDeltaTime;
+            if (_fitWait > 0f) { _fitWait -= dt; return; }
+            // (a long gap is loading or the app coming back, not the picture being slow)
+            if (dt > 0.5f) { _fitT = 0f; _fitGpu = 0f; _fitFrames = 0; _fitGpuFrames = 0; return; }
+            _fitT += dt;
+            _fitFrames++;
+            FrameTimingManager.CaptureFrameTimings();
+            if (FrameTimingManager.GetLatestTimings(1, _timing) > 0 && _timing[0].gpuFrameTime > 0.0)
+            {
+                _fitGpu += (float)_timing[0].gpuFrameTime;
+                _fitGpuFrames++;
+            }
+            if (_fitT < 2f) return;
+            float frame = _fitT / _fitFrames * 1000f;
+            float gpu = _fitGpuFrames * 2 > _fitFrames ? _fitGpu / _fitGpuFrames : -1f;
+            _fitT = 0f; _fitGpu = 0f; _fitFrames = 0; _fitGpuFrames = 0;
+
+            float budget = 1000f / Mathf.Max(10, phoneFrameRate);
+            // (where the chip's own time cannot be read, only the time between frames is known: that tells when to go down, never when to go up)
+            bool slow = gpu > 0f ? gpu > budget * 0.93f : frame > budget * 1.12f;
+            bool room = gpu > 0f && gpu < budget * 0.7f;
+            float want = _fit;
+            if (slow) want = Mathf.Max(phoneScaleRange.x, _fit - 0.05f);
+            else if (room) want = Mathf.Min(phoneScaleRange.y, _fit + 0.05f);
+            if (Mathf.Approximately(want, _fit)) return;
+            _fit = want;
+            // (the change itself costs a slow frame or two: the next measurement starts after it)
+            _fitWait = 1f;
+            Apply();
+            if (logPerformance && Debug.isDebugBuild && !Application.isEditor)
+                Debug.Log($"[IORI] perf scale={_fit:0.00} (gpu_ms={gpu:0.0} avg_ms={frame:0.0})");
+        }
+
         void Update()
         {
-            if (_last != Resolve() || _covered != SceneCovered) Apply();
+            if (_last != Resolve() || _covered != SceneCovered || _fitPaused != AdaptPaused) Apply();
             if (!Application.isPlaying) return;
+#if !UNITY_EDITOR
+            if (Applied == CampQualityLevel.Phone && adaptScaleOnPhone && !AdaptPaused && !_covered) FitScale();
+#endif
             _t += Time.unscaledDeltaTime;
             _frames++;
             _worst = Mathf.Max(_worst, Time.unscaledDeltaTime);
@@ -261,7 +322,7 @@ namespace Iori.Camp
             {
                 Fps = _frames / _t;
                 if (logPerformance && Debug.isDebugBuild && !Application.isEditor)
-                    Debug.Log($"[IORI] perf fps={Fps:0.0} avg_ms={_t / _frames * 1000f:0.0} worst_ms={_worst * 1000f:0.0} target={Application.targetFrameRate} screen={Screen.width}x{Screen.height} quality={Applied}");
+                    Debug.Log($"[IORI] perf fps={Fps:0.0} avg_ms={_t / _frames * 1000f:0.0} worst_ms={_worst * 1000f:0.0} target={Application.targetFrameRate} screen={Screen.width}x{Screen.height} quality={Applied} scale={Scale:0.00}");
                 _t = 0; _frames = 0; _worst = 0;
             }
         }

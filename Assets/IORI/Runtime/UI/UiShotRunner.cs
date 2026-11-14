@@ -32,6 +32,8 @@ namespace Iori.Ui
             string dir = null;
             for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-ioriUiShots") dir = args[i + 1];
             if (string.IsNullOrEmpty(dir)) return;
+            // (the same picture every time: with "-ioriQuality phone" the render scale does not fit itself to this machine)
+            Iori.Camp.CampQuality.AdaptPaused = true;
             // before the music player looks for songs: give it the made-up ones, and keep it from saving anything
             MusicDirector.Persist = false;
             string jackets = null;

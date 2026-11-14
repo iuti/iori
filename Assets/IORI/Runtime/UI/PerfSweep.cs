@@ -78,10 +78,10 @@ namespace Iori.Ui
         }
 
         /// <summary>Lets the picture settle, then measures the frames of a few seconds.</summary>
-        IEnumerator Measure(string name)
+        IEnumerator Measure(string name, bool capped = false)
         {
             // (settings applied anew put the phone's frame rate limit back)
-            Uncap();
+            if (!capped) Uncap();
             yield return Wait(SettleSeconds);
             _frames.Clear();
             double gpu = 0, main = 0, render = 0, wait = 0;
@@ -138,6 +138,9 @@ namespace Iori.Ui
             var canvas = ui.GetComponent<Canvas>();
             var lake = q.lakeMirror;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
+            // (every measurement at the same render scale: the scale does not fit itself meanwhile)
+            CampQuality.AdaptPaused = true;
+            q.Apply();
             Uncap();
 
             Line($"device={SystemInfo.deviceModel} gpu={SystemInfo.graphicsDeviceName} api={SystemInfo.graphicsDeviceType} screen={Screen.width}x{Screen.height} refresh={Screen.currentResolution.refreshRateRatio.value:0} quality={q.Applied}");
@@ -305,10 +308,34 @@ namespace Iori.Ui
             // (the phone warms up while this runs: the same measurement as at the start shows by how much it slowed)
             yield return Measure("night, home, again at the end");
 
+            // ---- as it ships: the 30 fps limit on, the render scale fitting itself to the phone
+            CampQuality.AdaptPaused = false;
+            asNow();
+            yield return Wait(26f);
+            yield return Measure("as it ships (30 fps limit, the render scale fits itself), night, home", true);
+            Line($"  the render scale settled at {q.Scale:0.00}");
+            if (ui.Open(CampPropKind.Fire))
+            {
+                yield return Wait(22f);
+                yield return Measure("as it ships, fire sheet", true);
+                Line($"  the render scale settled at {q.Scale:0.00}");
+                ui.Close();
+                yield return Wait(1.2f);
+            }
+            if (ui.Open(CampPropKind.Radio))
+            {
+                yield return Wait(14f);
+                yield return Measure("as it ships, radio sheet", true);
+                Line($"  the render scale settled at {q.Scale:0.00}");
+                ui.Close();
+                yield return Wait(1.2f);
+            }
+
             atm.followClock = followClock; atm.followRadioWeather = followWeather;
             atm.previewHour = hour; atm.hoursPerSecond = hoursPerSecond;
             atm.Snap();
             if (flat) Destroy(flat);
+            CampQuality.AdaptPaused = true;
             asNow();
             Line("done");
             Write();
