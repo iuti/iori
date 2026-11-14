@@ -216,6 +216,8 @@ namespace Iori.Camp
         {
             _snap = true;
             Apply(0f);
+            // (phones read the far view from a picture painted a strip at a time: after a jump it is painted whole)
+            if (CampQuality.Instance) CampQuality.Instance.SkyChanged();
         }
 
         /// <summary>The camera tells where it is looking: distance to what should be sharp, and how close-up the shot is (0..1).</summary>

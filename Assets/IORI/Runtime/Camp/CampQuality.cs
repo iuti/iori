@@ -10,7 +10,10 @@ namespace Iori.Camp
     /// How much the camp spends on its looks. "Full" is everything (PC). "Phone" drops what a
     /// mid-range phone cannot afford at 30 fps: depth of field and the depth-based effects (soft
     /// water's edge, flame cut by the logs), the fire's shadows, a third of the grass, the puddles'
-    /// own mirror image, and it renders a little smaller. Auto picks Phone on Android.
+    /// own mirror image, and it renders smaller. Three things are done another way on a phone, because
+    /// measuring on a Reno7 A showed them to be most of the cost: the flame is a baked flip book on a
+    /// card, the far view is read from a picture that is painted a strip at a time (CampSkyCache), and
+    /// the lake's mirror image is smaller and drawn every other frame. Auto picks Phone on Android.
     /// In development builds it logs the frame rate every few seconds ("[IORI] perf ...") so the
     /// cost can be read from adb logcat without looking at the screen.
     /// </summary>
@@ -26,7 +29,17 @@ namespace Iori.Camp
         [Tooltip("スマホでは、炎を立体の計算ではなく、前もって焼いた連番の絵(tools/camp/bake_fire.py)の板で出す")]
         public bool flameCardOnPhone = true;
         [Tooltip("スマホで、カメラが止まっている間、湖の鏡像を何フレームに 1 回描き直すか")]
-        [Min(1)] public int phoneMirrorInterval = 1;
+        [Min(1)] public int phoneMirrorInterval = 2;
+        [Tooltip("スマホで、湖の鏡像を画面の何倍の大きさで描くか")]
+        [Range(0.1f, 0.5f)] public float phoneMirrorScale = 0.3f;
+        [Tooltip("スマホで、景色を画面の何倍の大きさで描くか(UI は画面どおり)")]
+        [Range(0.4f, 1f)] public float phoneRenderScale = 0.7f;
+        [Tooltip("スマホでは、空と遠景を毎フレーム描かず、少しずつ描きためた絵から読む(CampSkyCache)")]
+        public bool skyCacheOnPhone = true;
+        [Tooltip("スマホでは、主な光の影を 1 枚の小さな影の地図で描く(影は筆の跡ごとに取るので、粗くても見た目は変わらない)")]
+        public bool lightShadowsOnPhone = true;
+        [Tooltip("画面いっぱいのシートが景色を覆っている間(ぼかしの向こうにしか見えない)、スマホで景色を描く大きさ")]
+        [Range(0.2f, 1f)] public float phoneCoveredScale = 0.4f;
 
         [Header("シーンの部品(「シーンを組み立てる」が入れる)")]
         public Renderer[] denseGrass;
@@ -40,6 +53,8 @@ namespace Iori.Camp
         /// <summary>Read by CampAtmosphere when it sets up the picture's finish.</summary>
         public static bool DepthOfFieldOn { get; private set; } = true;
         public static CampQuality Instance { get; private set; }
+        /// <summary>Set by the UI while a sheet covers the whole screen: the scene shows only through the blurred glass then.</summary>
+        public static bool SceneCovered;
 
         public CampQualityLevel Applied { get; private set; }
         public float Fps { get; private set; }
@@ -51,6 +66,8 @@ namespace Iori.Camp
         Material _cardMaterial;
         Mesh _cardMesh;
         bool _cardFailed;
+        CampSkyCache _sky;
+        bool _covered;
         CampQualityLevel _last = (CampQualityLevel)(-1);
         MaterialPropertyBlock _block;
 
@@ -76,7 +93,15 @@ namespace Iori.Camp
             if (_cardMaterial) DestroyImmediate(_cardMaterial);
             if (_cardMesh) DestroyImmediate(_cardMesh);
             _card = null; _cardMaterial = null; _cardMesh = null;
+            _sky?.Dispose();
+            _sky = null;
         }
+
+        /// <summary>True while the far view is read from the picture painted a strip at a time (phones).</summary>
+        public bool SkyIsCached => _sky != null && _sky.On;
+
+        /// <summary>The sky was changed at once (time or weather set by hand): paint the whole picture anew.</summary>
+        public void SkyChanged() => _sky?.Invalidate();
 
         /// <summary>True while the flame is shown as the baked flip book on a card (phones), not as the volume.</summary>
         public bool FlameIsCard => _card && _card.activeSelf;
@@ -167,7 +192,13 @@ namespace Iori.Camp
                 _block.SetFloat("_Steps", full ? 14f : 12f);
                 flameMirror.SetPropertyBlock(_block);
             }
-            if (lakeMirror) { lakeMirror.scale = full ? 0.5f : 0.33f; lakeMirror.interval = full ? 1 : Mathf.Max(1, phoneMirrorInterval); }
+            _covered = SceneCovered;
+            bool covered = !full && _covered;
+            if (lakeMirror)
+            {
+                lakeMirror.scale = full ? 0.5f : phoneMirrorScale;
+                lakeMirror.interval = full ? 1 : Mathf.Max(covered ? 4 : 1, phoneMirrorInterval);
+            }
             if (puddleMirror) { puddleMirror.render = full; puddleMirror.scale = 0.5f; }
 
             if (Application.isPlaying)
@@ -178,8 +209,11 @@ namespace Iori.Camp
                 {
                     urp.supportsCameraDepthTexture = full;
                     urp.msaaSampleCount = full ? 4 : 2;
-                    urp.renderScale = full ? 1f : 0.85f;
+                    urp.renderScale = full ? 1f : (covered ? Mathf.Min(phoneCoveredScale, phoneRenderScale) : phoneRenderScale);
                     urp.shadowDistance = full ? 28f : 16f;
+                    bool lightShadows = !full && lightShadowsOnPhone;
+                    urp.shadowCascadeCount = lightShadows ? 1 : 2;
+                    SetShadowMapSize(urp, lightShadows ? 1024 : 2048);
                 }
 #endif
                 QualitySettings.vSyncCount = full ? 1 : 0;
@@ -187,9 +221,31 @@ namespace Iori.Camp
             }
         }
 
+        // (the pipeline asset keeps the size of the main light's shadow map in a field of its own; set through its
+        // name, so this works whether or not the installed version offers a way to set it)
+        static void SetShadowMapSize(UniversalRenderPipelineAsset urp, int size)
+        {
+            try
+            {
+                var field = typeof(UniversalRenderPipelineAsset).GetField("m_MainLightShadowmapResolution", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                if (field != null && field.FieldType.IsEnum) field.SetValue(urp, System.Enum.ToObject(field.FieldType, size));
+            }
+            catch (System.Exception) { }
+        }
+
+        void LateUpdate()
+        {
+            // the far view's picture: after the atmosphere has set the sky's values, before the cameras draw
+            bool cached = Application.isPlaying && Applied == CampQualityLevel.Phone && skyCacheOnPhone;
+            if (!cached) { _sky?.Stop(); return; }
+            var cam = lakeMirror && lakeMirror.source ? lakeMirror.source : Camera.main;
+            _sky ??= new CampSkyCache();
+            _sky.Step(cam, RenderSettings.skybox, phoneRenderScale, phoneMirrorScale);
+        }
+
         void Update()
         {
-            if (_last != Resolve()) Apply();
+            if (_last != Resolve() || _covered != SceneCovered) Apply();
             if (!Application.isPlaying) return;
             _t += Time.unscaledDeltaTime;
             _frames++;

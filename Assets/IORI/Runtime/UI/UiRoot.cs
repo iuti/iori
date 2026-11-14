@@ -274,6 +274,8 @@ namespace Iori.Ui
 
             // a sheet over the whole screen hides the one under it: that one need not be drawn
             for (int i = 0; i < _stack.Count - 1; i++) _stack[i].Covered = top.FullScreen && top.IsSettled;
+            // ... and hides the scene but for what shows through its blurred glass: a phone draws the scene smaller meanwhile
+            CampQuality.SceneCovered = top && top.FullScreen && top.IsSettled;
 
             // the strip of the song that is on, while the music player has the floor and nothing is open
             var music = MusicDirector.Instance;
