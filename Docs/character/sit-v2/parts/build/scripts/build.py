@@ -136,7 +136,7 @@ body_rgb[_under] = _fill[_under]
 body_rgb[_cuphl] = final[_cuphl]
 print('body holes filled', int(_holes.sum()))
 # left of the left cup, above the shoulder line: only the jacket/hood itself, no hair outlines or background between locks
-_zone = (xx < 540) & (yy > 290) & (yy < 400) & ~dil(_cups, 5)
+_zone = (xx < 560) & (yy > 290) & (yy < 400) & ~dil(_cups, 5)
 _solid = cv2.morphologyEx((B & _zone & ~darkf).astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)).astype(bool)
 body_a = body_a & ~(_zone & ~dil(_solid, 3))
 add('body', body_rgb, soft(body_a), group='body')
@@ -245,6 +245,26 @@ hf_a = cv2.morphologyEx(hf_a.astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2), n
 add('front_hair', hf_rgb, soft(rim(hf_a, 3) & ~eyezone & ~lashy), group='hair_front', depth=0.1)
 add('ahoge', final, soft(ahoge, 0.5), group='hair_back', depth=0.0, bones=['ahoge'])
 add('goggles', final, soft(rim(gog, 3)), group='head', depth=0.12)
+
+# ---- second pass between layers (found with a flat-coloured debug render of the poses)
+_ix = {l[0]: i for i, l in enumerate(layers)}
+def _get(n): return layers[_ix[n]]
+def _set(n, rgb, a): i = _ix[n]; layers[i] = (layers[i][0], rgb, a, layers[i][3])
+_, sh_rgb, sh_a, _ = _get('side_hair'); _, fh_rgb, fh_a, _ = _get('front_hair'); _, bk_rgb, bk_a, _ = _get('back_hair')
+_, fc_rgb, fc_a, _ = _get('face'); _, bd_rgb, bd_a, _ = _get('body')
+# 2: pieces of the front hair below the chin (cut-off strands over the neck) go with the side hair they belong to
+_frag = (fh_a > 0.5) & (yy > 300) & (xx > 540)
+sh_rgb = sh_rgb.copy(); sh_rgb[_frag] = final[_frag]; sh_a = np.maximum(sh_a, _frag.astype(np.float32))
+fh_a = fh_a * ~_frag
+# 1: below the jaw the back hair only where the side hair covers it (its own tips were showing between the locks)
+bk_a = bk_a * ((yy < 330) | dil((sh_a > 0.5) | (fh_a > 0.5), 3) | dil(bd_a > 0.5, 9) & (xx > 560))
+# 4: the neck belongs to the body: the face stops where the body already holds the neck skin
+_neck = (bd_a > 0.5) & (yy > 300) & (fc_a > 0) & ((final[..., 0] > 185) & (final[..., 0] - final[..., 2] > 10))
+fc_a = fc_a * ~dil(_neck, 1)
+# 3: dark line bits of the hood edge on the right shoulder are body, not hair
+_hood = (xx > 690) & (yy > 320) & (yy < 440) & (sh_a > 0.5) & darkf & ~huehair & (bd_a > 0.5)
+sh_a = sh_a * ~_hood
+_set('side_hair', sh_rgb, sh_a); _set('front_hair', fh_rgb, fh_a); _set('back_hair', bk_rgb, bk_a); _set('face', fc_rgb, fc_a)
 
 # ---- what the hair cleanup dropped stays where it was drawn: bake it into the layer below
 idx = {l[0]: i for i, l in enumerate(layers)}
