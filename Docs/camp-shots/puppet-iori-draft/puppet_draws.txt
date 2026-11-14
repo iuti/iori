@@ -2,8 +2,8 @@ model Iori canvas 1024x1536 lattice 12 layers 19 chains 3 head_tilt -27.1
 texture 683x1024
   0 base                     group body       role            Main alpha 1 stencil None 0 verts 4536 still
   1 back_hair                group hair_back  role            Main alpha 1 stencil None 0 verts 914
-  2 body                     group body       role            Main alpha 1 stencil None 0 verts 2869
-  3 face                     group head       role            Main alpha 1 stencil None 0 verts 434
+  2 body                     group body       role            Main alpha 1 stencil None 0 verts 2891
+  3 face                     group head       role            Main alpha 1 stencil None 0 verts 433
   4 eye_L                    group head       role eye_L      Main alpha 1 stencil None 0 verts 24
   4 eye_L                    group head       role eye_L      Mask alpha 1 stencil Write 1 verts 24
   5 iris_L                   group head       role iris_L     Main alpha 1 stencil Test 1 verts 20

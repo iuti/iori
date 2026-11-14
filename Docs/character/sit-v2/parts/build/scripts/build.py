@@ -139,6 +139,17 @@ print('body holes filled', int(_holes.sum()))
 _zone = (xx < 560) & (yy > 290) & (yy < 400) & ~dil(_cups, 5)
 _solid = cv2.morphologyEx((B & _zone & ~darkf).astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)).astype(bool)
 body_a = body_a & ~(_zone & ~dil(_solid, 3))
+# chico's own painting of what the locks hid (source/chico_underhair.png): where it differs from the final and
+# shows body (not hair, not background), the body layer takes it
+_ch = np.asarray(Image.open('../../source/chico_underhair.png').convert('RGB')).astype(np.float32)
+_chg = dil(np.abs(_ch - final).max(2) > 12, 3)
+_chsat = _ch.max(2) - _ch.min(2)
+_chhair = (_chsat > 30) & (_ch[..., 2] > _ch[..., 0] + 12)
+_chbg = np.abs(_ch - final[5, 5]).max(2) < 14
+_take = _chg & ~_chhair & ~_chbg & (yy >= 260)
+body_rgb[_take] = _ch[_take]
+body_a = body_a | _take
+print('body takes chico painting px', int(_take.sum()))
 add('body', body_rgb, soft(body_a), group='body')
 
 # 4. face: visible skin from the final, hidden forehead/ears/neck from the shifted bare head
@@ -253,7 +264,7 @@ def _set(n, rgb, a): i = _ix[n]; layers[i] = (layers[i][0], rgb, a, layers[i][3]
 _, sh_rgb, sh_a, _ = _get('side_hair'); _, fh_rgb, fh_a, _ = _get('front_hair'); _, bk_rgb, bk_a, _ = _get('back_hair')
 _, fc_rgb, fc_a, _ = _get('face'); _, bd_rgb, bd_a, _ = _get('body')
 # 2: pieces of the front hair below the chin (cut-off strands over the neck) go with the side hair they belong to
-_frag = (fh_a > 0.5) & (yy > 300) & (xx > 540)
+_frag = (fh_a > 0.5) & (yy > 300) & (xx > 540) & (_hue0 | (gray(final) < 110))
 sh_rgb = sh_rgb.copy(); sh_rgb[_frag] = final[_frag]; sh_a = np.maximum(sh_a, _frag.astype(np.float32))
 fh_a = fh_a * ~_frag
 # 1: below the jaw the back hair only where the side hair covers it (its own tips were showing between the locks)
@@ -261,9 +272,25 @@ bk_a = bk_a * ((yy < 330) | dil((sh_a > 0.5) | (fh_a > 0.5), 3) | dil(bd_a > 0.5
 # 4: the neck belongs to the body: the face stops where the body already holds the neck skin
 _neck = (bd_a > 0.5) & (yy > 300) & (fc_a > 0) & ((final[..., 0] > 185) & (final[..., 0] - final[..., 2] > 10))
 fc_a = fc_a * ~dil(_neck, 1)
+fc_a = fc_a * ~((bd_a > 0.5) & (yy > 300) & (xx > 540))
 # 3: dark line bits of the hood edge on the right shoulder are body, not hair
 _hood = (xx > 690) & (yy > 320) & (yy < 440) & (sh_a > 0.5) & darkf & ~huehair & (bd_a > 0.5)
 sh_a = sh_a * ~_hood
+# the locks chico painted out of the body picture belong whole to the side hair (over her painted body), nowhere else
+_chi = np.asarray(Image.open('../../source/chico_underhair.png').convert('RGB')).astype(np.float32)
+_chd = np.abs(_chi - final).max(2) > 12
+_bgf = np.abs(final - final[5, 5]).max(2) < 14
+_strand = ((_chd & ~_bgf) | (dil(_chd, 2) & (_hue0 | (gray(final) < 110)) & ~_bgf)) & ~_cuphl
+sh_rgb[_strand] = final[_strand]; sh_a = np.maximum(sh_a, _strand.astype(np.float32))
+fh_a = fh_a * ~_strand; fc_a = fc_a * ~_strand
+# non-hair pixels the hair layers still held below the chin (neck skin, collar) are the body's
+_nh = (((fh_a > 0.5) | (sh_a > 0.5)) & (yy > 300) & (xx > 540) & ~(_hue0 | (gray(final) < 110))) & ~_strand & ~(np.abs(final - final[5, 5]).max(2) < 16)
+fh_a = fh_a * ~_nh; sh_a = sh_a * ~_nh
+bd_rgb = bd_rgb.copy(); bd_rgb[_nh] = np.where(_chd[_nh][:, None], _chi[_nh], final[_nh]); bd_a = np.maximum(bd_a, _nh.astype(np.float32))
+_jaw = darkf & (fc_a > 0.5) & (yy > 295) & (xx > 540) & ~_strand     # the jaw's own outline stays with the face
+bd_a = bd_a * ~_jaw
+_set('body', bd_rgb, bd_a)
+fc_a = fc_a * ~((bd_a > 0.5) & (yy > 300) & (xx > 540) & ~_jaw)
 _set('side_hair', sh_rgb, sh_a); _set('front_hair', fh_rgb, fh_a); _set('back_hair', bk_rgb, bk_a); _set('face', fc_rgb, fc_a)
 
 # ---- what the hair cleanup dropped stays where it was drawn: bake it into the layer below
@@ -273,6 +300,7 @@ left_s = hair_s & ~hs_a
 fa = face_a
 for name, extra in (('face', (left_f & skull) | (left_s & fa)), ('body', ((left_s & ~fa) | (left_f & ~skull)))):
     i = idx[name]; _id, rgb, a, ex = layers[i]
+    extra = extra & ~dil(_chd, 3) & ~_strand   # never over chico's painting or the locks over it
     rgb = rgb.copy(); rgb[extra] = final[extra]
     a = np.maximum(a, extra.astype(np.float32))
     layers[i] = (_id, rgb, a, ex)
@@ -280,7 +308,7 @@ for name, extra in (('face', (left_f & skull) | (left_s & fa)), ('body', ((left_
 # ---- key out the flat gray background (every source has the same gray), unmixing edge colors from it
 edge = np.concatenate([final[:6].reshape(-1, 3), final[-6:].reshape(-1, 3), final[:, :6].reshape(-1, 3), final[:, -6:].reshape(-1, 3)])
 BG = np.median(edge, 0)
-def key(rgb, a, loose=False):
+def key(rgb, a, loose=False, protect=None):
     d = np.abs(rgb - BG).max(2)
     # background = near-gray pixels connected to the picture's border; only there (and in a thin band
     # around it) does the key act, so gray-ish fabric inside the figure stays opaque
@@ -295,6 +323,7 @@ def key(rgb, a, loose=False):
             bgm = bgm | (np.isin(_l, 1 + np.where(_sz > 40)[0]) & (_l > 0))
         bgm = bgm | ((d < 14) & (xx < 565) & (yy > 290) & (yy < 430) & ~dil(_cups, 3))   # background between the locks left of the left cup
     elif loose: bgm = bgm | (d < 10)
+    if protect is not None: bgm = bgm & ~protect
     band = dil(bgm, 5)
     ka = np.clip((d - 5) / (24 - 5), 0, 1)
     ka = ka * ka * (3 - 2 * ka)
@@ -304,7 +333,7 @@ def key(rgb, a, loose=False):
     un = (rgb - (1 - safe) * BG) / safe
     rgb2 = np.where((ka < 1)[..., None], un, rgb)
     return rgb2.clip(0, 255), a2
-layers = [(i, *key(r, a, loose=('big' if i == 'body' else i != 'base')), e) for i, r, a, e in layers]
+layers = [(i, *key(r, a, loose=('big' if i == 'body' else i != 'base'), protect=(_strand if i == 'side_hair' else None)), e) for i, r, a, e in layers]
 
 # ---- write the textures
 model_layers = []
