@@ -207,7 +207,7 @@ namespace Iori.Ui
                 _empty.gameObject.SetActive(empty);
                 _emptySub.gameObject.SetActive(empty);
             }
-            if (empty) _emptySub.text = music.Backend is UnityMusicBackend ? UnityMusicBackend.MusicFolderPath : "";
+            if (empty) _emptySub.text = music.Backend != null ? music.Backend.EmptyHint : "";
         }
 
         void PaintTabs()

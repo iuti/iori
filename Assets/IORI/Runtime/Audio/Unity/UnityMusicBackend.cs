@@ -140,6 +140,10 @@ namespace Iori.Audio
 
         public void SetVolume(float volume) => _volume = Mathf.Clamp01(volume);
 
+        public void SetActive(bool active) { }
+
+        public string EmptyHint => MusicFolderPath;
+
         void Unload()
         {
             _loadSerial++;

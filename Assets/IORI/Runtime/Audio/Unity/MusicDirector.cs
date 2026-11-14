@@ -58,7 +58,7 @@ namespace Iori.Audio
             Instance = this;
             _seed = Environment.TickCount;
 #if UNITY_ANDROID && !UNITY_EDITOR
-            Backend = null; // Android の再生係はまだ無い(端末の曲を読む所から、これから作る)
+            Backend = gameObject.AddComponent<AndroidMusicBackend>();
 #else
             Backend = gameObject.AddComponent<UnityMusicBackend>();
 #endif
@@ -232,6 +232,7 @@ namespace Iori.Audio
         {
             if (Active == active) return;
             Active = active;
+            if (Backend != null) Backend.SetActive(active);
             var radio = RadioDirector.Instance;
             if (radio) radio.SetPlayerOn(active);
             Touch();

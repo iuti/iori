@@ -54,6 +54,15 @@ namespace Iori.Audio
         /// </summary>
         void LoadArt(MusicTrack track, int size, Action<Texture2D> done);
 
+        /// <summary>
+        /// プレーヤーの番になった(true)、ラジオの番に戻った(false)ことを伝える。
+        /// Android では、番の間、通知とロック画面にプレーヤーの曲が出る。PC では何もしない。
+        /// </summary>
+        void SetActive(bool active);
+
+        /// <summary>曲が 1 つも見つからないときに画面に出す一言(PC は探したフォルダ、Android は許可が無いこと)。無ければ空。</summary>
+        string EmptyHint { get; }
+
         /// <summary>動作確認用の状態の文字列。</summary>
         string Status { get; }
     }
