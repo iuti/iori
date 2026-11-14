@@ -167,6 +167,34 @@ namespace Iori.Puppet.Tests
         }
 
         [Test]
+        public void TiltedHead_ClosesItsEyesAndLooksAlongItsOwnAxes()
+        {
+            // the head drawn lying on its side: the eye shuts across the picture, and "look right" goes down it
+            var r = Rig(Model.Replace(@"""head_tilt"": 0", @"""head_tilt"": 90"));
+            var eye = Layer(r, "eye_L"); var iris = Layer(r, "iris_L");
+            float Span(PuppetLayer L, int axis, bool rest)
+            {
+                float lo = float.PositiveInfinity, hi = float.NegativeInfinity;
+                var a = rest ? L.rest : L.pos;
+                for (int i = axis; i < a.Length; i += 2) { lo = Math.Min(lo, a[i]); hi = Math.Max(hi, a[i]); }
+                return hi - lo;
+            }
+            int mid = Nearest(iris, 220, 194);
+            r.param.eyeBallX = 1;
+            r.Update(1f / 60f);
+            float ix = iris.pos[2 * mid], iy = iris.pos[2 * mid + 1];
+            r.param.eyeBallX = -1;
+            r.Update(1f / 60f);
+            Assert.That(Math.Abs(iris.pos[2 * mid] - ix), Is.LessThan(0.01f));
+            Assert.That(ix > 0 && iy - iris.pos[2 * mid + 1] > 5f, Is.True);
+            r.param.eyeBallX = 0; r.param.eyeLOpen = 0;
+            r.Update(1f / 60f);
+            Assert.That(Span(eye, 0, false), Is.LessThan(0.2f * Span(eye, 0, true)));
+            Assert.That(Span(eye, 1, false), Is.GreaterThan(0.9f * Span(eye, 1, true)));
+            AssertFinite(r);
+        }
+
+        [Test]
         public void LayersNamedStill_NeverMove_EvenAboveTheSeatLine()
         {
             // the legs and the chair as one layer whose knees rise above the seat line, in front of the body

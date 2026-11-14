@@ -859,7 +859,9 @@ namespace Iori.Puppet
                 // an iris with gaze travel drops a little as the eye closes and squashes only below the line its patch
                 // squashes toward; above it the closing lid covers it
                 bool lidIris = L.isIris && d.pivot != null && d.range != null && (d.range[0] > 0 || d.range[1] > 0);
-                if (lidIris) iy += IrisDrop * (1 - squash) * (d.pivot[1] - (d.y + d.h / 2f));
+                // (all of this along the drawn head's own right and down, which a tilted head does not share with the picture)
+                if (lidIris) iy += IrisDrop * (1 - squash) * (-(d.pivot[0] - (d.x + d.w / 2f)) * _tiltSin + (d.pivot[1] - (d.y + d.h / 2f)) * _tiltCos);
+                { float gx = ix, gy = iy; ix = gx * _tiltCos - gy * _tiltSin; iy = gx * _tiltSin + gy * _tiltCos; }
                 // highlights breathe a little and now and then sparkle, each eye on its own phase (models with chains)
                 float tw = Chained && L.isShine ? Twinkle(time + (L.side == 2 ? 1.3f : 0)) : 1;
                 float tcx = d.x + d.w / 2f, tcy = d.y + d.h / 2f;
@@ -872,9 +874,10 @@ namespace Iori.Puppet
                     if (tw != 1) { x = tcx + (x - tcx) * tw; y = tcy + (y - tcy) * tw; }
                     if (pivoted)
                     {
-                        float py = d.pivot[1];
                         x += ix; y += iy;
-                        if (!lidIris || y > py) y = py + (y - py) * squash;
+                        // how far below the line through the pivot, down the head's own axis
+                        float below = -(x - d.pivot[0]) * _tiltSin + (y - d.pivot[1]) * _tiltCos;
+                        if (!lidIris || below > 0) { float k = below * (squash - 1); x -= _tiltSin * k; y += _tiltCos * k; }
                     }
                     if (jawDrop > 0 && L.wJaw[i] > 0) y += jawDrop * L.wJaw[i];
                     float X, Y;
