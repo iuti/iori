@@ -5,8 +5,10 @@ what the puppet shows, nothing is cut or solved again here).
 
 Layers are matched by the first word of their name (base, strap, back_hair, body, neck, face, eye_L, iris_L, lash_L,
 eye_R, iris_R, lash_R, mouth, side_hair, earring, tag, front_hair, brow_L, brow_R, ahoge, goggles; 耳 = ear), drawn in
-the PSD's own order. Hidden layers are left out. The closed eyes (lid_L / lid_R) and the open-mouth frames are not in
-the PSD: they stay as the model has them; the PSD's mouth becomes the closed frame."""
+the PSD's own order. Hidden layers are left out, except the puppet's other frames: the closed eyes (lid_L, lid_R) and
+the mouth's open frames (mouth_small, mouth_half, mouth_open, mouth_round), which are read shown or hidden
+(frames_to_psd.py puts them into a PSD). Where the PSD has none of them they stay as the model has them; the PSD's
+mouth becomes the closed frame."""
 import json, os, sys, numpy as np
 from PIL import Image
 from psd_tools import PSDImage
@@ -30,10 +32,19 @@ def bleed(c):     # colour under the transparent pixels: the nearest opaque colo
     idx = ndi.distance_transform_edt(~solid, return_distances=False, return_indices=True)
     o = c.copy(); z = c[..., 3] == 0; o[z, :3] = c[idx[0], idx[1]][z, :3]; return o
 os.makedirs(MD + '/textures', exist_ok=True)
+FRAMES = ('lid_L', 'lid_R', 'mouth_small', 'mouth_half', 'mouth_open', 'mouth_round')
+frame = {l.name.split(' ')[0]: full(l) for l in psd if l.name.split(' ')[0] in FRAMES}      # the other frames, shown or hidden
+def lid_layer(side):     # the closed eye: from the PSD when it is there, else as the model has it
+    d = dict(told['lid_' + side]); c = frame.get('lid_' + side)
+    if c is not None and (c[..., 3] > 0).any():
+        ys, xs = np.where(c[..., 3] > 0)
+        x0, y0, x1, y1 = max(0, int(xs.min()) - 8), max(0, int(ys.min()) - 8), min(W, int(xs.max()) + 9), min(H, int(ys.max()) + 9)
+        Image.fromarray(bleed(c)[y0:y1, x0:x1]).save(MD + '/' + d['texture']); d.update({'x': x0, 'y': y0, 'w': x1 - x0, 'h': y1 - y0})
+    return d
 layers = []; rest = []
 for l in psd:
     name = l.name.split(' ')[0].split('　')[0]; lid = ALIAS.get(name, name)
-    if not l.visible or lid.startswith('ref_'): continue
+    if not l.visible or lid.startswith('ref_') or lid in FRAMES: continue
     if lid not in told and lid not in NEW: print('! unknown layer, left out:', l.name); continue
     c = full(l)
     if not (c[..., 3] > 0).any(): print('! empty layer, left out:', l.name); continue
@@ -44,6 +55,12 @@ for l in psd:
         ys, xs = np.where(c[..., 3] > 0)
         if xs.min() < x0 or ys.min() < y0 or xs.max() >= x1 or ys.max() >= y1: print('! the mouth is larger than the frames\' rectangle', (xs.min(), ys.min(), xs.max(), ys.max()))
         Image.fromarray(bleed(c)[y0:y1, x0:x1]).save(MD + '/' + o['frames'][0])
+        for f, v in zip(o['frames'], o.get('visemes', [])):     # the open frames the PSD holds, in the same rectangle
+            q = frame.get('mouth_' + v)
+            if q is None or not (q[..., 3] > 0).any(): continue
+            out = q.copy(); out[:y0] = 0; out[y1:] = 0; out[:, :x0] = 0; out[:, x1:] = 0
+            if (out[..., 3] > 0).sum() != (q[..., 3] > 0).sum(): print(f'! mouth_{v} reaches outside the frames\' rectangle, cut there')
+            Image.fromarray(bleed(q)[y0:y1, x0:x1]).save(MD + '/' + f)
         d = dict(o); layers.append(d); rest.append(c); continue
     ys, xs = np.where(c[..., 3] > 0); P = 8
     x0, y0, x1, y1 = max(0, xs.min() - P), max(0, ys.min() - P), min(W, xs.max() + 1 + P), min(H, ys.max() + 1 + P)
@@ -55,7 +72,7 @@ for l in psd:
     if lid.startswith('iris_'):     # at rest the iris shows only inside the white
         m = full([q for q in psd if q.name.split(' ')[0] == 'eye_' + lid[-1]][0])[..., 3] > 127; c = c.copy(); c[..., 3] = np.where(m, c[..., 3], 0)
     rest.append(c)
-    if lid.startswith('lash_') and 'lid_' + lid[-1] in told: layers.append(dict(told['lid_' + lid[-1]]))
+    if lid.startswith('lash_') and 'lid_' + lid[-1] in told: layers.append(lid_layer(lid[-1]))
 tm['layers'] = layers
 xi = tm.setdefault('x-iori', {}); xi['still'] = [s for s in STILL if any(l['id'] == s for l in layers)]
 json.dump(tm, open(MD + '/model.json', 'w', encoding='utf8'), ensure_ascii=False, indent=1)
