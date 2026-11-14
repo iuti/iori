@@ -156,9 +156,10 @@ namespace Iori.Ui
         {
             _pulling = false;
             var root = UiRoot.Instance;
+            Vector2 d = e.position - e.pressPosition;
+            if (Debug.isDebugBuild) Debug.Log($"[IORI] ui pull begin {name}: open {_open} top {(root ? root.OpenPanel == this : false)} d {d.x:0},{d.y:0}");
             if (!_open || !root || root.OpenPanel != this) return;
             // only a stroke that goes down
-            Vector2 d = e.position - e.pressPosition;
             if (-d.y <= Mathf.Abs(d.x) * 1.2f) return;
             _pulling = true;
             // (from where the finger is now: the sheet does not jump by the distance it took to tell a stroke from a press)
@@ -185,6 +186,7 @@ namespace Iori.Ui
 
         public void OnEndDrag(PointerEventData e)
         {
+            if (Debug.isDebugBuild) Debug.Log($"[IORI] ui pull end {name}: pulling {_pulling} pull {_pull:0} speed {_pullSpeed:0} top {Top:0}");
             if (!_pulling) return;
             _pulling = false;
             // (a finger that rested before it let go did not flick)
