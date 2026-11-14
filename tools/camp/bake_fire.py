@@ -55,6 +55,7 @@ FRAME_W, FRAME_H = 144, 204
 # the part of the flame's own space a frame shows, in units of the tallest tongue: x from -X_HALF to X_HALF, y from Y_MIN to Y_MAX
 X_HALF, Y_MIN, Y_MAX = 0.58, -0.06, 1.60
 VIEW_DOWN = math.radians(11.0)   # the camera looks down on the fire by about this much
+TIP_FADE, TIP_FADE_FROM, TIP_FADE_TO = 0.9, 0.95, 1.35   # see tongue_heat
 STEPS = 56
 DEPTH = 1.3                      # the ray runs this far before and behind the fire's middle
 
@@ -123,7 +124,10 @@ def tongue_heat(c, now, p, bite, sw_x, sw_z):
     dz = p[..., 2] - c[1] * (1.0 + LEAN * h) + sw_z * (SWAY * h) + now[1] * (h * h)
     r = c[3] * np.clip(1.0 - h / 1.15, 0.0, 1.0) * (0.55 + 0.45 * smoothstep(0.0, 0.14, h)) + 1e-4
     e = 1.0 - np.sqrt(dx * dx + dz * dz) / r - (bite - 0.30) * (0.9 + BITE * h) - COOL * h
-    return np.clip(e * 1.15, 0.0, 1.0) * smoothstep(-0.03, 0.05, p[..., 1])
+    heat = np.clip(e * 1.15, 0.0, 1.0) * smoothstep(-0.03, 0.05, p[..., 1])
+    # (not in the shader: with this many steps the walk finds thin licks far above the fire that the
+    # shader's few steps mostly miss; they are thinned out here so the card looks like the flame people know)
+    return heat * (1.0 - TIP_FADE * smoothstep(TIP_FADE_FROM, TIP_FADE_TO, p[..., 1]))
 
 
 def srgb_to_linear(c):
