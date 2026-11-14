@@ -27,6 +27,7 @@ namespace Iori.Audio
         const string PrefVoiceOn = "iori.talk.voiceOn";
         const string PrefVoiceId = "iori.talk.voiceId";
         const string PrefVoiceFor = "iori.talk.voiceFor";
+        const string PrefVoiceIdByHand = "iori.talk.voiceIdByHand";
         const string PrefVoiceModel = "iori.talk.voiceModel";
         const string PrefVoiceModelFor = "iori.talk.voiceModelFor";
         const int LlmTimeoutSeconds = 25;
@@ -62,8 +63,11 @@ namespace Iori.Audio
 
         static string MemoryPath => Path.Combine(Application.persistentDataPath, "talk_memory.json");
 
-        public bool HasLlmKey => SecretStore.Get(LlmKeyName).Length > 0;
-        public bool HasVoiceKey => SecretStore.Get(VoiceKeyName).Length > 0;
+        static string LlmKey => TalkApi.CleanKey(SecretStore.Get(LlmKeyName));
+        static string VoiceKey => TalkApi.CleanKey(SecretStore.Get(VoiceKeyName));
+
+        public bool HasLlmKey => LlmKey.Length > 0;
+        public bool HasVoiceKey => VoiceKey.Length > 0;
         /// <summary>話せるか(決まりが読めていて、LLM のキーがある)。false なら、イオリは今までどおり場面の一言だけ。</summary>
         public bool Ready => Book != null && HasLlmKey;
 
@@ -75,12 +79,25 @@ namespace Iori.Audio
         }
 
         /// <summary>LLM のキーを入れる(空で消す)。設定画面から呼ぶ。</summary>
-        public void SetLlmKey(string key) => SecretStore.Set(LlmKeyName, key);
+        public void SetLlmKey(string key) => SecretStore.Set(LlmKeyName, TalkApi.CleanKey(key));
+
+        /// <summary>声の id を手で決める(空で、名前で探すほうに戻す)。ElevenLabs の声の画面で「Copy voice ID」したもの。</summary>
+        public void SetVoiceId(string id)
+        {
+            id = (id ?? "").Trim();
+            if (id.Length == 0) PlayerPrefs.DeleteKey(PrefVoiceIdByHand);
+            else PlayerPrefs.SetString(PrefVoiceIdByHand, id);
+            _voiceId = null;
+            PlayerPrefs.DeleteKey(PrefVoiceId);
+        }
+
+        /// <summary>手で決めた声の id(無ければ空)。</summary>
+        public string VoiceIdByHand => PlayerPrefs.GetString(PrefVoiceIdByHand, "");
 
         /// <summary>声(ElevenLabs)のキーを入れる(空で消す)。</summary>
         public void SetVoiceKey(string key)
         {
-            SecretStore.Set(VoiceKeyName, key);
+            SecretStore.Set(VoiceKeyName, TalkApi.CleanKey(key));
             _voiceId = _voiceModel = null;
             _voiceModelFailed = false;
             PlayerPrefs.DeleteKey(PrefVoiceId);
@@ -202,7 +219,7 @@ namespace Iori.Audio
                 req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
-                req.SetRequestHeader("x-api-key", SecretStore.Get(LlmKeyName));
+                req.SetRequestHeader("x-api-key", LlmKey);
                 req.SetRequestHeader("anthropic-version", TalkApi.AnthropicVersion);
                 req.timeout = LlmTimeoutSeconds;
                 yield return req.SendWebRequest();
@@ -260,7 +277,7 @@ namespace Iori.Audio
                 req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(TalkApi.ElevenRequest(text, _voiceModel, Book.Voice.Language)));
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
-                req.SetRequestHeader("xi-api-key", SecretStore.Get(VoiceKeyName));
+                req.SetRequestHeader("xi-api-key", VoiceKey);
                 req.timeout = VoiceTimeoutSeconds;
                 yield return req.SendWebRequest();
                 if (req.result == UnityWebRequest.Result.Success) pcm = req.downloadHandler.data;
@@ -293,14 +310,28 @@ namespace Iori.Audio
             if (PlayerPrefs.GetString(PrefVoiceFor, "") == voice.VoiceName) _voiceId = NullIfEmpty(PlayerPrefs.GetString(PrefVoiceId, ""));
             if (PlayerPrefs.GetString(PrefVoiceModelFor, "") == modelsKey) _voiceModel = NullIfEmpty(PlayerPrefs.GetString(PrefVoiceModel, ""));
 
+            // 手で決めた id、talk.json に書いた id があれば、一覧は読まない
+            var byHand = VoiceIdByHand;
+            if (byHand.Length > 0) _voiceId = byHand;
+            else if (voice.VoiceId.Length > 0) _voiceId = voice.VoiceId;
+
             if (_voiceId == null)
             {
-                string json = null;
-                yield return ElevenGet("/voices", t => json = t);
+                // 自分の声(ライブラリから足したものも含む)から探し、無ければみんなの声のライブラリから探す
+                string json = null, error = null, sharedError = null;
+                yield return ElevenGet(TalkApi.ElevenVoicesUrl(voice.VoiceName), (t, e) => { json = t; error = e; });
                 _voiceId = json != null ? TalkApi.PickVoice(json, voice.VoiceName) : null;
                 if (_voiceId == null)
                 {
-                    LastError = "声: ElevenLabs の自分の声の一覧に「" + voice.VoiceName + "」がありません(または一覧を読めません)";
+                    string shared = null;
+                    yield return ElevenGet(TalkApi.ElevenSharedVoicesUrl(voice.VoiceName), (t, e) => { shared = t; sharedError = e; });
+                    _voiceId = shared != null ? TalkApi.PickVoice(shared, voice.VoiceName) : null;
+                }
+                if (_voiceId == null)
+                {
+                    LastError = error != null || sharedError != null
+                        ? "声: ElevenLabs の声の一覧を読めません(" + (error ?? sharedError) + ")。キーに声の一覧を読む権限が無いなら、声の ID を貼ると一覧を読まずに使える"
+                        : "声: ElevenLabs に「" + voice.VoiceName + "」という名前の声が見つかりません。声の ID を貼ると名前で探さずに使える";
                     Debug.LogWarning("[IORI] " + LastError);
                     yield break;
                 }
@@ -310,7 +341,7 @@ namespace Iori.Audio
             if (_voiceModel == null)
             {
                 string json = null;
-                yield return ElevenGet("/models", t => json = t);
+                yield return ElevenGet(TalkApi.ElevenBase + "/models", (t, e) => json = t);
                 var picked = json != null ? TalkApi.PickModel(json, voice.Models) : null;
                 _voiceModel = picked ?? voice.FallbackModel;
                 Debug.Log("[IORI] イオリの声のモデル: " + _voiceModel + (picked == null ? "(一覧に望みのものが無いので予備)" : ""));
@@ -322,18 +353,21 @@ namespace Iori.Audio
             }
         }
 
-        IEnumerator ElevenGet(string path, Action<string> done)
+        /// <summary>ElevenLabs から読む。done(本文, 失敗のわけ): うまくいけば本文、だめなら null とわけ(キーは入らない)。</summary>
+        IEnumerator ElevenGet(string url, Action<string, string> done)
         {
-            using (var req = UnityWebRequest.Get(TalkApi.ElevenBase + path))
+            using (var req = UnityWebRequest.Get(url))
             {
-                req.SetRequestHeader("xi-api-key", SecretStore.Get(VoiceKeyName));
+                req.SetRequestHeader("xi-api-key", VoiceKey);
                 req.timeout = VoiceTimeoutSeconds;
                 yield return req.SendWebRequest();
-                if (req.result == UnityWebRequest.Result.Success) done(req.downloadHandler.text);
+                if (req.result == UnityWebRequest.Result.Success) done(req.downloadHandler.text, null);
                 else
                 {
-                    Debug.LogWarning("[IORI] ElevenLabs " + path + ": HTTP " + req.responseCode + " " + req.error);
-                    done(null);
+                    // (断られたわけは本文に書いてある)
+                    var why = "HTTP " + req.responseCode + " " + req.error + " " + Short(req.downloadHandler != null ? req.downloadHandler.text : "");
+                    Debug.LogWarning("[IORI] ElevenLabs " + url.Substring(TalkApi.ElevenHost.Length) + ": " + why);
+                    done(null, why);
                 }
             }
         }
@@ -349,7 +383,7 @@ namespace Iori.Audio
             {
                 if (LoadError != null) return "会話: " + LoadError;
                 if (Book == null) return "会話: 読み込み中";
-                var s = $"会話: LLM のキー {(HasLlmKey ? "あり" : "なし")} / 声のキー {(HasVoiceKey ? "あり" : "なし")} / 声 {(VoiceOn ? "オン" : "オフ")}\n"
+                var s = $"会話: LLM のキー {(HasLlmKey ? "あり" : "なし")} / 声のキー {(HasVoiceKey ? "あり" : "なし")} / 声 {(VoiceOn ? "オン" : "オフ")} / 声の ID {(VoiceIdByHand.Length > 0 ? "手で決めた" : "名前で探す")}\n"
                         + $"覚え書き {Memory.Notes.Count} 個、やり取り {Memory.Turns.Count} 回  {LastInfo}";
                 if (LastReply.Length > 0) s += "\n最後の返事: " + LastReply;
                 if (LastError.Length > 0) s += "\n" + LastError;

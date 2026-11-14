@@ -11,7 +11,8 @@ namespace Iori.Audio
     {
         public const string AnthropicUrl = "https://api.anthropic.com/v1/messages";
         public const string AnthropicVersion = "2026-10-21";
-        public const string ElevenBase = "https://api.elevenlabs.io/v1";
+        public const string ElevenHost = "https://api.elevenlabs.io";
+        public const string ElevenBase = ElevenHost + "/v1";
 
         // ---- LLM
 
@@ -97,7 +98,35 @@ namespace Iori.Audio
             return Json.Write(body);
         }
 
-        /// <summary>声の一覧(GET /voices)から、名前に name を含む声の id を探す(大文字小文字は見ない)。無ければ null。</summary>
+        /// <summary>自分の声(ライブラリから足した声も含む)を名前で探す URL。古い /v1/voices は廃止予定なので使わない。</summary>
+        public static string ElevenVoicesUrl(string name) =>
+            ElevenHost + "/v2/voices?page_size=100&search=" + Uri.EscapeDataString(name ?? "");
+
+        /// <summary>みんなの声のライブラリを名前で探す URL(自分の声に足していないとき用)。</summary>
+        public static string ElevenSharedVoicesUrl(string name) =>
+            ElevenBase + "/shared-voices?page_size=30&search=" + Uri.EscapeDataString(name ?? "");
+
+        /// <summary>
+        /// 貼られたキーから、キーに入らない文字(空白、改行、引用符、全角など)を落とす。
+        /// ヘッダーに入れられない文字が混じると、サービスに届く前に断られる。
+        /// </summary>
+        public static string CleanKey(string key)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in key ?? "")
+                if (c > 0x20 && c < 0x7F && c != '"' && c != '\'') sb.Append(c);
+            return sb.ToString();
+        }
+
+        /// <summary>ElevenLabs の声の id らしい形か(英数字 20 文字)。</summary>
+        public static bool LooksLikeVoiceId(string s)
+        {
+            if (s == null || s.Length != 20) return false;
+            foreach (var c in s) if (!(c < 0x7F && char.IsLetterOrDigit(c))) return false;
+            return true;
+        }
+
+        /// <summary>声の一覧(GET /v2/voices や /v1/shared-voices)から、名前に name を含む声の id を探す(大文字小文字は見ない)。無ければ null。</summary>
         public static string PickVoice(string voicesJson, string name)
         {
             try

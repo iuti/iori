@@ -259,6 +259,13 @@ namespace Iori.Audio.Tests
             Assert.That(TalkApi.ElevenRequest("a", "m", "ja"), Does.Contain("\"language_code\":\"ja\""));
             Assert.That(TalkApi.ElevenSpeechUrl("abc", "pcm_24000"), Is.EqualTo("https://api.elevenlabs.io/v1/text-to-speech/abc?output_format=pcm_24000"));
 
+            Assert.That(TalkApi.ElevenVoicesUrl("Chin yaku"), Is.EqualTo("https://api.elevenlabs.io/v2/voices?page_size=100&search=Chin%20yaku"));
+            Assert.That(TalkApi.ElevenSharedVoicesUrl("Chinyaku"), Is.EqualTo("https://api.elevenlabs.io/v1/shared-voices?page_size=30&search=Chinyaku"));
+            Assert.That(TalkApi.CleanKey(" \"sk_abc 123\n\" "), Is.EqualTo("sk_abc123"));
+            Assert.That(TalkApi.LooksLikeVoiceId("EbuvaInXUGWtpYRUnKLQ"), Is.True);
+            Assert.That(TalkApi.LooksLikeVoiceId("sk_0123456789abcdefg"), Is.False);
+            Assert.That(TalkApi.LooksLikeVoiceId("short"), Is.False);
+
             var f = TalkApi.PcmToFloats(new byte[] { 0x00, 0x00, 0xFF, 0x7F, 0x00, 0x80, 0x01 });
             Assert.That(f.Length, Is.EqualTo(3));
             Assert.That(f[0], Is.EqualTo(0f));
