@@ -2,8 +2,8 @@ NVIDIA GeForce RTX 3070, Direct3D12, 486x1080, colour space Linear
 fonts: medium ZenKakuGothicNew-Medium, regular ZenKakuGothicNew-Regular, bold ZenKakuGothicNew-Bold, mincho ShipporiMincho-SemiBold
 open radio: True
 backdrop on 1, canvas scale 1.246
-[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_01.wav (HTTP/1.1 404 Not Found)
 [Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_02.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_01.wav (HTTP/1.1 404 Not Found)
 [Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_03.wav (HTTP/1.1 404 Not Found)
 open fire: True
 sheet drawn down 50 and let go: still open True, back in place True
@@ -12,6 +12,12 @@ music: 12 songs, 7 albums, 6 artists, Unity Audio (PC)
 open player: True
 playing: 遠まわりの帰り道, play 11/12 ready 73s/228s, player has the floor True, radio silent True
 player: play 11/12 ready 75s/228s
+list: 焚き火の夜, 5 songs, items shown 6
+picker: song in list True
+after the bin was pressed once and the change ended: 2 lists
+search みなと: 4 songs
+search ﾜﾙﾂ: 1 songs
+search はこにわ 星: 1 songs
 player drawn down 260 and let go: closed True
 open radio while the player plays: True
 released: player has the floor False, radio silent False
