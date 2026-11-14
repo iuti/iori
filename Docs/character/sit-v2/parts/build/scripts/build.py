@@ -55,7 +55,15 @@ bhm = ndi.binary_fill_holes(bhm) & ~bg_bh & ~((gray(bh) > 180) & (sat_bh < 35))
 _l, _n = ndi.label(cv2.morphologyEx(bhm.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)))
 _big = _l == (1 + int(np.argmax(ndi.sum(np.ones_like(_l), _l, range(1, _n + 1)))))
 bhm &= dil(_big, 7)
-add('back_hair', bh, soft(bhm), group='hair_back', depth=-0.3)
+# the inside of the side locks (side_hair_back_01) under the face's edge: what shows at the face's outline when
+# the side hair and the face move apart
+sbk = L('side_back')
+band = skull & ~ero(skull, 31) & (yy > 150)
+sat_sb = sbk.max(2) - sbk.min(2)
+band &= ((sat_sb > 25) & (sbk[..., 2] > sbk[..., 0])) | (gray(sbk) < 100)
+bh_rgb = bh.copy(); bh_rgb[band] = sbk[band]
+bhm = bhm | band
+add('back_hair', bh_rgb, soft(bhm), group='hair_back', depth=-0.3)
 
 # 3. body (incl. headphones): final pixels; where hair hangs over the shoulders, the bare-head picture's shirt
 BG0 = np.median(np.concatenate([final[:6].reshape(-1, 3), final[:, :6].reshape(-1, 3)]), 0)

@@ -42,6 +42,7 @@ jobs = {
     'm_open': (G + 'mouth/open_03.png', 420, 180, 200),
     'm_round': (G + 'mouth/u_02.png', 420, 180, 200),
     'behind_body': (G + 'behind_body/behind_body_02.png', 0, 0, 1024),
+    'side_back': (G + 'side_hair_back/side_hair_back_01.png', 320, 30, 480),
 }
 for name, (p, x0, y0, size) in jobs.items():
     out, valid = place(p, x0, y0, size)
@@ -50,7 +51,7 @@ for name, (p, x0, y0, size) in jobs.items():
         box = {'head': (330, 400, 790, 500), 'back_hair': (330, 400, 790, 500)}.get(name, None)
         if name.startswith('m_') or name in ('white', 'closed'):
             box = (430, 190, 610, 370)
-        if name in ('under_goggles', 'behind_tag'):
+        if name in ('under_goggles', 'behind_tag', 'side_back'):
             box = (340, 280, 780, 500)
         if name == 'behind_body':
             box = (100, 1000, 1000, 1500)
