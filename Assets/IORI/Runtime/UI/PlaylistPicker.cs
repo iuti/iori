@@ -67,8 +67,9 @@ namespace Iori.Ui
             sheet.anchorMax = new Vector2(1f, 0f);
             sheet.pivot = new Vector2(0.5f, 0f);
             p._sheet = sheet;
+            // (solid: the rows of the list under it would show through the letters)
             var pane = UiKit.Shape("Pane", sheet, 0, 0, 0, 0,
-                ShapeStyle.Fill(th.barSolid, 0f).TopLight(th.glassTopLight).Glow(th.glassShadow, th.glassShadowBlur, -th.glassShadowRise));
+                ShapeStyle.Fill(new Color32(th.barSolid.r, th.barSolid.g, th.barSolid.b, 255), 0f).TopLight(th.glassTopLight).Glow(th.glassShadow, th.glassShadowBlur, -th.glassShadowRise));
             UiKit.Stretch(pane.rectTransform);
             pane.raycastTarget = true;
 

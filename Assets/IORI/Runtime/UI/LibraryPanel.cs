@@ -856,8 +856,10 @@ namespace Iori.Ui
             // (a row with one line only, an artist's name, has it in the middle of its height)
             if (oneLine) UiKit.PlaceLine(row.title, TextX, 0, textWidth, RowHeight);
             else UiKit.PlaceLine(row.title, TextX, 10.6f, textWidth, 21.7f);
-            row.sub.gameObject.SetActive(!oneLine);
-            if (!oneLine)
+            // (... and so does the line under it, the number of songs)
+            bool subShown = !oneLine && !(listHead && _editing);
+            row.sub.gameObject.SetActive(subShown);
+            if (subShown)
             {
                 row.sub.text = it.sub;
                 UiKit.PlaceLine(row.sub, TextX, 33.3f, textWidth, 18.1f);
