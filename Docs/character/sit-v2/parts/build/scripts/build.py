@@ -397,6 +397,107 @@ def key(rgb, a, loose=False, protect=None):
     return rgb2.clip(0, 255), a2
 layers = [(i, *key(r, a, loose=('big' if i == 'body' else i != 'base'), protect=(_strand if i == 'side_hair' else None)), e) for i, r, a, e in layers]
 
+# ---- soft outer edges against the background: C = a*H + (1-a)*B (as for the locks over the neck), in place of the
+# gray key / binary masks. B = the background gray smoothed locally, H = the colour of the pixel with the largest
+# |C-B| within 5px among the layer's own visible core, a solved per pixel; the ring reaches 3px past the old edge
+# so the thin hair tips that were cut away come back as faint pixels.
+_fin_d = np.abs(final - BG).max(2)
+_n, _lab = cv2.connectedComponents((_fin_d < 12).astype(np.uint8))
+_bd = np.unique(np.concatenate([_lab[0], _lab[-1], _lab[:, 0], _lab[:, -1]]))
+_bgF = np.isin(_lab, _bd[_bd > 0])
+_bw = cv2.blur(_bgF.astype(np.float32), (41, 41))
+_Bsm = cv2.blur(final * _bgF[..., None], (41, 41)) / np.maximum(_bw, 1e-3)[..., None]
+_Bsm = np.where((_bw > 0.02)[..., None], _Bsm, BG)
+_Dn = np.abs(final - _Bsm).max(2)
+_EDGE = ('back_hair', 'side_hair', 'front_hair', 'ahoge', 'goggles', 'tag', 'earring', 'body', 'base')
+_li = {l[0]: k for k, l in enumerate(layers)}
+_top = np.full((H, W), -1, np.int32)
+for k, (_id, _r, _a, _e) in enumerate(layers):
+    if _e.get('role', '').startswith('lid_'): continue
+    _top[_a > 0.5] = k
+_near_bg = dil(_bgF, 4)
+_cand = {}
+for n_ in _EDGE:
+    k = _li[n_]; a_ = layers[k][2]
+    vis = (_top == k) & (a_ > 0.9) & ~_bgF
+    _cand[n_] = vis
+# owner of each ring pixel = the layer whose visible core is nearest (within 5px)
+_dist = np.full((H, W), 1e9, np.float32); _own = np.full((H, W), -1, np.int32)
+for n_, vis in _cand.items():
+    dt = cv2.distanceTransform((~vis).astype(np.uint8), cv2.DIST_L2, 5)
+    up = dt < _dist; _dist = np.where(up, dt, _dist); _own = np.where(up, _li[n_], _own)
+_ring = _near_bg & (_dist > 0) & (_dist <= 4.5)
+# pixels already given to some layer that is not an edge layer (face, eyes...) stay as they are
+_other = np.zeros((H, W), bool)
+for k, (_id, _r, _a, _e) in enumerate(layers):
+    if _id not in _EDGE and not _e.get('role', '').startswith('lid_'): _other |= _a > 0.5
+_ring &= ~_other
+_ring[:6] = False; _ring[-6:] = False; _ring[:, :6] = False; _ring[:, -6:] = False   # np.roll below wraps around
+# H: the strongest pixel of the owner's visible core within 5px
+_Dm = np.full((H, W), -1.0, np.float32); _Hc = np.zeros_like(final)
+for n_, vis in _cand.items():
+    _Dm = np.where(vis, _Dn, _Dm)
+_best = np.full((H, W), -1.0, np.float32); _bestc = np.zeros_like(final); _bown = np.full((H, W), -1, np.int32)
+_ownmap = np.full((H, W), -1, np.int32)
+for n_, vis in _cand.items(): _ownmap[vis] = _li[n_]
+for _dy in range(-5, 6):
+    for _dx in range(-5, 6):
+        if _dy * _dy + _dx * _dx > 25: continue
+        sD = np.roll(np.roll(_Dm, _dy, 0), _dx, 1); sO = np.roll(np.roll(_ownmap, _dy, 0), _dx, 1)
+        ok = (sO == _own) & (sD > _best)
+        _best = np.where(ok, sD, _best); _bestc = np.where(ok[..., None], np.roll(np.roll(final, _dy, 0), _dx, 1), _bestc)
+_HB = _bestc - _Bsm; _den = (_HB ** 2).sum(2)
+_solve = _ring & (_best > 0) & (_den > 20 ** 2)
+_ae = np.clip(((final - _Bsm) * _HB).sum(2) / np.maximum(_den, 1e-3), 0, 1)
+_ae = np.where(_ae < 0.04, 0.0, _ae)
+_gone = _ring & ~_solve          # ring pixels with no core colour to solve from: background
+before = {n_: layers[_li[n_]][2].copy() for n_ in _EDGE}
+for n_ in _EDGE:
+    k = _li[n_]; _id, r_, a_, e_ = layers[k]
+    r_ = r_.copy(); a_ = a_.copy()
+    mine = _solve & (_own == k)
+    r_[mine] = _bestc[mine]; a_[mine] = _ae[mine]
+    a_[(_solve | _gone) & (_own != k)] = 0.0       # one layer per ring pixel
+    a_[_gone & (_own == k)] = 0.0
+    layers[k] = (_id, r_, a_, e_)
+    print('edge', n_, 'ring px', int(mine.sum()), 'semi', int((mine & (_ae > 0) & (_ae < 0.97)).sum()),
+          'new px', int((mine & (_ae > 0) & (before[n_] < 0.004)).sum()))
+
+# thin tails (the end of the ahoge, curl tips) have no core within 5px: grow from the solved edge along the faint
+# pixels, a pixel at a time, each taking H from the neighbour it grew from (at most 40 steps)
+_lay = np.full((H, W), -1, np.int32); _Hg = np.zeros_like(final)
+for n_ in _EDGE:
+    k = _li[n_]; a_ = layers[k][2]
+    m_ = (a_ > 0.25) & _near_bg
+    _lay[m_] = k; _Hg[m_] = layers[k][1][m_]
+_taken = np.zeros((H, W), bool)
+for k_, (_id, _r, _a, _e) in enumerate(layers):
+    if not _e.get('role', '').startswith('lid_'): _taken |= _a > 0.004
+_grown = 0
+for _it in range(40):
+    front = (_lay >= 0)
+    newc = np.zeros((H, W), bool); newl = np.full((H, W), -1, np.int32); newH = np.zeros_like(final)
+    for _dy, _dx in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+        sl = np.roll(np.roll(_lay, _dy, 0), _dx, 1); sH = np.roll(np.roll(_Hg, _dy, 0), _dx, 1)
+        c = (sl >= 0) & ~front & ~_taken & ~newc & _near_bg & (_Dn > 7)
+        newc |= c; newl = np.where(c, sl, newl); newH = np.where(c[..., None], sH, newH)
+    newc[:6] = False; newc[-6:] = False; newc[:, :6] = False; newc[:, -6:] = False
+    if not newc.any(): break
+    HB = newH - _Bsm; den = (HB ** 2).sum(2)
+    a2 = np.clip(((final - _Bsm) * HB).sum(2) / np.maximum(den, 1e-3), 0, 1)
+    ok = newc & (den > 20 ** 2) & (a2 > 0.06)
+    for n_ in _EDGE:
+        k = _li[n_]; m_ = ok & (newl == k)
+        if m_.any():
+            _id, r_, a_, e_ = layers[k]; r_ = r_.copy(); a_ = a_.copy()
+            r_[m_] = newH[m_]; a_[m_] = a2[m_]; layers[k] = (_id, r_, a_, e_)
+    _lay[ok] = newl[ok]; _Hg[ok] = newH[ok]; _taken |= ok; _grown += int(ok.sum())
+print('thin tails grown', _grown, 'px')
+
+# nothing of hers touches the picture's border: a 1px dark column the key left at x=0 above y440 goes
+for k, (_id, r_, a_, e_) in enumerate(layers):
+    a_ = a_.copy(); a_[:2] = 0; a_[-2:] = 0; a_[:, :2] = 0; a_[:, -2:] = 0; layers[k] = (_id, r_, a_, e_)
+
 # ---- write the textures
 model_layers = []
 PAD = 8

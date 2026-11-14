@@ -190,10 +190,10 @@
   {
    "id": "base",
    "group": "body",
-   "x": 0,
-   "y": 0,
-   "w": 1004,
-   "h": 1508,
+   "x": 47,
+   "y": 426,
+   "w": 957,
+   "h": 1082,
    "texture": "textures/base.png"
   },
   {
@@ -209,9 +209,9 @@
   {
    "id": "body",
    "group": "body",
-   "x": 224,
+   "x": 225,
    "y": 151,
-   "w": 725,
+   "w": 724,
    "h": 860,
    "texture": "textures/body.png"
   },
@@ -371,9 +371,9 @@
   {
    "id": "side_hair",
    "group": "hair_side",
-   "x": 313,
+   "x": 309,
    "y": 43,
-   "w": 466,
+   "w": 470,
    "h": 402,
    "depth": 0.05,
    "texture": "textures/side_hair.png"
@@ -419,7 +419,7 @@
    "group": "hair_back",
    "x": 372,
    "y": 43,
-   "w": 217,
+   "w": 218,
    "h": 84,
    "depth": 0.0,
    "bones": [
