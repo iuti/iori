@@ -42,6 +42,11 @@ namespace Iori.Camp
         static readonly (string label, CampSeason s)[] Seasons = { ("暦どおり", CampSeason.Auto), ("春", CampSeason.Spring), ("夏", CampSeason.Summer), ("秋", CampSeason.Autumn), ("冬", CampSeason.Winter) };
         static readonly (string label, CampPropKind kind)[] Focuses = { ("焚き火", CampPropKind.Fire), ("イオリ", CampPropKind.Iori), ("ラジオ", CampPropKind.Radio), ("音楽プレーヤー", CampPropKind.Player) };
         static readonly (string label, CampQualityLevel q)[] Qualities = { ("端末に合わせる", CampQualityLevel.Auto), ("スマホ相当", CampQualityLevel.Phone), ("フル", CampQualityLevel.Full) };
+        static readonly (string label, string cue)[] VoiceTests =
+        {
+            ("あいさつ", VoiceCues.Greet), ("おかえり", VoiceCues.Return), ("タップ", VoiceCues.Tap), ("プレーヤー", VoiceCues.PlayerOpen),
+            ("曲が止まった", VoiceCues.MusicStopped), ("雨が降った", VoiceCues.RainStart), ("雨が止んだ", VoiceCues.RainStop), ("火をつけた", VoiceCues.Firewood),
+        };
         static readonly string[] Tabs = { "景色", "カメラ・画質", "音" };
         static readonly (string id, string label)[] PhaseNames = { ("early_morning", "早朝"), ("morning", "朝"), ("day", "昼"), ("evening", "夕方"), ("night", "夜"), ("late_night", "深夜") };
         static readonly (string id, string label)[] LayerNames = { ("fire", "焚き火"), ("wind", "風"), ("insects", "虫"), ("rain", "雨") };
@@ -450,6 +455,15 @@ namespace Iori.Camp
             if (GUILayout.Button("時計を戻す", radio.ClockOffsetMs != 0 ? _s.chipSmallOn : _s.chipSmall, GUILayout.Width(bw - 18f))) radio.SetClockOffset(0);
             GUILayout.EndHorizontal();
             GUILayout.Label("切り替わりの直前まで時計を進めるよ。自動のときは景色の時刻も一緒に進む。", _s.note, GUILayout.Width(width));
+
+            // ---- Iori's voice
+            var voice = VoiceDirector.Instance;
+            if (voice)
+            {
+                GUILayout.Label("イオリの声を聞く", _s.header);
+                Row(width, VoiceTests.Length, i => VoiceTests[i].label, i => false, i => voice.Say(VoiceTests[i].cue, true), 4, _s.chipSmall, _s.chipSmallOn);
+                GUILayout.Label("押すと、いまの時間帯と時刻に合うセリフを言うよ(本番は間隔と確率の決まりで黙ることも多い)。時報は「次の正時の直前へ」で聞ける。\n" + voice.Status, _s.note, GUILayout.Width(width));
+            }
 
             // ---- volumes
             GUILayout.Label("音量", _s.header);

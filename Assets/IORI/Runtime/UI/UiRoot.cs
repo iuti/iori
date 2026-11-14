@@ -116,11 +116,17 @@ namespace Iori.Ui
             Fit();
         }
 
-        void OnEnable() => CampProp.Tapped += OnPropTapped;
+        void OnEnable()
+        {
+            CampProp.Tapped += OnPropTapped;
+            // Iori says nothing while she sleeps (the lantern's sleep mode)
+            VoiceDirector.Hushed = () => CampAtmosphere.Instance && CampAtmosphere.Instance.sleep;
+        }
 
         void OnDisable()
         {
             CampProp.Tapped -= OnPropTapped;
+            VoiceDirector.Hushed = null;
             CampCameraRig.UiBlocked = false;
         }
 
@@ -129,6 +135,7 @@ namespace Iori.Ui
         void OnPropTapped(CampProp prop)
         {
             if (_stack.Count > 0) return;
+            if (prop.kind == CampPropKind.Iori && VoiceDirector.Instance) VoiceDirector.Instance.Say(VoiceCues.Tap);
             Open(prop.kind, prop);
         }
 
@@ -175,6 +182,10 @@ namespace Iori.Ui
             CampCameraRig.UiBlocked = true;
             _backdrop.wanted = true;
             UiSounds.Play(UiSounds.Open);
+            // opening the music player while none of its songs plays: "what are we listening to today?"
+            var music = MusicDirector.Instance;
+            if ((panel == _player || panel == _library) && music && !music.IsPlaying && VoiceDirector.Instance)
+                VoiceDirector.Instance.Say(VoiceCues.PlayerOpen);
             return true;
         }
 

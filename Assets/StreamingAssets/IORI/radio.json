@@ -70,6 +70,11 @@
     "file": "fx/chime.ogg",
     "volume": 0.5
   },
+  "jiho": {
+    "file": "voice/jiho_{hh}.ogg",
+    "delaySeconds": 1.6,
+    "volume": 1
+  },
   "quiet": {
     "minGapSeconds": 45,
     "maxGapSeconds": 180,

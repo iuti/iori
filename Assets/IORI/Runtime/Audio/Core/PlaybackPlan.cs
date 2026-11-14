@@ -63,6 +63,8 @@ namespace Iori.Audio
     {
         public const string Chime = "chime";
         public const string Phrase = "phrase";
+        /// <summary>イオリの声(時報)。Unity は声に合わせて口を動かす。</summary>
+        public const string Voice = "voice";
     }
 
     /// <summary>決まった時刻に一度だけ鳴らす音(正時のチャイム、静けさの時間のピアノなど)。</summary>
