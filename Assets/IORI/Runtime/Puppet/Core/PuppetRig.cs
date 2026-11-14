@@ -59,6 +59,9 @@ namespace Iori.Puppet
         /// <summary>Expression weights by id (smile lives in param).</summary>
         public readonly Dictionary<string, float> expr = new Dictionary<string, float>();
         public float physicsScale = 1;
+        /// <summary>How much of the model's upright pose (x-iori.upright) the figure rests in: 0 as drawn, 1 with a
+        /// straight back. The parameters move it about that pose.</summary>
+        public float posture = 0;
         public float time;
 
         const float ChinNeck = 0.08f, ChinNeckX0 = 0.2f, ChinNeckX1 = 0.34f;
@@ -488,12 +491,16 @@ namespace Iori.Puppet
 
         // ---------------------------------------------------------------- the head and the torso
 
+        // the pose the figure rests in, in degrees (ours: x-iori.upright)
+        float RestLean => model.upright != null ? model.upright[0] * posture : 0;
+        float RestRoll => model.upright != null ? model.upright[1] * posture : 0;
+
         void HeadTrig()
         {
             var R = model.rig; var T = model.tuning; var P = param;
             float py = P.angleY / 30f;
             float yaw = P.angleX / 30f * R.yaw * T.turn, pitch = py * (1 - R.pitchEase * py * py) * R.pitch * T.turn * T.nod;
-            _roll = P.angleZ * MathF.PI / 180f * R.roll * T.turn;
+            _roll = P.angleZ * MathF.PI / 180f * R.roll * T.turn + RestRoll * MathF.PI / 180f;
             _cy = MathF.Cos(yaw); _sy = MathF.Sin(yaw); _cp = MathF.Cos(pitch); _sp = MathF.Sin(pitch); _cr = MathF.Cos(_roll); _sr = MathF.Sin(_roll);
         }
 
@@ -533,11 +540,12 @@ namespace Iori.Puppet
             float br = param.breath * model.tuning.breath * R.breath * R.bodyBreath;
             dx = (x - A.headCx) * 0.01f * br * t;
             dy = -br * 0.024f * ry * MathF.Pow(t, 1.3f);
+            float tl = float.IsNaN(model.leanFrom) ? t : Smooth(model.leanFrom, A.neckY, y);    // ours: where the leaning starts
             float yaw = _bodyYaw / 30f;
             float bw = 1.4f * fw;
             float u = Math.Max(-1.6f, Math.Min(1.6f, (x - A.headCx) / bw));
-            dx += yaw * bw * 0.16f * MathF.Pow(t, 1.2f) * (1 - 0.18f * u * u) + yaw * (x - A.headCx) * -0.04f * Math.Sign(u) * t;
-            float a = _bodyRoll * MathF.PI / 180f * t;
+            dx += yaw * bw * 0.16f * MathF.Pow(tl, 1.2f) * (1 - 0.18f * u * u) + yaw * (x - A.headCx) * -0.04f * Math.Sign(u) * tl;
+            float a = (_bodyRoll + RestLean) * MathF.PI / 180f * tl;
             if (a != 0)
             {
                 float px = model.bodyPivot != null ? model.bodyPivot[0] : A.headCx;
@@ -694,7 +702,7 @@ namespace Iori.Puppet
             {
                 BodyOffset(rx, ry, out float bx, out float by);
                 x = rx + bx; y = ry + by;
-                rho = _bodyRoll * MathF.PI / 180f * Smooth(A.bottomY, A.neckY, ry);
+                rho = (_bodyRoll + RestLean) * MathF.PI / 180f * Smooth(float.IsNaN(model.leanFrom) ? A.bottomY : model.leanFrom, A.neckY, ry);
             }
             else
             {

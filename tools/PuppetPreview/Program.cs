@@ -94,6 +94,7 @@ static class Program
             }
             Rest(rig);
             rig.physicsScale = swing;
+            rig.posture = F(job, "posture", 0f);
             if (job.TryGetProperty("idle", out var idleDef))
             {
                 // as PuppetRenderer.RenderAt plays it: from rest, in steps of a thirtieth

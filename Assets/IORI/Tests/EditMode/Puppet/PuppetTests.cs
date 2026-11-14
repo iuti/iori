@@ -512,6 +512,56 @@ namespace Iori.Puppet.Tests
         }
 
         [Test]
+        public void Upright_TheFigureRestsWithAStraightBack_AndBelowTheLeanLineNothingMoves()
+        {
+            string up = Model.Replace(@"""head_tilt"": 0,", @"""head_tilt"": 0, ""upright"": [10, 16],");
+            string lap = up.Replace(@"""upright"": [10, 16],", @"""upright"": [10, 16], ""lean_from"": 480,");
+            Assert.That(PuppetModel.Parse(lap).upright, Is.EqualTo(new[] { 10f, 16f }));
+            Assert.That(PuppetModel.Parse(lap).leanFrom, Is.EqualTo(480f));
+            Assert.That(PuppetModel.Parse(Model).upright, Is.Null);
+            Assert.That(float.IsNaN(PuppetModel.Parse(Model).leanFrom));
+
+            PuppetRig At(string json, float posture)
+            {
+                var r = Rig(json); r.physicsScale = 0; r.posture = posture; Run(r, 1f); AssertFinite(r);
+                return r;
+            }
+            float X(PuppetRig r, string layer, float x, float y) { var L = Layer(r, layer); return L.pos[2 * Nearest(L, x, y)]; }
+            float Y(PuppetRig r, string layer, float x, float y) { var L = Layer(r, layer); return L.pos[2 * Nearest(L, x, y) + 1]; }
+            // which way the face's middle line points (two points one above the other on the drawn face), in degrees
+            double FaceTurn(PuppetRig r) => Math.Atan2(X(r, "face", 256, 280) - X(r, "face", 256, 140), Y(r, "face", 256, 280) - Y(r, "face", 256, 140)) * -180 / Math.PI;
+
+            // posture 0 is the picture as drawn, with or without the upright pose in the model
+            PuppetRig drawn = At(Model, 0), zero = At(lap, 0), full = At(lap, 1), half = At(lap, 0.5f);
+            Assert.That(X(zero, "body", 256, 320), Is.EqualTo(X(drawn, "body", 256, 320)).Within(0.001f));
+            Assert.That(FaceTurn(zero), Is.EqualTo(FaceTurn(drawn)).Within(0.001));
+
+            // posture 1: the shoulders have gone over by the lean about the hips (256, 600), the head has rolled by its
+            // own 16 degrees on top of being carried along; half the posture is about half of both
+            float shoulder = X(full, "body", 256, 320) - X(drawn, "body", 256, 320);
+            Assert.That(shoulder, Is.EqualTo(280 * Math.Sin(10 * Math.PI / 180)).Within(3.0));
+            Assert.That(FaceTurn(full) - FaceTurn(drawn), Is.EqualTo(16).Within(0.5));
+            Assert.That(X(half, "body", 256, 320) - X(drawn, "body", 256, 320), Is.EqualTo(0.5f * shoulder).Within(2f));
+            Assert.That(FaceTurn(half) - FaceTurn(drawn), Is.EqualTo(8).Within(0.5));
+            // the head goes where the neck goes
+            Assert.That(X(full, "face", 256, 300) - X(drawn, "face", 256, 300), Is.GreaterThan(0.8f * shoulder));
+
+            // the parameters move the figure about that pose: the same lean on top of it goes further the same way
+            var more = Rig(lap); more.physicsScale = 0; more.posture = 1; more.param.bodyZ = 5; Run(more, 2f);
+            Assert.That(X(more, "body", 256, 320), Is.GreaterThan(X(full, "body", 256, 320) + 15f));
+
+            // below the lean line nothing leans (hands on the lap stay on the knees); without the line the leaning starts
+            // at the seat, and the same point slides
+            PuppetRig seat = At(up, 1);
+            Assert.That(Math.Abs(X(full, "body", 256, 500) - X(drawn, "body", 256, 500)), Is.LessThan(0.01f));
+            Assert.That(Math.Abs(X(seat, "body", 256, 500) - X(drawn, "body", 256, 500)), Is.GreaterThan(1f));
+            // and the body's sway starts there too
+            var sway = Rig(lap); sway.physicsScale = 0; sway.param.bodyX = 10; Run(sway, 2f);
+            Assert.That(Math.Abs(X(sway, "body", 256, 500) - X(drawn, "body", 256, 500)), Is.LessThan(0.01f));
+            Assert.That(Math.Abs(X(sway, "body", 256, 320) - X(drawn, "body", 256, 320)), Is.GreaterThan(1f));
+        }
+
+        [Test]
         public void Idle_DrivesTheRig_WithoutBreakingIt()
         {
             var r = Rig();

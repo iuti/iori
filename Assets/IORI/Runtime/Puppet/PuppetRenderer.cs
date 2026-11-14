@@ -24,6 +24,7 @@ namespace Iori.Puppet
         [Tooltip("首をかしげる大きさ。3.5 あたりが、絵が崩れない上限")] [Range(0f, 5f)] public float tilt = 3.5f;
         [Tooltip("体を揺らす、傾ける大きさ。1.5 あたりが、絵が崩れない上限")] [Range(0f, 3f)] public float lean = 1.5f;
         [Tooltip("髪と揺れものの揺れの大きさ。1 あたりが、絵が崩れない上限")] [Range(0f, 2f)] public float swing = 1f;
+        [Tooltip("姿勢。0 が描いた絵のまま(前かがみで首をかしげている)、1 が背すじを起こした姿。動きはその姿のまわりで動く")] [Range(0f, 1f)] public float posture = 1f;
         [Tooltip("口の開き(声に合わせて外から入れる)")] [Range(0f, 1f)] public float mouthOpen;
         [Tooltip("口の形(-1: お、う / 1: い、え)")] [Range(-1f, 1f)] public float vowel;
         [Tooltip("ほほえみ")] [Range(0f, 1f)] public float smile;
@@ -194,7 +195,7 @@ namespace Iori.Puppet
             _rig.time = 0f;
             _rig.ResetPhysics(); _rig.ResetMouth();
             _idle.Reset();
-            _rig.physicsScale = swing;
+            _rig.physicsScale = swing; _rig.posture = posture;
             const float dt = 1f / 30f;
             int steps = Mathf.Max(1, Mathf.CeilToInt(seconds / dt));
             for (int i = 0; i < steps; i++) { pose?.Invoke(P); _rig.Update(dt); }
@@ -208,7 +209,7 @@ namespace Iori.Puppet
             _idle.amount = amount; _idle.turn = turn; _idle.tilt = tilt; _idle.lean = lean; _idle.asleep = asleep;
             if (idle) _idle.Apply(P, dt);
             P.mouthOpen = mouthOpen; P.vowel = vowel; P.smile = smile;
-            _rig.physicsScale = swing;
+            _rig.physicsScale = swing; _rig.posture = posture;
             _rig.Update(dt);
         }
 

@@ -10,6 +10,12 @@
 //   hair_tips   [r0, r1]: short hair that sticks out. Hair swings by how far it reaches past the head, in head
 //               radii from the head's middle (nothing at r0 and inside, fully at r1 and beyond), and all of it
 //               goes with the head. Without it only hair below the jaw swings (long hair), as LivLiv has it.
+//   lean_from   y: the line the upper body leans and sways from, instead of anchors.bottom_y (a seated figure with
+//               its hands on its lap: a line above the hands, so that they stay on the knees while the back moves)
+//   upright     [lean, roll] degrees: how far the upper body leans about body_pivot, and how far the head then
+//               rolls on the neck, for the figure to sit with a straight back (the picture may be drawn leaning,
+//               head tilted). PuppetRig.posture (0 as drawn .. 1 upright) says how much of it is used; the
+//               parameters then move the figure about that pose.
 // With anchors.bottom_y on the seat line, body layers wholly below it stay still without being listed.
 // And one more kind of mouth frame in a mouth layer's "visemes": "small", a mouth barely open, shown between "closed"
 // and "half" as mouthOpen grows (a quiet voice then moves the lips without showing the teeth).
@@ -96,6 +102,10 @@ namespace Iori.Puppet
         public float[] bodyPivot;
         /// <summary>x-iori.hair_tips [r0, r1], or null</summary>
         public float[] hairTips;
+        /// <summary>x-iori.lean_from, or NaN</summary>
+        public float leanFrom = float.NaN;
+        /// <summary>x-iori.upright [body lean, head roll] in degrees, or null</summary>
+        public float[] upright;
         /// <summary>x-iori.still: ids of the layers that never move (never null)</summary>
         public string[] still = new string[0];
 
@@ -236,6 +246,8 @@ namespace Iori.Puppet
                 m.headTilt = Num(x, "head_tilt", 0);
                 m.bodyPivot = Pair(x, "body_pivot");
                 m.hairTips = Pair(x, "hair_tips");
+                m.upright = Pair(x, "upright");
+                m.leanFrom = Num(x, "lean_from", float.NaN);
                 if (m.hairTips != null && !(m.hairTips[1] > m.hairTips[0])) throw new FormatException("x-iori.hair_tips: the second radius must be the larger");
                 if (x.TryGetValue("still", out var st) && st is List<object> stillIds)
                 {

@@ -30,6 +30,7 @@ node tools/PuppetPreview/render.js <出力の頭> <model.json のあるフォル
 - `keys`: `[{ "t": 0, "pose": {} }, { "t": 1.2, "pose": { "angleZ": 30 } }, ...]`。キーからキーへなめらかに動かして、全コマを描く(1 つの動きを端まで振って見る)。
 - `idle`: 待機の動き(`PuppetIdle`)を止めの姿から 1/30 秒ずつ進めて、`from` 秒から `seconds` 秒ぶんを描く(`PuppetRenderer.RenderAt` と同じ進め方)。
 - `swing`: 髪と揺れものの揺れの倍率(`PuppetRenderer.swing`)。
+- `posture`: 姿勢(`PuppetRenderer.posture`)。0 が描いた絵のまま(書かないとき)、1 が背すじを起こした姿(model.json の `x-iori.upright`)。
 - `every`: 何コマおきに描くか。`dry: true`: 網目は書かず、各コマの数値だけ(長い動きがどこまで行くかを見る)。`only: ["back_hair"]`: そのレイヤーの網目だけ(測るため。絵にはしない)。
 
 出力の `.json` には各コマの数値(`param`: angleX, angleY, angleZ, bodyX, bodyZ, breath, eyeLOpen, eyeBallX, eyeBallY)も入る。
