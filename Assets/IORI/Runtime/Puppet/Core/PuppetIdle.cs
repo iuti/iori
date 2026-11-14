@@ -21,7 +21,7 @@ namespace Iori.Puppet
         /// <summary>0: awake. 1: eyes closed, breathing slow and deep, head sunk a little.</summary>
         public float asleep;
 
-        readonly Random _rng;
+        Random _rng;
         readonly int _seed;
         float _t;
         // breath
@@ -39,14 +39,16 @@ namespace Iori.Puppet
         public PuppetIdle(int seed = 1)
         {
             _seed = seed;
-            _rng = new Random(seed);
             Reset();
         }
 
         float Rand(float a, float b) => a + (b - a) * (float)_rng.NextDouble();
 
+        /// <summary>Back to the start: the same seed plays the same motion again (a picture of "second 3" is the same
+        /// picture every time, and pictures taken one after another join into one motion).</summary>
         public void Reset()
         {
+            _rng = new Random(_seed);
             _t = 0;
             _breathPhase = 0; _breathsToDeep = Rand(7, 13); NextBreath();
             _blinkIn = Rand(1.2f, 3.5f); _blinkAt = -1; _blinkAgain = false; _sinceBlink = 10;

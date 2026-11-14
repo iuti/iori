@@ -130,6 +130,35 @@ namespace Iori.Camp.EditorTools
             }
         }
 
+        /// <summary>Writes her idle motion as pictures of the puppet alone, at the model's own size, not lit:
+        /// motion_NNN.png under dir/motion, `fps` pictures a second for `seconds` (from one second in, as the shots
+        /// on the board are). For a film that shows the motion itself, apart from the camp, its light and the
+        /// size of a phone's screen.</summary>
+        public static void DumpMotion(PuppetRenderer puppet, string dir, float fps, float seconds)
+        {
+            if (!puppet || puppet.Rig == null) { Debug.LogWarning("[IORI] puppet: no motion to write out"); return; }
+            int oldSize = puppet.maxSize;
+            string outDir = Path.Combine(dir, "motion");
+            Directory.CreateDirectory(outDir);
+            try
+            {
+                puppet.maxSize = Mathf.Max(puppet.Rig.model.canvasW, puppet.Rig.model.canvasH);
+                int count = Mathf.Clamp(Mathf.RoundToInt(fps * seconds), 1, 999);
+                for (int i = 0; i < count; i++)
+                {
+                    puppet.RenderAt(1f + i / fps);
+                    if (!puppet.ColorTexture) break;
+                    File.WriteAllBytes(Path.Combine(outDir, $"motion_{i:000}.png"), Straight(puppet.ColorTexture));
+                }
+                Debug.Log("[IORI] puppet motion written out to " + outDir);
+            }
+            finally
+            {
+                puppet.maxSize = oldSize;
+                puppet.RenderAt(0f);
+            }
+        }
+
         /// <summary>A texture the puppet drew into, as a PNG with its colors divided by alpha again.</summary>
         static byte[] Straight(RenderTexture rt)
         {

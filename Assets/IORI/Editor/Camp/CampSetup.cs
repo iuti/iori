@@ -903,14 +903,20 @@ namespace Iori.Camp.EditorTools
             return shots;
         }
 
+        /// <summary>How many pictures a second, for how long, the pictures of her motion are taken (-puppetFps, -puppetSeconds).</summary>
+        static void PuppetPace(out float fps, out float seconds)
+        {
+            fps = 8f; seconds = 12f;
+            if (float.TryParse(ArgValue("-puppetFps"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f) && f >= 1f && f <= 60f) fps = f;
+            if (float.TryParse(ArgValue("-puppetSeconds"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float sec) && sec > 0f && sec <= 60f) seconds = sec;
+        }
+
         /// <summary>Iori by the fire at night while she moves: to see the puppet's idle motion (names 80_puppet_000 on;
         /// "-shots 80" picks them all). An eighth of a second apart for twelve seconds unless -puppetFps (pictures a
         /// second) and -puppetSeconds say otherwise.</summary>
         static Shot[] PuppetShots()
         {
-            float fps = 8f, seconds = 12f;
-            if (float.TryParse(ArgValue("-puppetFps"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f) && f >= 1f && f <= 60f) fps = f;
-            if (float.TryParse(ArgValue("-puppetSeconds"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float sec) && sec > 0f && sec <= 60f) seconds = sec;
+            PuppetPace(out float fps, out float seconds);
             var shots = new Shot[Mathf.Clamp(Mathf.RoundToInt(fps * seconds), 1, 999)];
             for (int i = 0; i < shots.Length; i++)
                 shots[i] = new Shot { name = "80_puppet_" + i.ToString("000"), hour = 22f, focus = CampPropKind.Iori, time = ShotTime + i / fps, puppet = 1f + i / fps, small = true };
@@ -1059,6 +1065,12 @@ namespace Iori.Camp.EditorTools
             if (puppet) PuppetImport.Dump(puppet, dir);
             // -puppetPoses: and in a set of poses, one thing moved at a time, at the model's own size
             if (puppet && HasArg("-puppetPoses")) PuppetImport.DumpPoses(puppet, dir);
+            // -puppetMotion: and her idle motion as pictures of the puppet alone, at the model's own size (-puppetFps, -puppetSeconds)
+            if (puppet && HasArg("-puppetMotion"))
+            {
+                PuppetPace(out float motionFps, out float motionSeconds);
+                PuppetImport.DumpMotion(puppet, dir, motionFps, motionSeconds);
+            }
             Debug.Log("[IORI] shots saved to " + dir);
             LogShaderMessages();
             LogStats(mirrors.Length > 0 ? mirrors[0] : null);

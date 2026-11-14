@@ -384,6 +384,36 @@ namespace Iori.Puppet.Tests
             Assert.That(gazeMost, Is.GreaterThan(0.25f));
         }
 
+        // pictures of her motion are each played from rest (PuppetRenderer.RenderAt): played again, the motion must be the
+        // same one, or pictures a thirtieth of a second apart show poses from different motions and she jumps about
+        [Test]
+        public void Idle_PlayedAgainFromReset_IsTheSameMotion_SoPicturesTakenOneByOneJoinUp()
+        {
+            var idle = new PuppetIdle(1);
+            var P = new PuppetParams();
+            const float dt = 1f / 30f;
+            float[] Play(int steps)
+            {
+                idle.Reset();
+                for (int i = 0; i < steps; i++) idle.Apply(P, dt);
+                return new[] { P.angleX, P.angleY, P.angleZ, P.bodyX, P.bodyZ, P.eyeBallX, P.eyeBallY, P.eyeLOpen, P.breath };
+            }
+            var first = Play(600);
+            var again = Play(600);
+            for (int k = 0; k < first.Length; k++) Assert.AreEqual(first[k], again[k], 1e-6f, "value " + k);
+
+            // and one step on is a small step away, all through twenty seconds (head and body, in degrees)
+            float worst = 0;
+            var prev = Play(30);
+            for (int n = 31; n <= 600; n++)
+            {
+                var now = Play(n);
+                for (int k = 0; k < 5; k++) worst = Math.Max(worst, Math.Abs(now[k] - prev[k]));
+                prev = now;
+            }
+            Assert.Less(worst, 0.8f, "degrees between two pictures a thirtieth of a second apart");
+        }
+
         [Test]
         public void Idle_Asleep_KeepsTheEyesShut()
         {
