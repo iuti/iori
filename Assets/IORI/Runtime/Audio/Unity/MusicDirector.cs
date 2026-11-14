@@ -34,6 +34,9 @@ namespace Iori.Audio
         /// <summary>曲、列、鳴っているかどうか、一覧のどれかが変わるたびに増える。画面はこれを見て描き直す。</summary>
         public int Version { get; private set; }
 
+        /// <summary>列を最後まで鳴らし終えて止まった(イオリの「曲、止まっちゃったね」)。自分で止めたときは来ない。</summary>
+        public event Action QueueFinished;
+
         /// <summary>プレーヤーの曲の音量(0〜1)。ラジオの曲の音量とは別に覚える。</summary>
         public float Volume { get; private set; } = 1f;
 
@@ -286,6 +289,7 @@ namespace Iori.Audio
                 _savedPositionMs = 0;
                 if (Persist) PlayerPrefs.SetFloat(PrefPosition, 0f);
                 SetActive(false);
+                QueueFinished?.Invoke();
             }
             if (Backend.IsPlaying != _wasPlaying)
             {

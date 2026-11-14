@@ -67,9 +67,19 @@ namespace Iori.EditorTools
             }
             foreach (var t in program.Tracks) Check(t.File);
             if (program.Chime != null) Check(program.Chime.File);
+            if (program.Jiho != null) for (var h = 0; h < 24; h++) Check(program.Jiho.FileFor(h));
             foreach (var p in program.Quiet.Phrases) Check(p.File);
             foreach (var a in program.Ambient) Check(a.File);
             if (missing == 0) Debug.Log("[IORI] radio.json は問題ありません");
+
+            // イオリのセリフ帳
+            var voicePath = Path.Combine(Application.streamingAssetsPath, StreamingAudio.RootFolder, "voice.json");
+            VoiceBook book;
+            try { book = VoiceBook.Parse(File.ReadAllText(voicePath)); }
+            catch (System.Exception e) { Debug.LogError("[IORI] voice.json の読み込みに失敗しました: " + e.Message); return; }
+            var before = missing;
+            foreach (var f in book.Files()) Check(f);
+            if (missing == before) Debug.Log("[IORI] voice.json は問題ありません");
         }
     }
 
