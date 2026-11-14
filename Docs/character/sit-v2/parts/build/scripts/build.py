@@ -75,9 +75,29 @@ _chest = np.zeros((H, W), np.uint8)
 cv2.fillPoly(_chest, [np.array([(470, 335), (520, 318), (640, 305), (705, 330), (760, 345), (800, 380), (800, 445), (470, 445)], np.int32)], 1)
 _chest = _chest.astype(bool) & ~skull
 strong = (satb > 40) & (final[..., 2] > final[..., 0] + 15)
+_hue0 = huehair.copy()
 huehair = np.where(_chest, strong, huehair)
+_cand = (hair_f | hair_s) & _hue0
+_lab, _n = ndi.label(_cand)
+_outside = np.unique(_lab[_cand & ~_chest & (_lab > 0)])
+huehair |= np.isin(_lab, _outside) & _cand
 hcore = (hair_f | hair_s | ahoge) & huehair
 hairall = hcore | ((gray(final) < 95) & dil(hcore, 5) & (hair_f | hair_s | ahoge))   # the locks and their own outlines only
+# hair tips the first masks missed (over the headphones and the collar): hair-coloured strands joined to the locks
+_tips = _hue0 & U & (yy >= 280) & (yy < 450) & ~skull
+_tips &= ~(_chest & ~((satb > 30) & (final[..., 2] > final[..., 0] + 10)))
+_lab, _n = ndi.label(_tips | hairall)
+_keep = np.unique(_lab[hairall & ~_chest & (_lab > 0)])
+extra_hair = np.isin(_lab, _keep) & _tips & ~hairall
+_cups = ndi.binary_fill_holes(cv2.morphologyEx(phones.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8)).astype(bool))
+_spot = (xx > 628) & (xx < 725) & (yy > 288) & (yy < 362) & U & ~_cups & ~((gray(final) > 175) & (satb < 32)) & ~((gray(final) < 85) & (satb < 30)) & ~skull
+_cuphl = _cups & ~phones   # the cups' own highlights
+extra_hair = (extra_hair | _spot) & ~_cuphl
+hairall |= extra_hair
+hairall &= ~_cuphl
+_leftcup_tips = _hue0 & dil(_cups, 3) & (xx < 560) & ~phones & ~_cuphl & (yy >= 280)
+extra_hair |= _leftcup_tips
+hairall |= _leftcup_tips
 notbody = M('face') | gog | tag | earring | ahoge | (skull & (yy < 330))
 _ext = U & (yy >= 280) & (yy < 520) & ~notbody & ~body & ~hairall
 _ext &= ((gray(final) > 170) & (satb < 32)) | (final[..., 0] > 190) & (final[..., 0] - final[..., 2] > 12)   # shirt / skin only
@@ -101,6 +121,24 @@ line_col = np.median(line_px, 0) if len(line_px) else np.array([60, 50, 70.])
 body_rgb[edgeF] = line_col
 Image.fromarray(np.where(F[..., None], body_rgb, final).clip(0, 255).astype(np.uint8)).save('nogen_composite.png')
 body_a = (B | F) | (dil(B | F, 3) & darkf & ~hairall)
+_cl = cv2.morphologyEx(body_a.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8)).astype(bool) & dil(B | F, 3)
+body_a = body_a | (_cl & ~hairall)
+_lab, _n = ndi.label(~body_a)
+_sizes = ndi.sum(np.ones_like(_lab), _lab, range(1, _n + 1))
+_holes = np.isin(_lab, 1 + np.where(_sizes < 600)[0]) & (_lab > 0)
+_known = (B | F) & ~_holes
+_fill = cv2.inpaint(body_rgb.clip(0, 255).astype(np.uint8), (~_known).astype(np.uint8), 4, cv2.INPAINT_TELEA).astype(np.float32)
+body_rgb[_holes] = np.where(hairall[_holes][:, None], _fill[_holes], body_rgb[_holes])
+body_rgb[_holes & ~hairall] = final[_holes & ~hairall]
+body_a = body_a | _holes | _cups
+_under = _cups & hairall
+body_rgb[_under] = _fill[_under]
+body_rgb[_cuphl] = final[_cuphl]
+print('body holes filled', int(_holes.sum()))
+# left of the left cup, above the shoulder line: only the jacket/hood itself, no hair outlines or background between locks
+_zone = (xx < 540) & (yy > 290) & (yy < 400) & ~dil(_cups, 5)
+_solid = cv2.morphologyEx((B & _zone & ~darkf).astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)).astype(bool)
+body_a = body_a & ~(_zone & ~dil(_solid, 3))
 add('body', body_rgb, soft(body_a), group='body')
 
 # 4. face: visible skin from the final, hidden forehead/ears/neck from the shifted bare head
@@ -189,6 +227,8 @@ shirtish = (gray(final) > 188) & (satf < 34)
 hs_a &= ~((shirtish | (skin_f & ~skull)) & ~behind & ~g_out)
 hs_a &= ~eyeM
 hs_a &= ~lowhair
+hs_a |= extra_hair & ~phones
+hs_a &= ~_cuphl
 add('side_hair', hs_rgb, soft(rim(hs_a)), group='hair_side', depth=0.05)
 add('earring', final, soft(rim(earring, 3), 0.5), group='hair_side', depth=0.05, bones=['earring'])
 add('tag', final, soft(tag, 0.5), group='hair_side', depth=0.05, bones=['tag'])
@@ -228,7 +268,13 @@ def key(rgb, a, loose=False):
     n, lab = cv2.connectedComponents(near)
     border = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
     bgm = np.isin(lab, border[border > 0]) | (np.isin(lab, np.arange(1, n))[...] & (ndi.sum(near, lab, np.arange(n + 1))[lab] > 400) & (d < 8))
-    if loose: bgm = bgm | (d < 10)
+    if loose == 'big':
+        _l, _n = ndi.label(d < 10)
+        if _n:
+            _sz = ndi.sum(np.ones_like(_l), _l, range(1, _n + 1))
+            bgm = bgm | (np.isin(_l, 1 + np.where(_sz > 40)[0]) & (_l > 0))
+        bgm = bgm | ((d < 14) & (xx < 565) & (yy > 290) & (yy < 430) & ~dil(_cups, 3))   # background between the locks left of the left cup
+    elif loose: bgm = bgm | (d < 10)
     band = dil(bgm, 5)
     ka = np.clip((d - 5) / (24 - 5), 0, 1)
     ka = ka * ka * (3 - 2 * ka)
@@ -238,7 +284,7 @@ def key(rgb, a, loose=False):
     un = (rgb - (1 - safe) * BG) / safe
     rgb2 = np.where((ka < 1)[..., None], un, rgb)
     return rgb2.clip(0, 255), a2
-layers = [(i, *key(r, a, loose=(i != 'base')), e) for i, r, a, e in layers]
+layers = [(i, *key(r, a, loose=('big' if i == 'body' else i != 'base')), e) for i, r, a, e in layers]
 
 # ---- write the textures
 model_layers = []
