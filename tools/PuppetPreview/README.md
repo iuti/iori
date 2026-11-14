@@ -27,6 +27,7 @@ node tools/PuppetPreview/render.js <出力の頭> <model.json のあるフォル
 ```
 
 - `pose`: その値を `seconds` のあいだ保って、最後の瞬間を 1 枚(`PuppetRenderer.RenderPose` と同じ)。`frames: true` で途中も全部。値は `PuppetParams` の名前(angleX / angleY / angleZ / bodyX / bodyZ / breath / eyeLOpen / eyeROpen / eyeBallX / eyeBallY / mouthOpen / vowel / smile)。
+- `keys`: `[{ "t": 0, "pose": {} }, { "t": 1.2, "pose": { "angleZ": 30 } }, ...]`。キーからキーへなめらかに動かして、全コマを描く(1 つの動きを端まで振って見る)。
 - `idle`: 待機の動き(`PuppetIdle`)を止めの姿から 1/30 秒ずつ進めて、`from` 秒から `seconds` 秒ぶんを描く(`PuppetRenderer.RenderAt` と同じ進め方)。
 - `swing`: 髪と揺れものの揺れの倍率(`PuppetRenderer.swing`)。
 - `every`: 何コマおきに描くか。`dry: true`: 網目は書かず、各コマの数値だけ(長い動きがどこまで行くかを見る)。`only: ["back_hair"]`: そのレイヤーの網目だけ(測るため。絵にはしない)。

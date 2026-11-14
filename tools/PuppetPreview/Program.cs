@@ -109,6 +109,33 @@ static class Program
                     if (i >= start && (i - start) % every == 0) Frame(name + "_" + (i - start).ToString("0000"));
                 }
             }
+            else if (job.TryGetProperty("keys", out var keys))
+            {
+                // a pose that goes from key to key ({"t": seconds, "pose": {...}}, eased), every step's picture
+                var at = new List<float>(); var poses = new List<PuppetParams>();
+                foreach (var k in keys.EnumerateArray())
+                {
+                    var q = new PuppetParams();
+                    if (k.TryGetProperty("pose", out var kp)) SetPose(q, kp);
+                    at.Add(F(k, "t", 0f)); poses.Add(q);
+                }
+                int each = Math.Max(1, (int)F(job, "every", 1f));
+                int steps = (int)Math.Round(at[at.Count - 1] / dt);
+                for (int i = 0; i <= steps; i++)
+                {
+                    float t = i * dt; int k = 0;
+                    while (k < at.Count - 2 && t >= at[k + 1]) k++;
+                    float u = Math.Min(1f, Math.Max(0f, (t - at[k]) / Math.Max(1e-4f, at[k + 1] - at[k]))); u = u * u * (3 - 2 * u);
+                    PuppetParams a = poses[k], b = poses[k + 1], P = rig.param;
+                    P.angleX = a.angleX + (b.angleX - a.angleX) * u; P.angleY = a.angleY + (b.angleY - a.angleY) * u; P.angleZ = a.angleZ + (b.angleZ - a.angleZ) * u;
+                    P.bodyX = a.bodyX + (b.bodyX - a.bodyX) * u; P.bodyZ = a.bodyZ + (b.bodyZ - a.bodyZ) * u; P.breath = a.breath + (b.breath - a.breath) * u;
+                    P.eyeLOpen = a.eyeLOpen + (b.eyeLOpen - a.eyeLOpen) * u; P.eyeROpen = a.eyeROpen + (b.eyeROpen - a.eyeROpen) * u;
+                    P.eyeBallX = a.eyeBallX + (b.eyeBallX - a.eyeBallX) * u; P.eyeBallY = a.eyeBallY + (b.eyeBallY - a.eyeBallY) * u;
+                    P.mouthOpen = a.mouthOpen + (b.mouthOpen - a.mouthOpen) * u; P.vowel = a.vowel + (b.vowel - a.vowel) * u; P.smile = a.smile + (b.smile - a.smile) * u;
+                    rig.Update(i == 0 ? 0f : dt);
+                    if (i % each == 0) Frame(name + "_" + i.ToString("0000"));
+                }
+            }
             else
             {
                 // as PuppetRenderer.RenderPose holds it; "frames": every step's picture, not only the last
