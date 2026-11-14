@@ -23,6 +23,10 @@ namespace Iori.Camp
         public int desktopFrameRate = 60;
         public bool logPerformance = true;
         public float logInterval = 5f;
+        [Tooltip("スマホでは、炎を立体の計算ではなく、前もって焼いた連番の絵(tools/camp/bake_fire.py)の板で出す")]
+        public bool flameCardOnPhone = true;
+        [Tooltip("スマホで、カメラが止まっている間、湖の鏡像を何フレームに 1 回描き直すか")]
+        [Min(1)] public int phoneMirrorInterval = 1;
 
         [Header("シーンの部品(「シーンを組み立てる」が入れる)")]
         public Renderer[] denseGrass;
@@ -43,6 +47,10 @@ namespace Iori.Camp
         static readonly int DepthFxId = Shader.PropertyToID("_IoriDepthFx");
         float _t, _worst;
         int _frames;
+        GameObject _card;
+        Material _cardMaterial;
+        Mesh _cardMesh;
+        bool _cardFailed;
         CampQualityLevel _last = (CampQualityLevel)(-1);
         MaterialPropertyBlock _block;
 
@@ -56,6 +64,53 @@ namespace Iori.Camp
         void OnDisable()
         {
             if (Instance == this) Instance = null;
+            if (_card) DestroyImmediate(_card);
+            if (_cardMaterial) DestroyImmediate(_cardMaterial);
+            if (_cardMesh) DestroyImmediate(_cardMesh);
+            _card = null; _cardMaterial = null; _cardMesh = null;
+        }
+
+        /// <summary>True while the flame is shown as the baked flip book on a card (phones), not as the volume.</summary>
+        public bool FlameIsCard => _card && _card.activeSelf;
+
+        /// <summary>
+        /// The flame as a card with the baked flip book, standing at the foot of the volume's box. Made on
+        /// first use; null if the picture or its shader is missing (then the volume stays).
+        /// </summary>
+        GameObject FlameCard()
+        {
+            if (_card || _cardFailed || !flameMirror) return _card;
+            var shader = Resources.Load<Shader>("IoriCamp/IoriFireCard");
+            var book = Resources.Load<Texture2D>("IoriCamp/fire_flipbook");
+            if (!shader || !shader.isSupported || !book)
+            {
+                Debug.LogWarning("[IORI] 炎の連番の絵(Resources/IoriCamp/fire_flipbook と IoriFireCard)が使えないので、立体の炎のままにします");
+                _cardFailed = true;
+                return null;
+            }
+            _cardMaterial = new Material(shader) { name = "CampFlameCard (自動生成)", hideFlags = HideFlags.HideAndDontSave };
+            _cardMaterial.SetTexture("_Book", book);
+            _cardMesh = new Mesh { name = "Flame card", hideFlags = HideFlags.HideAndDontSave };
+            _cardMesh.SetVertices(new[] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0) });
+            _cardMesh.SetUVs(0, new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) });
+            _cardMesh.SetTriangles(new[] { 0, 2, 1, 0, 3, 2 }, 0);
+            // (the shader places the corners itself: the card is never left out for being off screen while the fire is near)
+            _cardMesh.bounds = new Bounds(new Vector3(0f, 0.8f, 0f), new Vector3(3f, 3f, 3f));
+
+            var box = flameMirror.transform;
+            _card = new GameObject("炎(連番の絵、自動生成)") { hideFlags = HideFlags.HideAndDontSave };
+            _card.transform.SetParent(box.parent, false);
+            // the flame starts at the bottom of the volume's box
+            _card.transform.position = box.position - Vector3.up * (box.lossyScale.y * 0.5f);
+            _card.transform.rotation = Quaternion.identity;
+            _card.AddComponent<MeshFilter>().sharedMesh = _cardMesh;
+            var r = _card.AddComponent<MeshRenderer>();
+            r.sharedMaterial = _cardMaterial;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            r.lightProbeUsage = LightProbeUsage.Off;
+            r.reflectionProbeUsage = ReflectionProbeUsage.Off;
+            return _card;
         }
 
         void OnValidate() => _last = (CampQualityLevel)(-1);
@@ -91,14 +146,18 @@ namespace Iori.Camp
                 _block.SetFloat("_Steps", 22f);
                 flame.SetPropertyBlock(_block);
             }
+            // On a phone the flame is the baked flip book on a card, for the main camera and the mirror images alike.
+            var card = !full && flameCardOnPhone && Application.isPlaying ? FlameCard() : null;
+            if (_card) _card.SetActive(card);
             if (flameMirror)
             {
+                flameMirror.gameObject.SetActive(!card);
                 flameMirror.gameObject.layer = full ? CampLayers.MirrorOnly : 0;
                 flameMirror.GetPropertyBlock(_block);
                 _block.SetFloat("_Steps", full ? 14f : 12f);
                 flameMirror.SetPropertyBlock(_block);
             }
-            if (lakeMirror) lakeMirror.scale = full ? 0.5f : 0.33f;
+            if (lakeMirror) { lakeMirror.scale = full ? 0.5f : 0.33f; lakeMirror.interval = full ? 1 : Mathf.Max(1, phoneMirrorInterval); }
             if (puddleMirror) { puddleMirror.render = full; puddleMirror.scale = 0.5f; }
 
             if (Application.isPlaying)

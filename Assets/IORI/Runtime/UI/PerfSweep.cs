@@ -59,6 +59,13 @@ namespace Iori.Ui
 
         static WaitForSecondsRealtime Wait(float s) => new WaitForSecondsRealtime(s);
 
+        /// <summary>No limit on the frame rate while measuring (CampQuality.Apply sets the limit again).</summary>
+        static void Uncap()
+        {
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 300;
+        }
+
         void Line(string text)
         {
             _out.AppendLine(text);
@@ -121,8 +128,7 @@ namespace Iori.Ui
             var camData = cam.GetUniversalAdditionalCameraData();
             int sleep = Screen.sleepTimeout;
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
-            QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = 300;
+            Uncap();
 
             Line($"device={SystemInfo.deviceModel} gpu={SystemInfo.graphicsDeviceName} api={SystemInfo.graphicsDeviceType} screen={Screen.width}x{Screen.height} refresh={Screen.currentResolution.refreshRateRatio.value:0} quality={q.Applied}");
             Line($"settings: scale={urp.renderScale:0.00} msaa={urp.msaaSampleCount} hdr={urp.supportsHDR} lake mirror scale={(q.lakeMirror ? q.lakeMirror.scale : 0f):0.00}");
@@ -143,7 +149,15 @@ namespace Iori.Ui
             int msaa = urp.msaaSampleCount;
             bool hdr = urp.supportsHDR;
             var lake = q.lakeMirror;
-            var flame = q.flameMirror && q.flameMirror.gameObject.activeSelf ? q.flameMirror : q.flame;
+            // (the flame as it is now: the baked card on a phone, the volume otherwise)
+            bool cardWanted = q.flameCardOnPhone;
+            var flame = q.FlameIsCard ? null : q.flameMirror && q.flameMirror.gameObject.activeSelf ? q.flameMirror : q.flame;
+            Line($"flame: {(q.FlameIsCard ? "card (baked flip book)" : "volume")}");
+            if (q.FlameIsCard)
+            {
+                // the volume instead of the card, to see what the card saves
+                yield return With("flame as the volume", () => { q.flameCardOnPhone = false; q.Apply(); Uncap(); }, () => { q.flameCardOnPhone = cardWanted; q.Apply(); Uncap(); });
+            }
             var grass = q.denseGrass != null && q.denseGrass.Length > 0 ? q.denseGrass[0] : null;
 
             if (lake)
@@ -179,6 +193,8 @@ namespace Iori.Ui
             {
                 yield return Wait(1.5f);
                 yield return Measure("fire sheet");
+                if (q.FlameIsCard)
+                    yield return With("fire sheet, flame as the volume", () => { q.flameCardOnPhone = false; q.Apply(); Uncap(); }, () => { q.flameCardOnPhone = cardWanted; q.Apply(); Uncap(); });
                 yield return With("fire sheet, no blur", () => UiBackdrop.Off = true, () => UiBackdrop.Off = false);
                 if (flame)
                 {
