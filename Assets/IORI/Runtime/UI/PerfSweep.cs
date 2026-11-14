@@ -14,15 +14,18 @@ namespace Iori.Ui
     /// A development aid for finding out what makes the camp slow on a phone. Started with the argument
     /// "-ioriPerfSweep" (desktop), or on Android with
     ///   adb shell am start -n PACKAGE/ACTIVITY --es iori -ioriPerfSweep
-    /// the app runs by itself for about three minutes: it switches the costly parts of the picture off
-    /// one at a time (the lake's mirror image, the flame, the finer resolution, the blur behind the
-    /// glass and so on), measures the frame time of each, and writes one line per measurement to the log
-    /// ("[IORI] sweep ...") and all of them to perf_sweep.txt in the app's data folder. The frame rate
-    /// limit is lifted meanwhile. Without the argument it does nothing.
+    /// the app runs by itself for about five minutes: it switches the costly parts of the picture off
+    /// one at a time (everything, the sky, each kind of surface by its shader, the lake's mirror image,
+    /// the lamps, the finer resolution, the blur behind the glass and so on), measures the frame time of
+    /// each, and writes one line per measurement to the log ("[IORI] sweep ...") and all of them to
+    /// perf_sweep.txt in the app's data folder. Each line also says where the time went: main = the
+    /// scripts' thread, render = the thread that hands the picture to the graphics chip, wait = the main
+    /// thread waiting for the screen, gpu = the graphics chip. The frame rate limit is lifted meanwhile.
+    /// Without the argument it does nothing.
     /// </summary>
     public sealed class PerfSweep : MonoBehaviour
     {
-        const float SettleSeconds = 1.5f, MeasureSeconds = 5f;
+        const float SettleSeconds = 1.2f, MeasureSeconds = 4f;
 
         readonly StringBuilder _out = new StringBuilder();
         readonly List<float> _frames = new List<float>(2048);
@@ -77,8 +80,8 @@ namespace Iori.Ui
         {
             yield return Wait(SettleSeconds);
             _frames.Clear();
-            double gpu = 0, cpu = 0;
-            int gpuCount = 0, cpuCount = 0;
+            double gpu = 0, main = 0, render = 0, wait = 0;
+            int timed = 0;
             float t = 0f;
             while (t < MeasureSeconds)
             {
@@ -87,19 +90,21 @@ namespace Iori.Ui
                 t += dt;
                 _frames.Add(dt);
                 FrameTimingManager.CaptureFrameTimings();
-                if (FrameTimingManager.GetLatestTimings(1, _timing) > 0)
+                if (FrameTimingManager.GetLatestTimings(1, _timing) > 0 && _timing[0].cpuFrameTime > 0)
                 {
-                    if (_timing[0].gpuFrameTime > 0) { gpu += _timing[0].gpuFrameTime; gpuCount++; }
-                    if (_timing[0].cpuFrameTime > 0) { cpu += _timing[0].cpuFrameTime; cpuCount++; }
+                    gpu += _timing[0].gpuFrameTime;
+                    main += _timing[0].cpuMainThreadFrameTime;
+                    render += _timing[0].cpuRenderThreadFrameTime;
+                    wait += _timing[0].cpuMainThreadPresentWaitTime;
+                    timed++;
                 }
             }
             if (_frames.Count == 0) yield break;
             _frames.Sort();
             float avg = t / _frames.Count * 1000f;
             float p95 = _frames[Mathf.Min(_frames.Count - 1, (int)(_frames.Count * 0.95f))] * 1000f;
-            string g = gpuCount > 0 ? (gpu / gpuCount).ToString("0.0") : "?";
-            string c = cpuCount > 0 ? (cpu / cpuCount).ToString("0.0") : "?";
-            Line($"{name}: avg_ms={avg:0.0} fps={1000f / avg:0.0} p95_ms={p95:0.0} gpu_ms={g} cpu_ms={c} frames={_frames.Count}");
+            string parts = timed > 0 ? $"gpu_ms={gpu / timed:0.0} main_ms={main / timed:0.0} render_ms={render / timed:0.0} wait_ms={wait / timed:0.0}" : "gpu_ms=? main_ms=? render_ms=? wait_ms=?";
+            Line($"{name}: avg_ms={avg:0.0} fps={1000f / avg:0.0} p95_ms={p95:0.0} {parts} frames={_frames.Count}");
         }
 
         /// <summary>Measures with one thing changed, then puts it back.</summary>
@@ -147,62 +152,109 @@ namespace Iori.Ui
             // ---- one part at a time (night, home view)
             float scale = urp.renderScale;
             int msaa = urp.msaaSampleCount;
-            bool hdr = urp.supportsHDR;
+            var canvas = ui.GetComponent<Canvas>();
             var lake = q.lakeMirror;
-            // (the flame as it is now: the baked card on a phone, the volume otherwise)
-            bool cardWanted = q.flameCardOnPhone;
-            var flame = q.FlameIsCard ? null : q.flameMirror && q.flameMirror.gameObject.activeSelf ? q.flameMirror : q.flame;
             Line($"flame: {(q.FlameIsCard ? "card (baked flip book)" : "volume")}");
-            if (q.FlameIsCard)
+
+            // everything that is drawn in the scene, by the shader that draws it
+            var groups = new SortedDictionary<string, List<Renderer>>();
+            var all = new List<Renderer>();
+            foreach (var r in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
             {
-                // the volume instead of the card, to see what the card saves
-                yield return With("flame as the volume", () => { q.flameCardOnPhone = false; q.Apply(); Uncap(); }, () => { q.flameCardOnPhone = cardWanted; q.Apply(); Uncap(); });
+                if (!r.enabled || !r.gameObject.activeInHierarchy) continue;
+                all.Add(r);
+                string shader = r.sharedMaterial && r.sharedMaterial.shader ? r.sharedMaterial.shader.name : "(no material)";
+                if (!groups.TryGetValue(shader, out var list)) groups[shader] = list = new List<Renderer>();
+                list.Add(r);
             }
-            var grass = q.denseGrass != null && q.denseGrass.Length > 0 ? q.denseGrass[0] : null;
+            // (the baked flame makes itself and hides from such a search)
+            var card = q.FlameCardRenderer;
+            if (card && card.gameObject.activeInHierarchy) { all.Add(card); groups["IORI/Camp/FireCard"] = new List<Renderer> { card }; }
+            Action<List<Renderer>, bool> show = (list, on) => { foreach (var r in list) if (r) r.enabled = on; };
+
+            var clear = cam.clearFlags;
+            var back = cam.backgroundColor;
+            int mask = cam.cullingMask;
+            var sky = atm.skyMaterial;
+            Action plainSky = () => { cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.02f, 0.03f, 0.06f, 1f); };
+            Action realSky = () => { cam.clearFlags = clear; cam.backgroundColor = back; };
+            Action nothing = () => { plainSky(); cam.cullingMask = 0; if (lake) lake.render = false; };
+            Action everything = () => { realSky(); cam.cullingMask = mask; if (lake) lake.render = true; };
+
+            // the floor: what a frame costs before anything of the scene is drawn
+            yield return With("nothing drawn (plain background, no mirror image)", nothing, everything);
+            if (camData)
+                yield return With("nothing drawn, no finish", () => { nothing(); camData.renderPostProcessing = false; }, () => { everything(); camData.renderPostProcessing = true; });
+            yield return With("nothing drawn, no ui", () => { nothing(); canvas.enabled = false; }, () => { everything(); canvas.enabled = true; });
+            yield return With("nothing drawn, render scale 0.4", () => { nothing(); urp.renderScale = 0.4f; }, () => { everything(); urp.renderScale = scale; });
+
+            // the sky (with the mountains, the town and the far shore: all one shader)
+            yield return With("sky only (nothing else drawn, no mirror image)", () => { show(all, false); if (lake) lake.render = false; }, () => { show(all, true); if (lake) lake.render = true; });
+            yield return With("no sky in the main view (the mirror image keeps it)", plainSky, realSky);
+            yield return With("no sky anywhere", () => { atm.skyMaterial = null; RenderSettings.skybox = null; plainSky(); }, () => { atm.skyMaterial = sky; RenderSettings.skybox = sky; realSky(); });
+
+            // each kind of surface
+            foreach (var g in groups)
+            {
+                long tris = 0;
+                foreach (var r in g.Value)
+                {
+                    var mf = r.GetComponent<MeshFilter>();
+                    var mesh = mf ? mf.sharedMesh : null;
+                    if (!mesh) continue;
+                    for (int i = 0; i < mesh.subMeshCount; i++) tris += mesh.GetIndexCount(i) / 3;
+                }
+                var list = g.Value;
+                yield return With($"without {g.Key} ({list.Count} things, {tris} triangles)", () => show(list, false), () => show(list, true));
+            }
 
             if (lake)
             {
                 yield return With("no lake mirror", () => lake.render = false, () => lake.render = true);
-                yield return With("lake mirror every 2nd frame", () => lake.interval = 2, () => lake.interval = 1);
                 yield return With("lake mirror every 4th frame", () => lake.interval = 4, () => lake.interval = 1);
             }
-            if (flame)
-                yield return With("no flame", () => flame.gameObject.SetActive(false), () => flame.gameObject.SetActive(true));
-            yield return With("render scale 0.7", () => urp.renderScale = 0.7f, () => urp.renderScale = scale);
-            yield return With("render scale 0.6", () => urp.renderScale = 0.6f, () => urp.renderScale = scale);
-            yield return With("no msaa", () => urp.msaaSampleCount = 1, () => urp.msaaSampleCount = msaa);
-            if (camData)
-                yield return With("no finish (bloom, colour)", () => camData.renderPostProcessing = false, () => camData.renderPostProcessing = true);
-            yield return With("no hdr", () => urp.supportsHDR = false, () => urp.supportsHDR = hdr);
+            // the fire, the lantern and the lamp in the tent: every surface works out each of them for every pixel
+            var lamps = new List<Light>();
+            foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
+                if (l.enabled && l.type != LightType.Directional) lamps.Add(l);
+            yield return With($"no lamps ({lamps.Count} lights off)", () => { foreach (var l in lamps) l.enabled = false; }, () => { foreach (var l in lamps) l.enabled = true; });
             if (q.keyLight)
             {
                 var shadows = q.keyLight.shadows;
                 yield return With("no shadows", () => q.keyLight.shadows = LightShadows.None, () => q.keyLight.shadows = shadows);
             }
-            if (grass)
-                yield return With("no grass", () => grass.enabled = false, () => grass.enabled = true);
+            yield return With("no msaa", () => urp.msaaSampleCount = 1, () => urp.msaaSampleCount = msaa);
+            if (camData)
+                yield return With("no finish (bloom, colour)", () => camData.renderPostProcessing = false, () => camData.renderPostProcessing = true);
+            yield return With("no ui", () => canvas.enabled = false, () => canvas.enabled = true);
+            yield return With("render scale 0.7", () => urp.renderScale = 0.7f, () => urp.renderScale = scale);
+            yield return With("render scale 0.6", () => urp.renderScale = 0.6f, () => urp.renderScale = scale);
+            yield return With("render scale 0.4", () => urp.renderScale = 0.4f, () => urp.renderScale = scale);
 
             Action light = () => { if (lake) lake.interval = 4; urp.renderScale = 0.7f; urp.msaaSampleCount = 1; };
             Action heavy = () => { if (lake) lake.interval = 1; urp.renderScale = scale; urp.msaaSampleCount = msaa; };
             yield return With("light set (mirror every 4th, scale 0.7, no msaa)", light, heavy);
-            if (flame)
-                yield return With("light set, no flame", () => { light(); flame.gameObject.SetActive(false); }, () => { heavy(); flame.gameObject.SetActive(true); });
+
+            // a smaller screen (the phone enlarges it by itself): everything shrinks with it, the UI and the last copy to the screen too
+            int sw = Screen.width, sh = Screen.height;
+            int smallW = 720, smallH = Mathf.RoundToInt(720f * sh / Mathf.Max(1, sw));
+            Screen.SetResolution(smallW, smallH, Screen.fullScreenMode);
+            yield return Wait(1.5f);
+            urp.renderScale = 1f;
+            yield return Measure($"screen {Screen.width}x{Screen.height}, render scale 1.0");
+            urp.renderScale = 0.85f;
+            yield return Measure($"screen {Screen.width}x{Screen.height}, render scale 0.85");
+            urp.renderScale = scale;
+            Screen.SetResolution(sw, sh, Screen.fullScreenMode);
+            yield return Wait(1.5f);
 
             // ---- close to the fire, with its sheet open
             if (ui.Open(CampPropKind.Fire))
             {
                 yield return Wait(1.5f);
                 yield return Measure("fire sheet");
-                if (q.FlameIsCard)
-                    yield return With("fire sheet, flame as the volume", () => { q.flameCardOnPhone = false; q.Apply(); Uncap(); }, () => { q.flameCardOnPhone = cardWanted; q.Apply(); Uncap(); });
                 yield return With("fire sheet, no blur", () => UiBackdrop.Off = true, () => UiBackdrop.Off = false);
-                if (flame)
-                {
-                    yield return With("fire sheet, no flame", () => flame.gameObject.SetActive(false), () => flame.gameObject.SetActive(true));
-                    yield return With("fire sheet, light set, no flame, no blur",
-                        () => { light(); flame.gameObject.SetActive(false); UiBackdrop.Off = true; },
-                        () => { heavy(); flame.gameObject.SetActive(true); UiBackdrop.Off = false; });
-                }
+                yield return With("fire sheet, light set", light, heavy);
                 ui.Close();
                 yield return Wait(1.2f);
             }

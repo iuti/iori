@@ -80,6 +80,8 @@ namespace Iori.Camp
 
         /// <summary>True while the flame is shown as the baked flip book on a card (phones), not as the volume.</summary>
         public bool FlameIsCard => _card && _card.activeSelf;
+        /// <summary>The card's renderer, once it has been made (for measuring).</summary>
+        public Renderer FlameCardRenderer => _card ? _card.GetComponent<Renderer>() : null;
 
         /// <summary>
         /// The flame as a card with the baked flip book, standing at the foot of the volume's box. Made on
