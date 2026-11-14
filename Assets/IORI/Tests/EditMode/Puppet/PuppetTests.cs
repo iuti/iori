@@ -144,6 +144,29 @@ namespace Iori.Puppet.Tests
         }
 
         [Test]
+        public void Mouth_WithASmallFrame_ClimbsFourSteps_AndTheRoundVowelStillWins()
+        {
+            string json = Model.Replace(@"""frames"": [""t/mouth0.png"", ""t/mouth1.png"", ""t/mouth2.png""]",
+                @"""frames"": [""t/m0.png"", ""t/m1.png"", ""t/m2.png"", ""t/m3.png"", ""t/m4.png""], ""visemes"": [""closed"", ""small"", ""half"", ""open"", ""round""]");
+            var r = Rig(json);
+            int Shown(float open, float vowel = 0)
+            {
+                r.param.mouthOpen = open; r.param.vowel = vowel;
+                Run(r, 0.3f);
+                return Draw(r, "mouth", PuppetTexture.Frame).frame;
+            }
+            Assert.That(Shown(0), Is.EqualTo(0));
+            Assert.That(Shown(0.2f), Is.EqualTo(1));
+            Assert.That(Shown(0.45f), Is.EqualTo(2));
+            Assert.That(Shown(1), Is.EqualTo(3));
+            Assert.That(Shown(0.45f), Is.EqualTo(2));
+            Assert.That(Shown(0.2f), Is.EqualTo(1));
+            Assert.That(Shown(0.5f, -1), Is.EqualTo(4));
+            Assert.That(Shown(0), Is.EqualTo(0));
+            AssertFinite(r);
+        }
+
+        [Test]
         public void LayersNamedStill_NeverMove_EvenAboveTheSeatLine()
         {
             // the legs and the chair as one layer whose knees rise above the seat line, in front of the body

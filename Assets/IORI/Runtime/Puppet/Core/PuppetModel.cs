@@ -8,6 +8,8 @@
 //   still       ["layer id", ...]: layers that never move, whatever their place (a seated figure: the legs and the
 //               chair as one layer, whose knees rise above the seat line in front of the body)
 // With anchors.bottom_y on the seat line, body layers wholly below it stay still without being listed.
+// And one more kind of mouth frame in a mouth layer's "visemes": "small", a mouth barely open, shown between "closed"
+// and "half" as mouthOpen grows (a quiet voice then moves the lips without showing the teeth).
 using System;
 using System.Collections.Generic;
 using Iori.Audio;

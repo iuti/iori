@@ -65,6 +65,8 @@ namespace Iori.Puppet
         const float NeckFollow = 0.2f, NeckFollowY = 0.6f, NeckFollowX0 = 0.6f, NeckFollowX1 = 1.3f;
         const float NeckShadow = 0.3f, ProcJaw = 0.015f, IrisDrop = 0.3f;
         const float MouthAt1 = 0.12f, MouthAt2 = 0.5f, MouthHyst = 0.04f, MouthHold = 0.055f;
+        // with a "small" frame between closed and half (ours, see PuppetModel): small from MouthAt1, half and open from these
+        const float MouthAtHalfS = 0.3f, MouthAtOpenS = 0.62f;
         const float VowelIn = 0.65f, VowelOut = 0.35f, TalkLatch = 0.4f;
         const float SideAt0 = 0.5f, SideAt1 = 0.85f;
 
@@ -99,6 +101,10 @@ namespace Iori.Puppet
         readonly string[] _frameKind;
         readonly float[] _frameJaw;
         readonly int _visRound = -1, _visWide = -1, _visShut = -1;
+        // the frames mouthOpen walks through, least open first, and the mouthOpen each (after the first) starts at
+        readonly int[] _ampFrame;
+        readonly float[] _ampAt;
+        readonly float _atHalf = MouthAt1, _atOpen = MouthAt2;
         readonly bool _anyJaw;
 
         /// <summary>The layer's part of the model's one lattice: its first cell and how many cells it spans.</summary>
@@ -173,7 +179,7 @@ namespace Iori.Puppet
                 for (int i = 0; i < frames; i++)
                 {
                     string k = _frameKind[i];
-                    float j = k == "half" ? (A.jawOpen > 0 ? A.jawHalf : 0) : k == "open" ? A.jawOpen : k == "round" ? A.jawRound : k == "wide" ? A.jawWide : 0;
+                    float j = k == "half" ? (A.jawOpen > 0 ? A.jawHalf : 0) : k == "small" ? (A.jawOpen > 0 ? 0.4f * A.jawHalf : 0) : k == "open" ? A.jawOpen : k == "round" ? A.jawRound : k == "wide" ? A.jawWide : 0;
                     _frameJaw[i] = j; some |= j > 0;
                 }
                 float proc = float.IsNaN(model.rig.jaw) ? ProcJaw : model.rig.jaw;
@@ -183,7 +189,7 @@ namespace Iori.Puppet
                     for (int i = 0; i < frames; i++)
                     {
                         string k = _frameKind[i];
-                        float amt = k == "half" ? 0.45f : k == "open" ? 1f : k == "round" ? 0.7f : k == "wide" ? 0.35f : 0f;
+                        float amt = k == "half" ? 0.45f : k == "small" ? 0.18f : k == "open" ? 1f : k == "round" ? 0.7f : k == "wide" ? 0.35f : 0f;
                         _frameJaw[i] = proc * fh * amt; some |= _frameJaw[i] > 0;
                     }
                 }
@@ -196,6 +202,19 @@ namespace Iori.Puppet
                 else if (_frameKind[i] == "shut") _visShut = i;
             }
             _mouthW = new float[frames];
+            // the ladder mouthOpen climbs: closed, (small,) half, open, as far as the model has them
+            var rungs = new List<int>(); var at = new List<float>();
+            bool small = Array.IndexOf(_frameKind, "small") >= 0;
+            if (small) { _atHalf = MouthAtHalfS; _atOpen = MouthAtOpenS; }
+            foreach (string kind in new[] { "closed", "small", "half", "open" })
+            {
+                int i = Array.IndexOf(_frameKind, kind);
+                if (i < 0) continue;
+                if (rungs.Count > 0) at.Add(kind == "small" ? MouthAt1 : kind == "half" ? _atHalf : _atOpen);
+                rungs.Add(i);
+            }
+            if (rungs.Count == 0) rungs.Add(0);
+            _ampFrame = rungs.ToArray(); _ampAt = at.ToArray();
 
             layers = new PuppetLayer[model.layers.Length];
             for (int i = 0; i < layers.Length; i++)
@@ -583,16 +602,15 @@ namespace Iori.Puppet
         void StepMouth(float dt)
         {
             float m = Math.Min(1f, Math.Max(0f, param.mouthOpen)), v = Math.Min(1f, Math.Max(-1f, param.vowel));
-            const float t1 = MouthAt1, t2 = MouthAt2, h = MouthHyst;
+            const float h = MouthHyst;
             _mouthHeld += dt;
-            int a = _mouthAmp;
-            if (a == 0 && m > t1 + h) a = m > t2 + h ? 2 : 1;
-            else if (a == 1 && (m < t1 - h || m > t2 + h)) a = m < t1 - h ? 0 : 2;
-            else if (a == 2 && m < t2 - h) a = m < t1 - h ? 0 : 1;
+            int a = Math.Min(_mouthAmp, _ampAt.Length);
+            if (a < _ampAt.Length && m > _ampAt[a] + h) { do a++; while (a < _ampAt.Length && m > _ampAt[a] + h); }
+            else while (a > 0 && m < _ampAt[a - 1] - h) a--;
             int s = _mouthShape;
             if (s == 0 || (s == 1 ? v > -VowelOut : v < VowelOut)) s = v < -VowelIn ? 1 : v > VowelIn ? 2 : 0;
             int shaped = s == 1 ? _visRound : s == 2 ? _visWide : -1;
-            int want = a > 0 && shaped >= 0 ? shaped : Math.Min(a, _mouthW.Length - 1);
+            int want = a > 0 && shaped >= 0 ? shaped : _ampFrame[a];
             if (want == 0 && _talkLeft > 0 && _visShut >= 0) want = _visShut;
             if (want == _mouthFrame) { _mouthAmp = a; _mouthShape = s; }
             else if (_mouthHeld >= MouthHold) { _mouthFrame = want; _mouthAmp = a; _mouthShape = s; _mouthHeld = 0; }
@@ -606,7 +624,7 @@ namespace Iori.Puppet
         float FrameEase(int i, float m)
         {
             string kind = _frameKind[i];
-            return kind == "half" ? Smooth(MouthAt1, MouthAt2, m) : kind == "open" ? Smooth(MouthAt2, 1, m) : Smooth(MouthAt1, 1, m);
+            return kind == "half" ? Smooth(_atHalf, _atOpen, m) : kind == "open" ? Smooth(_atOpen, 1, m) : kind == "small" ? Smooth(MouthAt1, _atHalf, m) : Smooth(MouthAt1, 1, m);
         }
 
         /// <summary>The hair's springs: per group a chain of two, thrown by the hair root's speed, the head's own
