@@ -551,6 +551,8 @@ namespace Iori.Camp.EditorTools
             AssetDatabase.SaveAssets();
 
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            // opening a scene clears away assets nothing holds: the puppet made above is one of them
+            if (puppetDir != null) puppet = Load<Iori.Puppet.PuppetAsset>(puppetDir + "/puppet.asset");
             foreach (var go in scene.GetRootGameObjects()) UnityEngine.Object.DestroyImmediate(go);
 
             // ---- camera
@@ -1048,6 +1050,9 @@ namespace Iori.Camp.EditorTools
                 rig.Snap();
                 ShaderUtil.allowAsyncCompilation = oldAsync;
             }
+            // the puppet as it was drawn into its texture, apart from the board and its light: to tell a fault in the
+            // layers from a fault in the board
+            if (puppet) PuppetImport.Dump(puppet, dir);
             Debug.Log("[IORI] shots saved to " + dir);
             LogShaderMessages();
             LogStats(mirrors.Length > 0 ? mirrors[0] : null);

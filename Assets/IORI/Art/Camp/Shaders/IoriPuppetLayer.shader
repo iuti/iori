@@ -1,6 +1,6 @@
 // One layer of the moving puppet, drawn into the two textures the character board then shows
 // (PuppetRenderer): her colors and her normals, layer over layer, as a painting tool lays them.
-// Both come out multiplied by alpha; the board's shader (IoriCharacter, _Premultiplied) divides again.
+// Both come out multiplied by alpha; the board's shader (IoriCharacter, _IoriPuppetBoard) divides again.
 // The layers' colors are read as the numbers in the file (their textures are imported with sRGB off)
 // and laid over each other as such, which is how the tool that drew them does it.
 // No includes on purpose: it is drawn outside of any camera, with its own matrix.

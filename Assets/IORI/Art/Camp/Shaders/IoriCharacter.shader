@@ -24,8 +24,9 @@
 //   shade moves with it and leans with the flame (_Flicker, _Dance; CampAtmosphere's _IoriFireFlicker).
 // Drawn as a solid thing so that depth of field and shadows treat her properly.
 // When she moves (PuppetRenderer), the picture and the normals are two textures her layers were drawn
-// into a moment ago: there the colors come multiplied by alpha and still encoded for the screen
-// (_Premultiplied), and the board's own breathing sway is off (the puppet breathes by itself).
+// into a moment ago: there the colors come multiplied by alpha and still encoded for the screen,
+// and the board's own breathing sway is off (the puppet breathes by itself). PuppetRenderer says so
+// with _IoriPuppetBoard, a value for all shaders (there is one Iori).
 Shader "IORI/Camp/Character"
 {
     Properties
@@ -54,7 +55,6 @@ Shader "IORI/Camp/Character"
         _Glint ("Fire glinting on gold fittings", Range(0, 8)) = 1
         _Flicker ("Her firelight swelling and sinking with the fire", Range(0, 3)) = 1
         _Dance ("The border of light moving with the flicker", Range(0, 3)) = 1
-        _Premultiplied ("Picture drawn by the puppet (color times alpha, screen encoded)", Float) = 0
     }
     SubShader
     {
@@ -70,8 +70,8 @@ Shader "IORI/Camp/Character"
             float _NormalStrength, _Cel, _CelEdge, _CelSoft, _Wrap, _SkyBack, _LampInDaylight;
             float _LampFromSide, _LampUpFade, _EdgeGlow, _EdgeWidth, _Glint, _Flicker, _Dance;
             float _LampFill, _LampSoft, _ShadeDeep, _EdgeGlowOnWhite;
-            float _Premultiplied;
         CBUFFER_END
+        float _IoriPuppetBoard;     // 1 while the picture is the puppet's (PuppetRenderer)
         TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
         TEXTURE2D(_NormalTex); SAMPLER(sampler_NormalTex);
 
@@ -79,7 +79,7 @@ Shader "IORI/Camp/Character"
         float4 IoriPicture(float2 uv)
         {
             float4 t = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
-            if (_Premultiplied > 0.5) t.rgb = SRGBToLinear(saturate(t.rgb / max(t.a, 1e-3)));
+            if (_IoriPuppetBoard > 0.5) t.rgb = SRGBToLinear(saturate(t.rgb / max(t.a, 1e-3)));
             return t;
         }
 
@@ -87,15 +87,16 @@ Shader "IORI/Camp/Character"
         float3 IoriPictureNormal(float2 uv)
         {
             float4 n = SAMPLE_TEXTURE2D(_NormalTex, sampler_NormalTex, uv);
-            if (_Premultiplied > 0.5) n.rgb = saturate(n.rgb / max(n.a, 1e-3));
+            if (_IoriPuppetBoard > 0.5) n.rgb = saturate(n.rgb / max(n.a, 1e-3));
             return n.rgb;
         }
 
         float3 IoriBreath(float3 p, float2 uv)
         {
             float t = IoriTime();
-            p.y += sin(t * 1.5) * 0.006 * smoothstep(0.45, 0.8, uv.y) * _Breath;
-            p.x += sin(t * 0.6) * 0.004 * smoothstep(0.2, 1.0, uv.y) * _Breath;
+            float sway = _Breath * (1.0 - step(0.5, _IoriPuppetBoard));
+            p.y += sin(t * 1.5) * 0.006 * smoothstep(0.45, 0.8, uv.y) * sway;
+            p.x += sin(t * 0.6) * 0.004 * smoothstep(0.2, 1.0, uv.y) * sway;
             return p;
         }
         ENDHLSL

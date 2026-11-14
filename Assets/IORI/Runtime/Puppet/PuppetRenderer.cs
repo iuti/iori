@@ -34,7 +34,7 @@ namespace Iori.Puppet
 
         static readonly int MainTexId = Shader.PropertyToID("_MainTex"), NormalTexId = Shader.PropertyToID("_NormalTex");
         static readonly int AlphaId = Shader.PropertyToID("_Alpha"), StencilRefId = Shader.PropertyToID("_StencilRef"), VpId = Shader.PropertyToID("_PuppetVP");
-        static readonly int TexelId = Shader.PropertyToID("_MainTex_TexelSize"), PremultipliedId = Shader.PropertyToID("_Premultiplied"), BreathId = Shader.PropertyToID("_Breath");
+        static readonly int TexelId = Shader.PropertyToID("_MainTex_TexelSize"), BoardId = Shader.PropertyToID("_IoriPuppetBoard");
 
         PuppetRig _rig;
         PuppetIdle _idle;
@@ -65,6 +65,7 @@ namespace Iori.Puppet
         void Release()
         {
             if (_board) _board.SetPropertyBlock(null);
+            if (_rig != null) Shader.SetGlobalFloat(BoardId, 0f);
             if (_color) { _color.Release(); DestroyImmediate(_color); }
             if (_normal) { _normal.Release(); DestroyImmediate(_normal); }
             if (_meshes != null) foreach (var m in _meshes) if (m) DestroyImmediate(m);
@@ -249,9 +250,10 @@ namespace Iori.Puppet
             _block.SetTexture(NormalTexId, _normal);
             // the rims are measured in the drawing's own pixels, whatever size it is kept at here
             _block.SetVector(TexelId, new Vector4(1f / model.canvasW, 1f / model.canvasH, model.canvasW, model.canvasH));
-            _block.SetFloat(PremultipliedId, 1f);
-            _block.SetFloat(BreathId, 0f);
             _board.SetPropertyBlock(_block);
+            // how the board's shader is to read them (color times alpha, encoded for the screen). Said to all shaders
+            // rather than to this board alone: there is one Iori, and every view of her (the mirrors too) agrees
+            Shader.SetGlobalFloat(BoardId, 1f);
         }
     }
 }

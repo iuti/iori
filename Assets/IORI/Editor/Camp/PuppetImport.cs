@@ -50,6 +50,57 @@ namespace Iori.Camp.EditorTools
             catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
         }
 
+        /// <summary>Writes what the puppet draws, as drawn at rest: puppet_color.png (her colors as the layers' files
+        /// have them, not multiplied by alpha: it should look like the drawing the model was made from),
+        /// puppet_normals.png and puppet_draws.txt (what was drawn in which order).</summary>
+        public static void Dump(PuppetRenderer puppet, string dir)
+        {
+            puppet.RenderAt(0f);
+            if (puppet.Rig == null || !puppet.ColorTexture) { Debug.LogWarning("[IORI] puppet: nothing to write out"); return; }
+            Directory.CreateDirectory(dir);
+            File.WriteAllBytes(Path.Combine(dir, "puppet_color.png"), Straight(puppet.ColorTexture));
+            File.WriteAllBytes(Path.Combine(dir, "puppet_normals.png"), Straight(puppet.NormalTexture));
+            var text = new System.Text.StringBuilder();
+            var rig = puppet.Rig;
+            text.AppendLine($"model {rig.model.name} canvas {rig.model.canvasW}x{rig.model.canvasH} lattice {rig.model.Lattice} layers {rig.layers.Length} chains {rig.model.rig.chains.Length} head_tilt {rig.model.headTilt}");
+            text.AppendLine($"texture {puppet.ColorTexture.width}x{puppet.ColorTexture.height}");
+            foreach (var d in rig.draws)
+            {
+                var L = rig.layers[d.layer];
+                text.AppendLine($"{d.layer,3} {L.def.id,-24} group {L.def.group,-10} role {L.def.role,-10} {d.texture}{(d.texture == PuppetTexture.Frame ? " " + d.frame : "")} alpha {d.alpha:0.###} stencil {d.stencil} {d.stencilRef} verts {L.rest.Length / 2}{(L.still ? " still" : "")}");
+            }
+            File.WriteAllText(Path.Combine(dir, "puppet_draws.txt"), text.ToString());
+            Debug.Log("[IORI] puppet written out to " + dir);
+        }
+
+        /// <summary>A texture the puppet drew into, as a PNG with its colors divided by alpha again.</summary>
+        static byte[] Straight(RenderTexture rt)
+        {
+            var prev = RenderTexture.active;
+            RenderTexture.active = rt;
+            var t = new Texture2D(rt.width, rt.height, TextureFormat.RGBA32, false, true);
+            try
+            {
+                t.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+                RenderTexture.active = prev;
+                var px = t.GetPixels32();
+                for (int i = 0; i < px.Length; i++)
+                {
+                    var p = px[i];
+                    if (p.a == 0) { px[i] = new Color32(0, 0, 0, 0); continue; }
+                    px[i] = new Color32((byte)Mathf.Min(255, p.r * 255 / p.a), (byte)Mathf.Min(255, p.g * 255 / p.a), (byte)Mathf.Min(255, p.b * 255 / p.a), p.a);
+                }
+                t.SetPixels32(px);
+                t.Apply();
+                return t.EncodeToPNG();
+            }
+            finally
+            {
+                RenderTexture.active = prev;
+                UnityEngine.Object.DestroyImmediate(t);
+            }
+        }
+
         /// <summary>The model's picture as it lies in the project: a model made for the web names WebP files,
         /// which Unity does not read, so the PNG of the same name is taken.</summary>
         static string PicturePath(string folder, string name)
