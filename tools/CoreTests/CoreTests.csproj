@@ -15,6 +15,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Assets/IORI/Runtime/Audio/Core/**/*.cs" />
+    <Compile Include="../../Assets/IORI/Runtime/Puppet/Core/**/*.cs" />
     <Compile Include="../../Assets/IORI/Tests/EditMode/**/*.cs" />
   </ItemGroup>
   <ItemGroup>

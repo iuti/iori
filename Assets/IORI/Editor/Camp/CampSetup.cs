@@ -46,7 +46,7 @@ namespace Iori.Camp.EditorTools
         const string UrpAssetPath = "Assets/IORI/Settings/IORI_URP.asset";
         const string UrpRendererPath = "Assets/IORI/Settings/IORI_URP_Renderer.asset";
 
-        static readonly string[] ShaderFiles = { "IoriLit", "IoriGround", "IoriFoliage", "IoriSky", "IoriWater", "IoriWaterClassic", "IoriFire", "IoriSparks", "IoriRain", "IoriCharacter", "IoriContact" };
+        static readonly string[] ShaderFiles = { "IoriLit", "IoriGround", "IoriFoliage", "IoriSky", "IoriWater", "IoriWaterClassic", "IoriFire", "IoriSparks", "IoriRain", "IoriCharacter", "IoriContact", "IoriPuppetLayer" };
 
         // ------------------------------------------------------------------ layout file
 
@@ -508,6 +508,9 @@ namespace Iori.Camp.EditorTools
             EnsureLayer(CampLayers.MirrorOnly, CampLayers.MirrorOnlyName);
             EnsureFolder(MaterialDir);
             ConfigureTextures();
+            // a puppet model, if one lies in the project (its pictures are imported here, before anything is built)
+            string puppetDir = PuppetImport.FindFolder();
+            var puppet = puppetDir != null ? PuppetImport.Import(puppetDir) : null;
             ConfigurePipeline();
             if (PlayerSettings.colorSpace != ColorSpace.Linear) PlayerSettings.colorSpace = ColorSpace.Linear;
 
@@ -739,6 +742,17 @@ namespace Iori.Camp.EditorTools
                 bb.picture = ioriTex;
                 if (sitting) bb.height = IoriSitHeight;
                 bb.viewer = cam;
+                // a puppet model, if one is in the project: she moves, drawn into the board's picture (PuppetRenderer)
+                if (puppet)
+                {
+                    var canvas = Iori.Puppet.PuppetModel.Parse(puppet.model.text);
+                    var pr = board.AddComponent<Iori.Puppet.PuppetRenderer>();
+                    pr.asset = puppet;
+                    pr.layerShader = Load<Shader>(ShaderDir + "/IoriPuppetLayer.shader");
+                    bb.aspect = canvas.canvasW / (float)canvas.canvasH;
+                    board.name = "イオリの板(動く人形)";
+                    Debug.Log("[IORI] puppet on the board: " + puppetDir);
+                }
             }
             // the shade under her and her chair (a flat picture cannot shade the ground under itself)
             if (sitting)
@@ -828,6 +842,8 @@ namespace Iori.Camp.EditorTools
             public bool small;
             /// <summary>The lake painted the earlier way (CampLook.lakeClassic).</summary>
             public bool lakeClassic;
+            /// <summary>Seconds of her idle motion played before the picture (a puppet on the board). 0: as drawn, at rest.</summary>
+            public float puppet;
         }
 
         const float ShotTime = 37.3f;
@@ -885,6 +901,16 @@ namespace Iori.Camp.EditorTools
             return shots;
         }
 
+        /// <summary>Iori by the fire at night while she moves, an eighth of a second apart for twelve seconds: to see
+        /// the puppet's idle motion (names 80_puppet_000 to 80_puppet_095; "-shots 80" picks them all).</summary>
+        static Shot[] PuppetShots()
+        {
+            var shots = new Shot[96];
+            for (int i = 0; i < shots.Length; i++)
+                shots[i] = new Shot { name = "80_puppet_" + i.ToString("000"), hour = 22f, focus = CampPropKind.Iori, time = ShotTime + 0.125f * i, puppet = 1f + 0.125f * i, small = true };
+            return shots;
+        }
+
         [MenuItem("IORI/Camp/スクショを撮る")]
         public static void CaptureMenu()
         {
@@ -903,6 +929,7 @@ namespace Iori.Camp.EditorTools
                 _plainFire = HasArg("-ioriPlainFire");
                 var shots = new List<Shot>(DefaultShots);
                 shots.AddRange(FlickerShots());
+                shots.AddRange(PuppetShots());
                 if (!string.IsNullOrEmpty(only))
                 {
                     var keep = new HashSet<string>(only.Split(','));
@@ -928,6 +955,7 @@ namespace Iori.Camp.EditorTools
             var rig = UnityEngine.Object.FindFirstObjectByType<CampCameraRig>();
             var quality = UnityEngine.Object.FindFirstObjectByType<CampQuality>();
             var board = UnityEngine.Object.FindFirstObjectByType<CampBillboard>();
+            var puppet = UnityEngine.Object.FindFirstObjectByType<Iori.Puppet.PuppetRenderer>();
             var rain = UnityEngine.Object.FindFirstObjectByType<CampRain>();
             var mirrors = UnityEngine.Object.FindObjectsByType<CampReflection>(FindObjectsSortMode.None);
             if (!atm || !rig || !quality) throw new Exception("Camp scene is not set up (IORI/Camp/シーンを組み立てる)");
@@ -981,6 +1009,7 @@ namespace Iori.Camp.EditorTools
                     rig.Snap();
                     atm.Snap();          // again: the camera has now said how far away its subject is
                     if (board) board.Place();
+                    if (puppet) puppet.RenderAt(s.puppet);
                     if (rain) rain.Refresh();
                     foreach (var m in mirrors)
                     {
@@ -1012,6 +1041,7 @@ namespace Iori.Camp.EditorTools
                 atm.followClock = oldClock; atm.previewHour = oldHour; atm.weather = oldWeather; atm.season = oldSeason; atm.sleep = false; atm.timeOverride = -1f;
                 rig.focus = null; rig.yaw = 0f; rig.autoSway = oldSway;
                 if (atm.look) atm.look.lakeClassic = oldLakeClassic;
+                if (puppet) puppet.RenderAt(0f);
                 quality.level = oldLevel;
                 quality.Apply();
                 atm.Snap();

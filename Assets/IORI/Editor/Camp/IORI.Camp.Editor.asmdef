@@ -3,6 +3,8 @@
     "rootNamespace": "Iori.Camp.EditorTools",
     "references": [
         "IORI.Camp",
+        "IORI.Puppet",
+        "IORI.Puppet.Core",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime"
     ],

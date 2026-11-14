@@ -23,6 +23,9 @@
 // - It flickers: her firelight swells and sinks with the fire, and the border between light and
 //   shade moves with it and leans with the flame (_Flicker, _Dance; CampAtmosphere's _IoriFireFlicker).
 // Drawn as a solid thing so that depth of field and shadows treat her properly.
+// When she moves (PuppetRenderer), the picture and the normals are two textures her layers were drawn
+// into a moment ago: there the colors come multiplied by alpha and still encoded for the screen
+// (_Premultiplied), and the board's own breathing sway is off (the puppet breathes by itself).
 Shader "IORI/Camp/Character"
 {
     Properties
@@ -51,6 +54,7 @@ Shader "IORI/Camp/Character"
         _Glint ("Fire glinting on gold fittings", Range(0, 8)) = 1
         _Flicker ("Her firelight swelling and sinking with the fire", Range(0, 3)) = 1
         _Dance ("The border of light moving with the flicker", Range(0, 3)) = 1
+        _Premultiplied ("Picture drawn by the puppet (color times alpha, screen encoded)", Float) = 0
     }
     SubShader
     {
@@ -66,9 +70,26 @@ Shader "IORI/Camp/Character"
             float _NormalStrength, _Cel, _CelEdge, _CelSoft, _Wrap, _SkyBack, _LampInDaylight;
             float _LampFromSide, _LampUpFade, _EdgeGlow, _EdgeWidth, _Glint, _Flicker, _Dance;
             float _LampFill, _LampSoft, _ShadeDeep, _EdgeGlowOnWhite;
+            float _Premultiplied;
         CBUFFER_END
         TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
         TEXTURE2D(_NormalTex); SAMPLER(sampler_NormalTex);
+
+        // her picture: color as light (not multiplied by alpha), and alpha
+        float4 IoriPicture(float2 uv)
+        {
+            float4 t = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
+            if (_Premultiplied > 0.5) t.rgb = SRGBToLinear(saturate(t.rgb / max(t.a, 1e-3)));
+            return t;
+        }
+
+        // her normals as stored (0..1)
+        float3 IoriPictureNormal(float2 uv)
+        {
+            float4 n = SAMPLE_TEXTURE2D(_NormalTex, sampler_NormalTex, uv);
+            if (_Premultiplied > 0.5) n.rgb = saturate(n.rgb / max(n.a, 1e-3));
+            return n.rgb;
+        }
 
         float3 IoriBreath(float3 p, float2 uv)
         {
@@ -130,14 +151,14 @@ Shader "IORI/Camp/Character"
 
             half4 frag(Varyings i) : SV_Target
             {
-                float4 t = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
+                float4 t = IoriPicture(i.uv);
                 clip(t.a - _Cutoff);
 
                 // the board's own directions: the picture's right, up, and out of the picture toward the viewer
                 float3 right = normalize(TransformObjectToWorldDir(float3(1, 0, 0)));
                 float3 up = normalize(TransformObjectToWorldDir(float3(0, 1, 0)));
                 float3 front = normalize(TransformObjectToWorldDir(float3(0, 0, -1)));
-                float3 nt = SAMPLE_TEXTURE2D(_NormalTex, sampler_NormalTex, i.uv).xyz * 2.0 - 1.0;
+                float3 nt = IoriPictureNormal(i.uv) * 2.0 - 1.0;
                 nt.xy *= _NormalStrength;
                 float3 n = normalize(right * nt.x + up * nt.y + front * max(nt.z, 0.05));
 
