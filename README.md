@@ -85,11 +85,11 @@ ElevenLabs の Voice Library の声「Chinyaku - Cute Japanese Actor」を、モ
 
 | ファイル | 場面 | セリフ |
 | --- | --- | --- |
-| `greet_early_morning_01` | 早朝に開いた | 早いね。……火、つけといた。 |
-| `greet_morning_01` | 朝に開いた | おはよ。ゆ、沸いてるよ。 |
+| `greet_early_morning_01` | 早朝に開いた | 早いね。……火、つけといたよ。 |
+| `greet_morning_01` | 朝に開いた | おはよ。 |
 | `greet_day_01` | 昼に開いた | いい天気。……眠くなるね。 |
-| `greet_evening_01` | 夕方に開いた | 日、落ちてきたね。 |
-| `greet_night_01` | 夜に開いた | 星、出てるよ。 |
+| `greet_evening_01` | 夕方に開いた | 太陽、落ちてきたね。 |
+| `greet_night_01` | 夜に開いた | 星、出てきたね。 |
 | `greet_late_night_01` | 深夜に開いた | まだ起きてるんだ。……私もだけど。 |
 | `rain_start_01` | 雨が降り始めた | 降ってきた。 |
 | `rain_stop_01` | 雨が止んだ | ……止んだね。 |
@@ -97,7 +97,7 @@ ElevenLabs の Voice Library の声「Chinyaku - Cute Japanese Actor」を、モ
 | `okaeri_02` | 帰宅した(遅い時間) | おかえり。……遅かったね。 |
 | `itterasshai_01` | 出かける | いってらっしゃい。 |
 | `itterasshai_02` | 出かける | 気をつけて。 |
-| `tap_01` `tap_02` `tap_03` | イオリをタップ | ん。/……なに。/見てるよ。 |
+| `tap_01` `tap_02` `tap_03` | イオリをタップ | ん。/……なーに。/見てるよ。 |
 | `firewood_01` | 薪をくべた | ありがと。(小声) |
 
 ## 環境音・チャイム・UI の効果音
