@@ -1,0 +1,3 @@
+NVIDIA GeForce RTX 3070, Direct3D12, 486x1080, colour space Linear
+fonts: medium ZenKakuGothicNew-Medium, regular ZenKakuGothicNew-Regular, bold ZenKakuGothicNew-Bold, mincho ShipporiMincho-SemiBold
+open talk: True
