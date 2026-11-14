@@ -292,8 +292,10 @@ float IoriAirAmount(float3 posWS)
 float IoriGlowAlong(float3 q, float3 rd, float tmax, float soft2)
 {
     float b = dot(rd, q);
-    float h = sqrt(max(dot(q, q) - b * b, 0.0) + soft2);
-    return (atan((tmax + b) / h) - atan(b / h)) / h;
+    float h2 = max(dot(q, q) - b * b, 0.0) + soft2;
+    // atan((tmax + b) / h) - atan(b / h), as one arc tangent (the difference of two angles; it lies between 0 and pi)
+    float h = sqrt(h2);
+    return atan2(tmax * h, h2 + (tmax + b) * b) / h;
 }
 
 float3 IoriLampAir(float3 posWS)

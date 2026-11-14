@@ -39,7 +39,9 @@ namespace Iori.Camp
         [Tooltip("スマホでは、主な光の影を 1 枚の小さな影の地図で描く(影は筆の跡ごとに取るので、粗くても見た目は変わらない)")]
         public bool lightShadowsOnPhone = true;
         [Tooltip("画面いっぱいのシートが景色を覆っている間(ぼかしの向こうにしか見えない)、スマホで景色を描く大きさ")]
-        [Range(0.2f, 1f)] public float phoneCoveredScale = 0.4f;
+        [Range(0.2f, 1f)] public float phoneCoveredScale = 0.3f;
+        [Tooltip("スマホでは、光のにじみ(ブルーム)を 4 分の 1 の大きさから作る")]
+        public bool lightBloomOnPhone = true;
 
         [Header("シーンの部品(「シーンを組み立てる」が入れる)")]
         public Renderer[] denseGrass;
@@ -52,6 +54,8 @@ namespace Iori.Camp
 
         /// <summary>Read by CampAtmosphere when it sets up the picture's finish.</summary>
         public static bool DepthOfFieldOn { get; private set; } = true;
+        /// <summary>Read by CampAtmosphere too: the cheaper glow (phones).</summary>
+        public static bool LightBloom { get; private set; }
         public static CampQuality Instance { get; private set; }
         /// <summary>Set by the UI while a sheet covers the whole screen: the scene shows only through the blurred glass then.</summary>
         public static bool SceneCovered;
@@ -164,6 +168,7 @@ namespace Iori.Camp
             bool full = q == CampQualityLevel.Full;
 
             DepthOfFieldOn = full;
+            LightBloom = !full && lightBloomOnPhone;
             Shader.SetGlobalFloat(DepthFxId, full ? 1f : 0f);
             if (denseGrass != null)
                 for (int i = 0; i < denseGrass.Length; i++)
@@ -197,7 +202,7 @@ namespace Iori.Camp
             if (lakeMirror)
             {
                 lakeMirror.scale = full ? 0.5f : phoneMirrorScale;
-                lakeMirror.interval = full ? 1 : Mathf.Max(covered ? 4 : 1, phoneMirrorInterval);
+                lakeMirror.interval = full ? 1 : Mathf.Max(covered ? 8 : 1, phoneMirrorInterval);
             }
             if (puddleMirror) { puddleMirror.render = full; puddleMirror.scale = 0.5f; }
 
@@ -238,6 +243,8 @@ namespace Iori.Camp
             // the far view's picture: after the atmosphere has set the sky's values, before the cameras draw
             bool cached = Application.isPlaying && Applied == CampQualityLevel.Phone && skyCacheOnPhone;
             if (!cached) { _sky?.Stop(); return; }
+            // (behind a sheet that covers the whole screen the picture is left as it is)
+            if (_covered && _sky != null && _sky.On) return;
             var cam = lakeMirror && lakeMirror.source ? lakeMirror.source : Camera.main;
             _sky ??= new CampSkyCache();
             _sky.Step(cam, RenderSettings.skybox, phoneRenderScale, phoneMirrorScale);

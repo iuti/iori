@@ -155,12 +155,12 @@ namespace Iori.Ui
             yield return Measure("night, home (as it is now)");
 
             // ---- each of the phone's savings undone (night, home view)
-            bool skyCache = q.skyCacheOnPhone, lightShadows = q.lightShadowsOnPhone;
+            bool skyCache = q.skyCacheOnPhone, lightShadows = q.lightShadowsOnPhone, lightBloom = q.lightBloomOnPhone;
             float scale = q.phoneRenderScale, mirrorScale = q.phoneMirrorScale;
             int mirrorEvery = q.phoneMirrorInterval;
             Action asNow = () =>
             {
-                q.skyCacheOnPhone = skyCache; q.lightShadowsOnPhone = lightShadows;
+                q.skyCacheOnPhone = skyCache; q.lightShadowsOnPhone = lightShadows; q.lightBloomOnPhone = lightBloom;
                 q.phoneRenderScale = scale; q.phoneMirrorScale = mirrorScale; q.phoneMirrorInterval = mirrorEvery;
                 q.Apply();
             };
@@ -168,9 +168,10 @@ namespace Iori.Ui
             yield return With("as before: lake mirror 0.33 of the screen, every frame", () => { q.phoneMirrorScale = 0.33f; q.phoneMirrorInterval = 1; q.Apply(); }, asNow);
             yield return With("as before: render scale 0.85", () => { q.phoneRenderScale = 0.85f; q.Apply(); }, asNow);
             yield return With("as before: shadows in two parts, 2048", () => { q.lightShadowsOnPhone = false; q.Apply(); }, asNow);
-            yield return With("as before: all four", () =>
+            yield return With("as before: the glow made from half the picture", () => { q.lightBloomOnPhone = false; q.Apply(); }, asNow);
+            yield return With("as before: all five", () =>
             {
-                q.skyCacheOnPhone = false; q.lightShadowsOnPhone = false;
+                q.skyCacheOnPhone = false; q.lightShadowsOnPhone = false; q.lightBloomOnPhone = false;
                 q.phoneRenderScale = 0.85f; q.phoneMirrorScale = 0.33f; q.phoneMirrorInterval = 1;
                 q.Apply();
             }, asNow);
@@ -243,6 +244,11 @@ namespace Iori.Ui
             }
 
             if (lake) yield return With("no lake mirror", () => lake.render = false, () => lake.render = true);
+            // the fire, the lantern and the lamp in the tent: every solid thing works out each of them for every pixel
+            var lamps = new List<Light>();
+            foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
+                if (l.enabled && l.type != LightType.Directional) lamps.Add(l);
+            yield return With($"no lamps ({lamps.Count} lights off)", () => { foreach (var l in lamps) l.enabled = false; }, () => { foreach (var l in lamps) l.enabled = true; });
             if (q.keyLight)
             {
                 var shadows = q.keyLight.shadows;
@@ -256,7 +262,9 @@ namespace Iori.Ui
             yield return With("render scale 0.6", () => { q.phoneRenderScale = 0.6f; q.Apply(); }, asNow);
             yield return With("render scale 0.5", () => { q.phoneRenderScale = 0.5f; q.Apply(); }, asNow);
             yield return With("lake mirror every frame", () => { q.phoneMirrorInterval = 1; q.Apply(); }, asNow);
+            yield return With("lake mirror every 3rd frame", () => { q.phoneMirrorInterval = 3; q.Apply(); }, asNow);
             yield return With("lake mirror every 4th frame", () => { q.phoneMirrorInterval = 4; q.Apply(); }, asNow);
+            yield return With("no msaa, render scale 0.6", () => { q.phoneRenderScale = 0.6f; q.Apply(); urp.msaaSampleCount = 1; }, () => { asNow(); });
 
             // ---- close to the fire, with its sheet open
             if (ui.Open(CampPropKind.Fire))

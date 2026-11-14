@@ -7,7 +7,7 @@ namespace Iori.Camp
     /// Phones: the far view (sky, clouds, stars, the mountains, the town, the far shore: IoriSky) costs more
     /// than everything else in the picture when it is painted anew for every pixel of every frame, and it
     /// hardly changes from one frame to the next. So it is painted into a wide picture that covers all the
-    /// sky the camp's camera can ever see, one narrow strip per frame (the whole of it about every two
+    /// sky the camp's camera can ever see, one narrow strip per frame (the whole of it about every three
     /// seconds: clouds drift and stars twinkle at that pace), and the skybox only reads that picture.
     /// A second, smaller picture without the stars and the town's lights is kept for the mirror images.
     /// When the sky changes at once (the time or the weather set by hand), the whole picture is painted
@@ -47,7 +47,7 @@ namespace Iori.Camp
         bool _failed;
 
         /// <summary>How many frames it takes to paint the whole picture once.</summary>
-        public int strips = 60;
+        public int strips = 90;
 
         /// <summary>True while the skybox reads the picture.</summary>
         public bool On { get; private set; }

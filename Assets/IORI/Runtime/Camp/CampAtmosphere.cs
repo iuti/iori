@@ -547,6 +547,9 @@ namespace Iori.Camp
             _bloom.intensity.Override(p.bloom);
             _bloom.threshold.Override(1.0f);
             _bloom.scatter.Override(L.bloomScatter);
+            // (phones: the glow starts from a quarter of the picture and takes one step fewer; about the same spread for half the work)
+            _bloom.downscale.Override(CampQuality.LightBloom ? BloomDownscaleMode.Quarter : BloomDownscaleMode.Half);
+            _bloom.maxIterations.Override(CampQuality.LightBloom ? 5 : 6);
             _dof.mode.Override(CampQuality.DepthOfFieldOn ? DepthOfFieldMode.Bokeh : DepthOfFieldMode.Off);
             _dof.focusDistance.Override(_focusDistance);
             _dof.focalLength.Override(L.focalLength);
