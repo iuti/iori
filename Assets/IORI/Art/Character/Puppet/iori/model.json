@@ -209,10 +209,10 @@
   {
    "id": "body",
    "group": "body",
-   "x": 216,
+   "x": 224,
    "y": 151,
-   "w": 734,
-   "h": 861,
+   "w": 725,
+   "h": 860,
    "texture": "textures/body.png"
   },
   {
@@ -373,8 +373,8 @@
    "group": "hair_side",
    "x": 313,
    "y": 43,
-   "w": 497,
-   "h": 408,
+   "w": 466,
+   "h": 402,
    "depth": 0.05,
    "texture": "textures/side_hair.png"
   },

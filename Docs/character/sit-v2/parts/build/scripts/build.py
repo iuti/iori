@@ -71,9 +71,21 @@ BG0 = np.median(np.concatenate([final[:6].reshape(-1, 3), final[:, :6].reshape(-
 # the inside is diffused from body pixels only, and the outline is carried along the new edge
 satb = final.max(2) - final.min(2)
 huehair = (satb > 22) & (final[..., 2] > final[..., 0] + 6) & (final[..., 2] > final[..., 1] + 14) & (gray(final) < 175)
+_chest = np.zeros((H, W), np.uint8)
+cv2.fillPoly(_chest, [np.array([(470, 335), (520, 318), (640, 305), (705, 330), (760, 345), (800, 380), (800, 445), (470, 445)], np.int32)], 1)
+_chest = _chest.astype(bool) & ~skull
+strong = (satb > 40) & (final[..., 2] > final[..., 0] + 15)
+huehair = np.where(_chest, strong, huehair)
 hcore = (hair_f | hair_s | ahoge) & huehair
 hairall = hcore | ((gray(final) < 95) & dil(hcore, 5) & (hair_f | hair_s | ahoge))   # the locks and their own outlines only
-B = body & ~hairall
+notbody = M('face') | gog | tag | earring | ahoge | (skull & (yy < 330))
+_ext = U & (yy >= 280) & (yy < 520) & ~notbody & ~body & ~hairall
+_ext &= ((gray(final) > 170) & (satb < 32)) | (final[..., 0] > 190) & (final[..., 0] - final[..., 2] > 12)   # shirt / skin only
+_ext &= dil(body, 9)
+_ext |= _chest & ~hairall & ~phones & ~M('face')
+B = (body | _ext) & ~hairall
+_skinlike = (final[..., 0] > 190) & (final[..., 0] - final[..., 2] > 12)
+lowhair = ((yy >= 280) & (hair_f | hair_s) & ~hairall & (((gray(final) > 180) & (satb < 30)) | _skinlike)) | (_chest & ~hairall)
 B = B & ~(cv2.morphologyEx(B.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) == 0)   # drop 1-px specks
 Bc = cv2.morphologyEx(B.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (31, 31))).astype(bool)
 Bc = ndi.binary_fill_holes(Bc)
@@ -176,6 +188,7 @@ hairc = ((satf > 38) & (final[..., 2] > final[..., 0])) | (gray(final) < 105)
 shirtish = (gray(final) > 188) & (satf < 34)
 hs_a &= ~((shirtish | (skin_f & ~skull)) & ~behind & ~g_out)
 hs_a &= ~eyeM
+hs_a &= ~lowhair
 add('side_hair', hs_rgb, soft(rim(hs_a)), group='hair_side', depth=0.05)
 add('earring', final, soft(rim(earring, 3), 0.5), group='hair_side', depth=0.05, bones=['earring'])
 add('tag', final, soft(tag, 0.5), group='hair_side', depth=0.05, bones=['tag'])
@@ -187,7 +200,7 @@ hf_rgb[g_in] = ug[g_in]
 opening_all = M('whites') | M('iris')
 eyezone = dil(opening_all, 3)
 lashy = dil(opening_all, 4) & (gray(final) < 70) & (satf < 40)
-hf_a = ((hair_f & ~eyezone & ~lashy & ~(skin_f & ~g_in)) | g_in) & ~eyeM
+hf_a = ((hair_f & ~eyezone & ~lashy & ~(skin_f & ~g_in)) | g_in) & ~eyeM & ~lowhair
 hf_a = cv2.morphologyEx(hf_a.astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2), np.uint8)).astype(bool)
 add('front_hair', hf_rgb, soft(rim(hf_a, 3) & ~eyezone & ~lashy), group='hair_front', depth=0.1)
 add('ahoge', final, soft(ahoge, 0.5), group='hair_back', depth=0.0, bones=['ahoge'])
