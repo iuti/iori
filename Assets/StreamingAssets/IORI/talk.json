@@ -11,6 +11,12 @@
     "voiceId": "",
     "models": [ "v4 turbo", "turbo v4", "v3", "turbo v2 5", "flash v2 5" ],
     "fallbackModel": "eleven_multilingual_v2",
+    "tagModels": [ "v3", "v4" ],
+    "tags": [ "[softly]", "[眠たそうな声]", "[whispers]", "[sighs]", "[chuckles]", "[happy]", "[shyly]", "[tired]" ],
+    "hourTags": [
+      { "hours": "2-6", "tag": "[眠たそうな声]" },
+      { "hours": "22-2", "tag": "[softly]" }
+    ],
     "language": "",
     "format": "pcm_24000",
     "volume": 1

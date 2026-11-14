@@ -26,6 +26,12 @@ namespace Iori.Audio
         public List<string> Models = new List<string>();
         /// <summary>どれも見つからないときのモデルの id。</summary>
         public string FallbackModel = "eleven_multilingual_v2";
+        /// <summary>角かっこのタグを読めるモデル(「v3」のような語の並び。モデルの id にその語がすべてあれば読める)。ほかのモデルにはタグを渡さない。</summary>
+        public List<string> TagModels = new List<string>();
+        /// <summary>声の調子のタグとして使ってよいもの("[softly]" の形)。LLM が付けたタグのうち、ここに無いものは落とす。</summary>
+        public List<string> Tags = new List<string>();
+        /// <summary>LLM がタグを付けなかったときの、時間帯ごとの既定のタグ(上から最初に合うもの)。</summary>
+        public List<TalkHourTag> HourTags = new List<TalkHourTag>();
         /// <summary>言語を決め打ちするときの符号(ja など)。空なら送らない(受け付けないモデルがある)。</summary>
         public string Language = "";
         /// <summary>返ってくる音の形。pcm_ のものだけ(16 ビット、モノラル)。</summary>
@@ -93,6 +99,17 @@ namespace Iori.Audio
                 b.Voice.VoiceId = JsonRead.Str(v, "voiceId", "").Trim();
                 b.Voice.Models = JsonRead.StrList(v, "models");
                 b.Voice.FallbackModel = JsonRead.Str(v, "fallbackModel", b.Voice.FallbackModel);
+                b.Voice.TagModels = JsonRead.StrList(v, "tagModels");
+                b.Voice.Tags = JsonRead.StrList(v, "tags");
+                foreach (var ho in JsonRead.Arr(v, "hourTags"))
+                {
+                    var h = JsonRead.Obj(ho, "hourTags の要素");
+                    b.Voice.HourTags.Add(new TalkHourTag
+                    {
+                        Hours = HourRange.Parse(JsonRead.Str(h, "hours", "", true)),
+                        Tag = JsonRead.Str(h, "tag", "", true).Trim(),
+                    });
+                }
                 b.Voice.Language = JsonRead.Str(v, "language", "");
                 b.Voice.Format = JsonRead.Str(v, "format", b.Voice.Format);
                 b.Voice.Volume = (float)JsonRead.Num(v, "volume", 1);
@@ -154,6 +171,8 @@ namespace Iori.Audio
     public static class TalkPrompt
     {
         public const string MemoMark = "MEMO:";
+        /// <summary>声に出して読む形(読みを開いた文と調子のタグ)の行の印。見せる文、記憶、履歴には入れない。</summary>
+        public const string VoiceMark = "VOICE:";
 
         static readonly string[] Weekdays = { "日", "月", "火", "水", "木", "金", "土" };
 
@@ -188,8 +207,14 @@ namespace Iori.Audio
             sb.Append("- イオリの言葉だけを書く。かぎかっこ、名前、動作や表情の説明は付けない。\n");
             sb.Append("- ").Append(book.MaxSentences).Append(" 文まで、全部で ").Append(book.MaxChars)
               .Append(" 文字まで。声に出して読まれるので、絵文字や記号は使わない。\n");
+            sb.Append("- 返事のあとに改行して、「").Append(VoiceMark).Append(" 」で始まる 1 行を必ず足す。返事と同じ言葉を、声に出して読む形で書いたもの。")
+              .Append("読み間違えやすい漢字(人名、曲名、地名、数字、当て字、むずかしい読み)はひらがなに、英語の曲名や名前はカタカナに開く。ほかはそのままでいい。\n");
+            if (book.Voice.Tags.Count > 0)
+                sb.Append("- 声の調子をはっきり変えたいときだけ、").Append(VoiceMark).Append(" の行の頭に次のタグから 1 つを付ける: ")
+                  .Append(string.Join(" ", book.Voice.Tags)).Append("。たいていは付けない(時間に合った調子は自動で付く)。\n");
+            sb.Append("- 例: 返事が「春泥、いい曲だね。」なら、次の行は「").Append(VoiceMark).Append(" しゅんでい、いい曲だね。」。\n");
             if (book.MaxNotes > 0)
-                sb.Append("- キミの言ったことの中に、次に会ったときも覚えていたいことがあったときだけ、返事のあとに改行して「")
+                sb.Append("- キミの言ったことの中に、次に会ったときも覚えていたいことがあったときだけ、").Append(VoiceMark).Append(" の行のあとに改行して「")
                   .Append(MemoMark).Append(" 」で始まる 1 行を足す(").Append(book.NoteChars)
                   .Append(" 文字まで、「キミは〜」の形)。たいていは足さない。\n");
 
@@ -229,6 +254,8 @@ namespace Iori.Audio
         public string Say;
         /// <summary>覚えておくこと(無ければ null)。</summary>
         public string Memo;
+        /// <summary>声に出して読む形(「VOICE:」の行の中身。調子のタグも付いたまま。無ければ null)。声に渡す文は <see cref="TalkSpeech.Compose"/> で組む。</summary>
+        public string Voice;
         /// <summary>声にする中身があるか(「……」だけなら無い)。</summary>
         public bool HasVoice;
     }
@@ -239,42 +266,67 @@ namespace Iori.Audio
     /// </summary>
     public static class TalkReply
     {
-        const string Enders = "。!?!?";
-        const string Closers = "」』))";
+        // (全角の記号は \u で書く: 。!?!? と 」』)) のうち全角のもの)
+        const string Enders = "。！？!?";
+        const string Closers = "」』)）";
+        const char WideSpace = '　';
 
         public static TalkReplyText Tidy(string raw, int maxSentences, int maxChars, int noteChars)
         {
             var result = new TalkReplyText { Say = "" };
             if (string.IsNullOrEmpty(raw)) return result;
             var say = new StringBuilder();
+            string voice = null;
             foreach (var rawLine in raw.Replace("\r", "").Split('\n'))
             {
-                var line = rawLine.Trim().Trim(' ');
+                var line = rawLine.Trim().Trim(WideSpace);
                 if (line.Length == 0) continue;
-                var memo = MemoOf(line);
+                var memo = MarkedOf(line, TalkPrompt.MemoMark);
                 if (memo != null)
                 {
                     if (result.Memo == null && memo.Length > 0) result.Memo = Cut(memo, noteChars);
                     continue;
                 }
+                var spoken = MarkedOf(line, TalkPrompt.VoiceMark);
+                if (spoken != null)
+                {
+                    if (voice == null && spoken.Length > 0) voice = spoken;
+                    continue;
+                }
                 say.Append(line);
             }
-            var text = StripAsides(say.ToString());
-            text = StripName(text);
-            text = StripQuotes(text).Trim().Trim(' ');
+            // (見せる文には調子のタグを入れない)
+            var text = TalkSpeech.StripTags(say.ToString(), null, out _);
+            text = Clean(text);
             text = LimitSentences(text, maxSentences);
             text = LimitChars(text, maxChars);
             result.Say = text;
             foreach (var c in text)
                 if (char.IsLetterOrDigit(c)) { result.HasVoice = true; break; }
+
+            if (voice != null)
+            {
+                // 見せる文と同じ数の文までにそろえる(タグは文に数えない)
+                voice = Clean(voice);
+                voice = LimitSentences(voice, Math.Max(1, SentenceEnds(text).Count));
+                result.Voice = voice.Length > 0 ? voice : null;
+            }
             return result;
         }
 
-        static string MemoOf(string line)
+        static string Clean(string s)
         {
-            var folded = line.Replace(':', ':').TrimStart('-', '・', ' ', '「', '〔', '[', '(', '(');
-            if (!folded.StartsWith(TalkPrompt.MemoMark, StringComparison.OrdinalIgnoreCase)) return null;
-            return folded.Substring(TalkPrompt.MemoMark.Length).Trim().TrimEnd('」', '〕', ']', ')', ')').Trim();
+            s = StripAsides(s);
+            s = StripName(s);
+            return StripQuotes(s).Trim().Trim(WideSpace);
+        }
+
+        /// <summary>「MEMO:」「VOICE:」のような印で始まる行なら中身を返す(印の前の記号、全角のコロン、囲みは見ない)。違えば null。</summary>
+        static string MarkedOf(string line, string mark)
+        {
+            var folded = line.Replace('：', ':').TrimStart('-', '・', ' ', WideSpace, '「', '〔', '［', '(', '（');
+            if (!folded.StartsWith(mark, StringComparison.OrdinalIgnoreCase)) return null;
+            return folded.Substring(mark.Length).Trim().Trim(WideSpace).TrimEnd('」', '〕', '］', ')', '）').Trim();
         }
 
         /// <summary>(笑う)や *うなずく* のような説明を外す。</summary>
@@ -284,13 +336,13 @@ namespace Iori.Audio
             int depth = 0; bool star = false;
             foreach (var c in s)
             {
-                if (c == '(' || c == '(') { depth++; continue; }
-                if (c == ')' || c == ')') { if (depth > 0) depth--; continue; }
-                if (c == '*' || c == '*') { star = !star; continue; }
+                if (c == '(' || c == '\uFF08') { depth++; continue; }
+                if (c == ')' || c == '\uFF09') { if (depth > 0) depth--; continue; }
+                if (c == '*' || c == '\uFF0A') { star = !star; continue; }
                 if (depth == 0 && !star) sb.Append(c);
             }
             // (閉じていない * は、ただの記号として中身を残す)
-            return star ? s.Replace("*", "").Replace("*", "") : sb.ToString();
+            return star ? s.Replace("*", "").Replace("\uFF0A", "") : sb.ToString();
         }
 
         static string StripName(string s)
@@ -300,7 +352,7 @@ namespace Iori.Audio
             {
                 if (!s.StartsWith(name, StringComparison.Ordinal)) continue;
                 var rest = s.Substring(name.Length).TrimStart();
-                if (rest.Length > 0 && (rest[0] == ':' || rest[0] == ':')) return rest.Substring(1).TrimStart();
+                if (rest.Length > 0 && (rest[0] == ':' || rest[0] == '\uFF1A')) return rest.Substring(1).TrimStart();
                 if (rest.Length > 0 && rest[0] == '「') return rest;
             }
             return s;
@@ -313,7 +365,7 @@ namespace Iori.Audio
             while (s.Length >= 2)
             {
                 char a = s[0], z = s[s.Length - 1];
-                bool pair = (a == '「' && z == '」') || (a == '『' && z == '』') || (a == '"' && z == '"') || (a == '“' && z == '”');
+                bool pair = (a == '「' && z == '」') || (a == '『' && z == '』') || (a == '"' && z == '"') || (a == '\uFF02' && z == '\uFF02') || (a == '“' && z == '”');
                 if (!pair) break;
                 var inner = s.Substring(1, s.Length - 2);
                 // 「A」と「B」のように別々のかっこなら外さない
