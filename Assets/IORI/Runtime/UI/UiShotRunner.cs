@@ -234,6 +234,20 @@ namespace Iori.Ui
             yield return Wait(1.2f);
             yield return Shot("ui_17_artists");
             ui.Library.ShowTab(0);
+
+            // a finger draws the player down: the scene shows above it (not the list under it), and let go it goes back to the home screen
+            ui.ShowPlayer();
+            yield return Wait(2.4f);
+            if (ui.OpenPanel)
+            {
+                ui.OpenPanel.HoldPulled(260f);
+                yield return Wait(0.5f);
+                yield return Shot("ui_23_player_pulled");
+                ui.OpenPanel.OnEndDrag(null);
+                yield return Wait(0.12f);
+                yield return Shot("ui_24_player_leaving");
+            }
+            _report.AppendLine($"player drawn down 260 and let go: closed {!ui.OpenPanel}");
             ui.Close();
             yield return Wait(3.4f);
 
@@ -315,6 +329,10 @@ namespace Iori.Ui
             string wasWeather = radio.Weather;
             radio.SetQuiet(false);
             radio.SetWeather(WeatherIds.Clear);
+            // (the flame's size follows the fire's volume: the pictures are taken with the slider at its first place)
+            float wasFire = radio.Mixer.GetUserVolume("fire"), firstFire = wasFire;
+            foreach (var layer in radio.Mixer.Layers) if (layer.Id == "fire") firstFire = layer.DefaultVolume;
+            radio.SetAmbientVolume("fire", firstFire);
 
             // the look of the proposal: a clear summer evening, the radio's clock at 17:20
             atm.followClock = false; atm.hoursPerSecond = 0f; atm.previewHour = 18.6f;
@@ -353,6 +371,37 @@ namespace Iori.Ui
             yield return Shot("ui_07_fire_rain");
             radio.SetWeather(WeatherIds.Clear);
             ui.Close();
+            yield return Wait(1.2f);
+
+            // the flame follows the fire's volume: the slider at its left end, then at its right end
+            radio.SetAmbientVolume("fire", 0f);
+            ui.Open(CampPropKind.Fire);
+            yield return Wait(3.2f);
+            yield return Shot("ui_20_fire_volume_low");
+            ui.Close();
+            yield return Wait(1.2f);
+            radio.SetAmbientVolume("fire", 1f);
+            ui.Open(CampPropKind.Fire);
+            yield return Wait(3.2f);
+            yield return Shot("ui_21_fire_volume_high");
+            radio.SetAmbientVolume("fire", firstFire);
+
+            // a finger draws the sheet down a little and lets go (it comes back up), then further (it goes away)
+            ui.OpenPanel.HoldPulled(50f);
+            yield return Wait(0.3f);
+            yield return Shot("ui_22_fire_pulled");
+            ui.OpenPanel.OnEndDrag(null);
+            yield return Wait(0.8f);
+            _report.AppendLine($"sheet drawn down 50 and let go: still open {(bool)ui.OpenPanel}, back in place {ui.OpenPanel && !ui.OpenPanel.IsPulled}");
+            if (ui.OpenPanel)
+            {
+                ui.OpenPanel.HoldPulled(130f);
+                yield return Wait(0.2f);
+                ui.OpenPanel.OnEndDrag(null);
+            }
+            yield return null;
+            _report.AppendLine($"sheet drawn down 130 and let go: closed {!ui.OpenPanel}");
+            ui.Close();
             yield return Wait(2.5f);
 
             // night: the glass over a dark scene
@@ -376,6 +425,7 @@ namespace Iori.Ui
             radio.SetClockOffset(0);
             radio.SetWeather(wasWeather);
             radio.SetQuiet(wasQuiet);
+            radio.SetAmbientVolume("fire", wasFire);
             yield return null;
             Finish(0);
         }

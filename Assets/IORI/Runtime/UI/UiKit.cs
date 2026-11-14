@@ -175,9 +175,11 @@ namespace Iori.Ui
 
     /// <summary>
     /// A slider: a thin line, the filled part of it, and a small upright bar as the handle. The press
-    /// area is 44 high. Pressing or dragging anywhere on it moves the handle there.
+    /// area is 44 high. Pressing or dragging anywhere on it moves the handle there. A stroke that goes
+    /// down instead of along it is not for the slider: it draws the sheet down (<see cref="UiPanel"/>),
+    /// and the slider keeps its value.
     /// </summary>
-    public sealed class UiSlider : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler, IInitializePotentialDragHandler
+    public sealed class UiSlider : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler, IEndDragHandler, IInitializePotentialDragHandler
     {
         public Action<float> onChanged;
         /// <summary>Called when the finger lets go, with the value it was left at.</summary>
@@ -188,6 +190,8 @@ namespace Iori.Ui
         UiShape _track, _fill, _handle;
         Color32 _fillColor;
         float _press, _pressTarget;
+        UiPanel _panel;
+        bool _decided, _yielded;
 
         public float Value => _value;
         /// <summary>True while a finger is on it.</summary>
@@ -258,16 +262,57 @@ namespace Iori.Ui
         }
 
         public void OnInitializePotentialDrag(PointerEventData e) => e.useDragThreshold = false;
-        public void OnPointerDown(PointerEventData e) { _pressTarget = 1f; Set(e); }
-        public void OnDrag(PointerEventData e) => Set(e);
+
+        public void OnPointerDown(PointerEventData e)
+        {
+            // (the handle moves once it is clear which way the finger goes, or when it lets go without a stroke)
+            _pressTarget = 1f;
+            _decided = _yielded = false;
+            if (!_panel) _panel = GetComponentInParent<UiPanel>();
+        }
+
+        public void OnDrag(PointerEventData e)
+        {
+            if (_yielded)
+            {
+                if (_panel) _panel.OnDrag(e);
+                return;
+            }
+            if (!_decided)
+            {
+                Vector2 d = (e.position - e.pressPosition) / Mathf.Max(0.01f, _rt.lossyScale.x);
+                if (d.magnitude < 8f) return;
+                _decided = true;
+                // a stroke downward draws the sheet down
+                if (_panel && -d.y > Mathf.Abs(d.x) * 1.5f)
+                {
+                    _yielded = true;
+                    _pressTarget = 0f;
+                    _panel.OnBeginDrag(e);
+                    _panel.OnDrag(e);
+                    return;
+                }
+            }
+            Set(e);
+        }
+
         public void OnPointerUp(PointerEventData e)
         {
             _pressTarget = 0f;
+            if (_yielded) return;
+            if (!_decided) Set(e);
             UiSounds.Play(UiSounds.Slider, 0.7f);
             onReleased?.Invoke(_value);
         }
 
-        void OnDisable() { _press = _pressTarget = 0f; if (_handle) Layout(); }
+        public void OnEndDrag(PointerEventData e)
+        {
+            if (!_yielded) return;
+            _yielded = false;
+            if (_panel) _panel.OnEndDrag(e);
+        }
+
+        void OnDisable() { _press = _pressTarget = 0f; _yielded = false; if (_handle) Layout(); }
 
         void Update()
         {
@@ -275,6 +320,48 @@ namespace Iori.Ui
             // the handle grows a little taller while held
             _press = Mathf.MoveTowards(_press, _pressTarget, Time.unscaledDeltaTime * 10f);
             Layout();
+        }
+    }
+
+    /// <summary>
+    /// The window a list moves in. As a ScrollRect, but when the list is at its top and the finger
+    /// strokes downward there is nothing more to show: the stroke draws the sheet down instead
+    /// (<see cref="UiPanel"/>).
+    /// </summary>
+    public sealed class UiListScroll : UnityEngine.UI.ScrollRect
+    {
+        UiPanel _panel;
+        bool _yielded;
+
+        public override void OnBeginDrag(PointerEventData e)
+        {
+            _yielded = false;
+            if (!_panel) _panel = GetComponentInParent<UiPanel>();
+            Vector2 d = e.position - e.pressPosition;
+            bool atTop = !content || content.anchoredPosition.y <= 1f;
+            if (_panel && atTop && -d.y > Mathf.Abs(d.x) * 1.2f)
+            {
+                _yielded = true;
+                _panel.OnBeginDrag(e);
+                return;
+            }
+            base.OnBeginDrag(e);
+        }
+
+        public override void OnDrag(PointerEventData e)
+        {
+            if (_yielded) { if (_panel) _panel.OnDrag(e); }
+            else base.OnDrag(e);
+        }
+
+        public override void OnEndDrag(PointerEventData e)
+        {
+            if (_yielded)
+            {
+                _yielded = false;
+                if (_panel) _panel.OnEndDrag(e);
+            }
+            else base.OnEndDrag(e);
         }
     }
 }

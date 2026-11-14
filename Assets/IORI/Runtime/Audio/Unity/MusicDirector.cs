@@ -16,6 +16,7 @@ namespace Iori.Audio
     {
         const string PrefQueue = "iori.music.queue";
         const string PrefPosition = "iori.music.position";
+        const string PrefVolume = "iori.music.volume";
 
         public static MusicDirector Instance { get; private set; }
         /// <summary>動作確認用: false にすると、列と位置を保存も読み出しもしない(画面の撮影で、聴いていた列を上書きしないため)。</summary>
@@ -32,6 +33,9 @@ namespace Iori.Audio
         public bool Active { get; private set; }
         /// <summary>曲、列、鳴っているかどうか、一覧のどれかが変わるたびに増える。画面はこれを見て描き直す。</summary>
         public int Version { get; private set; }
+
+        /// <summary>プレーヤーの曲の音量(0〜1)。ラジオの曲の音量とは別に覚える。</summary>
+        public float Volume { get; private set; } = 1f;
 
         public MusicTrack Current => Library.Find(Queue.Current);
         public bool IsPlaying => Active && Backend != null && Backend.IsPlaying;
@@ -57,6 +61,8 @@ namespace Iori.Audio
         {
             Instance = this;
             _seed = Environment.TickCount;
+            // (初めては、それまで一緒に使っていたラジオの曲の音量から始める)
+            Volume = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefVolume, PlayerPrefs.GetFloat("iori.radio.musicVolume", 1f)));
 #if UNITY_ANDROID && !UNITY_EDITOR
             Backend = gameObject.AddComponent<AndroidMusicBackend>();
 #else
@@ -69,6 +75,14 @@ namespace Iori.Audio
         void OnDestroy() { if (Instance == this) Instance = null; }
 
         void Touch() => Version++;
+
+        /// <summary>プレーヤーの曲の音量を変える(0〜1)。</summary>
+        public void SetVolume(float volume)
+        {
+            Volume = Mathf.Clamp01(volume);
+            PlayerPrefs.SetFloat(PrefVolume, Volume);
+            if (Backend != null) Backend.SetVolume(Volume);
+        }
 
         /// <summary>端末の曲を集め直す。</summary>
         public void Rescan()
@@ -253,13 +267,10 @@ namespace Iori.Audio
         void Update()
         {
             if (Backend == null) return;
+            Backend.SetVolume(Volume);
             var radio = RadioDirector.Instance;
-            if (radio)
-            {
-                Backend.SetVolume(radio.MusicVolume);
-                // (ラジオが後から用意できたときのため、番を伝え直す)
-                if (radio.PlayerOn != Active) radio.SetPlayerOn(Active);
-            }
+            // (ラジオが後から用意できたときのため、番を伝え直す)
+            if (radio && radio.PlayerOn != Active) radio.SetPlayerOn(Active);
             if (!_pushed) return;
 
             // 再生係が自分で次の曲へ進んだら、列の位置を合わせる

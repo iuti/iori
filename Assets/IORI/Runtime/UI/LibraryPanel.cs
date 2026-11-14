@@ -49,7 +49,7 @@ namespace Iori.Ui
         readonly UiButton[] _tabButtons = new UiButton[TabNames.Length];
         UiShape _tabMark;
         RectTransform _view, _rows;
-        ScrollRect _scroll;
+        UiListScroll _scroll;
         MiniBar _bar;
         TextMeshProUGUI _empty, _emptySub;
         readonly List<Row> _pool = new List<Row>();
@@ -100,7 +100,7 @@ namespace Iori.Ui
             _rows.pivot = new Vector2(0.5f, 1f);
             _rows.anchoredPosition = Vector2.zero;
             _rows.sizeDelta = new Vector2(0f, 100f);
-            _scroll = _view.gameObject.AddComponent<ScrollRect>();
+            _scroll = _view.gameObject.AddComponent<UiListScroll>();
             _scroll.viewport = _view;
             _scroll.content = _rows;
             _scroll.horizontal = false;

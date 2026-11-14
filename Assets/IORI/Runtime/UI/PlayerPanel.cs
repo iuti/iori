@@ -6,22 +6,22 @@ namespace Iori.Ui
 {
     /// <summary>
     /// The music player, over the whole screen: the jacket of the song that is on, large, with room
-    /// around it; under it the title and the artist, the playing position, and the buttons (shuffle,
-    /// previous, stop or play, next, repeat). The arrow at the top left puts the screen away, the
-    /// lines at the top right open the list of songs.
+    /// around it; under it the title and the artist, the playing position, the buttons (shuffle,
+    /// previous, stop or play, next, repeat) and, at the foot, the volume of the player's songs.
+    /// The arrow at the top left puts the screen away, the lines at the top right open the list of songs.
     /// </summary>
     public sealed class PlayerPanel : UiPanel
     {
         const float Side = 32f, JacketTop = 76f, JacketSize = 326f, LowerTop = 432f;
-        const float NamesHeight = 60f, SeekHeight = 43f, ButtonsHeight = 64f;
+        const float NamesHeight = 60f, SeekHeight = 43f, ButtonsHeight = 64f, VolumeHeight = 44f;
 
         public override bool FullScreen => true;
         public override float Height => Room;
 
         UiJacket _jacket;
         TextMeshProUGUI _title, _artist, _now, _total;
-        RectTransform _seekBlock, _buttons;
-        UiSlider _seek;
+        RectTransform _seekBlock, _buttons, _volumeBlock;
+        UiSlider _seek, _volume;
         UiButton _play, _shuffle, _repeat;
         UiShape _shuffleMark, _repeatMark;
         Texture _pauseIcon, _playIcon, _repeatIcon, _repeatOneIcon;
@@ -73,22 +73,34 @@ namespace Iori.Ui
             _shuffleMark = UiKit.Box("On", _shuffle.visual, 17, 38, 10, 2, th.text);
             _repeatMark = UiKit.Box("On", _repeat.visual, 17, 38, 10, 2, th.text);
 
+            // the volume of the player's songs: the same picture and line as on the radio's sheet
+            _volumeBlock = UiKit.Node("Volume", Content, Side, 0, w, VolumeHeight);
+            UiKit.Icon("Volume icon", _volumeBlock, 0, 12, 20, "volume", th.textSoft);
+            _volume = UiSlider.Create("Volume line", _volumeBlock, 36, 0, w - 36);
+            _volume.onChanged = v => { if (Music) Music.SetVolume(v); };
+
             _pauseIcon = _play.icon.Picture;
             _playIcon = UiKit.LoadIcon("play");
             _repeatIcon = _repeat.icon.Picture;
             _repeatOneIcon = UiKit.LoadIcon("repeat_one");
         }
 
-        /// <summary>The names stay under the jacket and the buttons near the bottom edge; the position line sits halfway between them.</summary>
+        /// <summary>The names stay under the jacket and the volume near the bottom edge; the position line and the buttons share the room between them evenly.</summary>
         protected override void Layout()
         {
-            float bottom = Height - Mathf.Max(30f, 50f - BottomInset);
-            float gap = Mathf.Max(8f, (bottom - LowerTop - NamesHeight - SeekHeight - ButtonsHeight) * 0.5f);
-            UiKit.Place(_seekBlock, Side, LowerTop + NamesHeight + gap, Width - Side * 2f, SeekHeight);
-            UiKit.Place(_buttons, 21, bottom - ButtonsHeight, 348, ButtonsHeight);
+            float bottom = Height - Mathf.Max(22f, 42f - BottomInset);
+            float gap = Mathf.Max(4f, (bottom - LowerTop - NamesHeight - SeekHeight - ButtonsHeight - VolumeHeight) / 3f);
+            float seekTop = LowerTop + NamesHeight + gap;
+            UiKit.Place(_seekBlock, Side, seekTop, Width - Side * 2f, SeekHeight);
+            UiKit.Place(_buttons, 21, seekTop + SeekHeight + gap, 348, ButtonsHeight);
+            UiKit.Place(_volumeBlock, Side, bottom - VolumeHeight, Width - Side * 2f, VolumeHeight);
         }
 
-        protected override void OnOpened() => _version = -1;
+        protected override void OnOpened()
+        {
+            _version = -1;
+            if (Music) _volume.SetValue(Music.Volume);
+        }
 
         protected override void Refresh()
         {

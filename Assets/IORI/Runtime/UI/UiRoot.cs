@@ -259,6 +259,9 @@ namespace Iori.Ui
             _safe = Screen.safeArea;
             float scale = Mathf.Max(0.1f, Mathf.Min(_screenW / DesignWidth, _screenH / MinHeight));
             _canvas.scaleFactor = scale;
+            // how far a finger may wander before a press becomes a stroke: 8 units of the layout, whatever the screen's density
+            var events = EventSystem.current;
+            if (events) events.pixelDragThreshold = Mathf.Max(10, Mathf.RoundToInt(8f * scale));
             float bottom = Mathf.Max(0f, _safe.yMin) / scale;
             float top = Mathf.Max(0f, _screenH - _safe.yMax) / scale;
             foreach (var p in _panels) p.SetScreen(_screenH / scale, bottom, top);
@@ -273,9 +276,12 @@ namespace Iori.Ui
             var top = OpenPanel;
 
             // a sheet over the whole screen hides the one under it: that one need not be drawn
-            for (int i = 0; i < _stack.Count - 1; i++) _stack[i].Covered = top.FullScreen && top.IsSettled;
+            // (nor while a finger draws the top one down: that goes back to the home screen, not to the one under it)
+            bool hides = top && top.FullScreen && top.IsSettled;
+            for (int i = 0; i < _stack.Count - 1; i++) _stack[i].Covered = hides;
             // ... and hides the scene but for what shows through its blurred glass: a phone draws the scene smaller meanwhile
-            CampQuality.SceneCovered = top && top.FullScreen && top.IsSettled;
+            // (at its usual size again as soon as a finger draws the sheet down and the scene comes into view)
+            CampQuality.SceneCovered = hides && !top.IsPulled;
 
             // the strip of the song that is on, while the music player has the floor and nothing is open
             var music = MusicDirector.Instance;

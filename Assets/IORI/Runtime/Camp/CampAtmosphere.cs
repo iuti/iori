@@ -49,6 +49,11 @@ namespace Iori.Camp
         public bool sleep;
         public float sleepFadeSeconds = 3f;
 
+        [Header("焚き火の音量と炎")]
+        [Tooltip("焚き火の音量のつまみに、炎の大きさを合わせる(つまみが初めの位置のとき、炎は元の大きさ)")] public bool fireFollowsVolume = true;
+        [Tooltip("つまみがいちばん左のときと、いちばん右のときの、炎の大きさの倍率")] public Vector2 fireVolumeSize = new Vector2(0.45f, 1.35f);
+        [Tooltip("そのとき、焚き火の明かりがどれだけ一緒に変わるか(0 = 変わらない、1 = 炎と同じだけ)")] [Range(0, 1)] public float fireVolumeLight = 0.5f;
+
         [Header("シーンの部品(「シーンを組み立てる」が入れる)")]
         public Light keyLight;
         public Light fireLight;
@@ -71,7 +76,7 @@ namespace Iori.Camp
         public float timeOverride = -1f;
 
         // smoothed state
-        float _rain, _wet, _sleep;
+        float _rain, _wet, _sleep, _fireKnob = 1f;
         bool _snap = true;
         float _afterRainSince = -1f;
         string _lastRadioWeather;
@@ -245,9 +250,12 @@ namespace Iori.Camp
             float rainTarget = weather == CampWeather.Rain ? 1f : 0f;
             float wetTarget = WetTarget();
             float sleepTarget = sleep ? 1f : 0f;
-            if (_snap) { _rain = rainTarget; _wet = wetTarget; _sleep = sleepTarget; _snap = false; }
+            float knobTarget = FireKnob();
+            if (_snap) { _rain = rainTarget; _wet = wetTarget; _sleep = sleepTarget; _fireKnob = knobTarget; _snap = false; }
             else
             {
+                // (the flame follows the finger on the slider closely, but does not jump)
+                _fireKnob = Mathf.MoveTowards(_fireKnob, knobTarget, dt * 2.5f);
                 _rain = Mathf.MoveTowards(_rain, rainTarget, dt / Mathf.Max(0.01f, weatherFadeSeconds));
                 // puddles fill over a few moments of rain and go away slowly
                 _wet = Mathf.MoveTowards(_wet, wetTarget, dt / Mathf.Max(0.01f, weatherFadeSeconds * 4f));
@@ -256,6 +264,24 @@ namespace Iori.Camp
 
             Look.Evaluate(CurrentHour, _pal);
             Push(_pal);
+        }
+
+        /// <summary>
+        /// How large the flame is for where the fire's volume slider stands: 1 at the slider's first place
+        /// (the volume the programme gives the fire), smaller to the left of it, larger to the right.
+        /// </summary>
+        float FireKnob()
+        {
+            var radio = RadioDirector.Instance;
+            if (!fireFollowsVolume || !Application.isPlaying || radio == null || radio.Mixer == null) return 1f;
+            foreach (var layer in radio.Mixer.Layers)
+            {
+                if (layer.Id != "fire") continue;
+                float first = Mathf.Clamp(layer.DefaultVolume, 0.05f, 0.95f);
+                float v = Mathf.Clamp01(radio.Mixer.GetUserVolume(layer.Id));
+                return v <= first ? Mathf.Lerp(fireVolumeSize.x, 1f, v / first) : Mathf.Lerp(1f, fireVolumeSize.y, (v - first) / (1f - first));
+            }
+            return 1f;
         }
 
         float ResolveHour()
@@ -412,7 +438,9 @@ namespace Iori.Camp
 
             // ---- the fire: it breathes, and its light wanders a little so the shadows move
             float flick = 0.9f + 0.07f * Mathf.Sin(t * 2.3f) * Mathf.Sin(t * 1.7f + 1f) + 0.035f * Mathf.Sin(t * 5.1f) + 0.02f * Mathf.Sin(t * 11.3f + 2f);
-            float fireLevel = p.fire * Mathf.Lerp(1f, L.sleepFire, sl) * Mathf.Lerp(1f, L.rainFire, rain);
+            // (the fire's volume slider makes the flame smaller or larger, and its light goes part of the way with it)
+            float fireBase = p.fire * Mathf.Lerp(1f, L.sleepFire, sl) * Mathf.Lerp(1f, L.rainFire, rain);
+            float fireLevel = fireBase * Mathf.Lerp(1f, _fireKnob, fireVolumeLight);
             float lanternLevel = p.lantern * (1f - sl);
             float tentLevel = p.tent * Mathf.Lerp(1f, L.sleepTent, sl);
             Vector3 firePos = fire ? fire.position + new Vector3(0f, 0.32f, 0f) : new Vector3(-0.22f, 0.3f, -0.85f);
@@ -459,7 +487,8 @@ namespace Iori.Camp
             Shader.SetGlobalVector(Id.AirFire, Lin(L.fireColor, L.fireIntensity * fireLevel * flick * airCatch));
             Shader.SetGlobalVector(Id.AirTent, Lin(L.tentColor, L.tentIntensity * tentLevel * airCatch * 0.3f));
             // flame size: a low flame over embers when sleeping, never quite out
-            float flameSize = Mathf.Clamp(0.35f + 0.65f * fireLevel, 0.3f, 1.2f) * Mathf.Lerp(1f, 0.55f, sl);
+            // (never taller than its box has room for: see CampSetup, where the box is made)
+            float flameSize = Mathf.Clamp((0.35f + 0.65f * fireBase) * _fireKnob, 0.3f, 1.3f) * Mathf.Lerp(1f, 0.55f, sl);
             Shader.SetGlobalVector(Id.Fire, new Vector4(flameSize, Mathf.Lerp(0.85f, 1.1f, Mathf.Clamp01(fireLevel)) * flick, Mathf.Clamp01(fireLevel * (1f - sl * 0.7f)), 0f));
 
             // ---- things that glow by themselves (channels as in campkit.py: 1 fire, 2 tent, 3 lantern, 4 town, 5 radio, 6 player, 7 embers)
