@@ -159,6 +159,50 @@ namespace Iori.Camp.EditorTools
             }
         }
 
+        /// <summary>Each motion alone, made bigger step by step, to find how far it can go before the layers part
+        /// (dir/sweep/axis_value.png, the model's own size). Head turn, nod and tilt, the body's turn and lean are
+        /// held 2 s (hair settled); the hair's swing is a quick turn of the head from -15 to +15, taken 0.25 s after
+        /// the turn, with the swing made 1 to 4 times as strong.</summary>
+        public static void DumpSweep(PuppetRenderer puppet, string dir)
+        {
+            if (!puppet || puppet.Rig == null) { Debug.LogWarning("[IORI] puppet: no sweep to write out"); return; }
+            int oldSize = puppet.maxSize; float oldSwing = puppet.swing;
+            string outDir = Path.Combine(dir, "sweep");
+            Directory.CreateDirectory(outDir);
+            void Save(string name) => File.WriteAllBytes(Path.Combine(outDir, name + ".png"), Straight(puppet.ColorTexture));
+            try
+            {
+                puppet.maxSize = Mathf.Max(puppet.Rig.model.canvasW, puppet.Rig.model.canvasH);
+                float[] head = { 5, 10, 15, 20, 25, 30, 40 }, body = { 2, 4, 6, 8, 10, 14 };
+                var axes = new (string name, float[] values, Action<PuppetParams, float> set)[]
+                {
+                    ("turn", head, (P, v) => P.angleX = v), ("nod", head, (P, v) => P.angleY = v), ("tilt", head, (P, v) => P.angleZ = v),
+                    ("bodyturn", body, (P, v) => P.bodyX = v), ("lean", body, (P, v) => P.bodyZ = v),
+                };
+                foreach (var (name, values, set) in axes)
+                    foreach (float v in values)
+                        foreach (float s in new[] { -1f, 1f })
+                        {
+                            float val = v * s;
+                            puppet.RenderPose(P => set(P, val), 2f);
+                            Save($"{name}_{(val < 0 ? "m" : "p")}{v:00}");
+                        }
+                foreach (float sw in new[] { 1f, 1.5f, 2f, 3f, 4f })
+                {
+                    puppet.swing = sw;
+                    int step = 0;
+                    puppet.RenderPose(P => { P.angleX = step++ < 45 ? -15f : 15f; }, 1.5f + 0.25f);
+                    Save($"swing_x{sw:0.0}");
+                }
+                Debug.Log("[IORI] puppet sweep written out to " + outDir);
+            }
+            finally
+            {
+                puppet.maxSize = oldSize; puppet.swing = oldSwing;
+                puppet.RenderAt(0f);
+            }
+        }
+
         /// <summary>A texture the puppet drew into, as a PNG with its colors divided by alpha again.</summary>
         static byte[] Straight(RenderTexture rt)
         {

@@ -1063,15 +1063,17 @@ namespace Iori.Camp.EditorTools
             // the puppet as it was drawn into its texture, apart from the board and its light: to tell a fault in the
             // layers from a fault in the board
             // -puppetAmount / -puppetSwing: how big her head and body motion and the hair's swing are in the pictures
-            // below (PuppetRenderer.amount / .swing; 1 is as set on the puppet), to compare sizes of motion
+            // below (PuppetRenderer.amount / .swing, 0 to 4; 1 is as set on the puppet), to compare sizes of motion
             if (puppet)
             {
-                if (float.TryParse(ArgValue("-puppetAmount"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float am) && am >= 0f && am <= 2f) puppet.amount = am;
-                if (float.TryParse(ArgValue("-puppetSwing"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float sw) && sw >= 0f && sw <= 2f) puppet.swing = sw;
+                if (float.TryParse(ArgValue("-puppetAmount"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float am) && am >= 0f && am <= 4f) puppet.amount = am;
+                if (float.TryParse(ArgValue("-puppetSwing"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float sw) && sw >= 0f && sw <= 4f) puppet.swing = sw;
             }
             if (puppet) PuppetImport.Dump(puppet, dir);
             // -puppetPoses: and in a set of poses, one thing moved at a time, at the model's own size
             if (puppet && HasArg("-puppetPoses")) PuppetImport.DumpPoses(puppet, dir);
+            // -puppetSweep: each motion alone, made bigger step by step (how far it can go before the layers part)
+            if (puppet && HasArg("-puppetSweep")) PuppetImport.DumpSweep(puppet, dir);
             // -puppetMotion: and her idle motion as pictures of the puppet alone, at the model's own size (-puppetFps, -puppetSeconds)
             if (puppet && HasArg("-puppetMotion"))
             {
