@@ -32,7 +32,7 @@ radio.json(番組表) ─┐
 | `Assets/IORI/Tests/EditMode/` | Core のテスト |
 | `Assets/Plugins/Android/IoriPlayback.androidlib/` | Android のバックグラウンド再生サービス(Java、Media3) |
 | `Assets/StreamingAssets/IORI/radio.json` | 番組表(時間帯、曲、チャイム、静けさの時間のフレーズ、環境音) |
-| `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
+| `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`radio/`(ラジオの曲)、`voice/`(イオリの声)、`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
 | `tools/CoreTests/` | Unity なしで Core のテストを動かす .NET プロジェクト |
 
 ## はじめに(デスクトップで)
@@ -61,6 +61,46 @@ radio.json(番組表) ─┐
 時間帯(`phases`)は `start`(HH:mm)の順に並び、次の時間帯まで続く。1 時間刻みにしたければ 24 個書けばよい。
 時間帯が切り替わるとき、前の曲は `crossfadeSeconds`(既定 8 秒)かけてフェードアウトし、次の曲はフェードインせず頭から鳴る(イントロの張りを残すため。フェードインさせたいときは `introFadeSeconds` を指定)。
 `mode: "quiet"` の時間帯は曲を流さず、環境音とたまに鳴るフレーズだけになる(ブレワイ式)。
+
+## ラジオの曲
+
+Suno(v6)の Cover で、時間帯ごとのモチーフの種から作った曲。いまは晴れの 6 曲だけで、雨の日も晴れの曲が流れる。
+
+| ファイル | 時間帯 | 中身 |
+| --- | --- | --- |
+| `radio/early_morning_clear.ogg` | 早朝 4:00 | A♭、約 65 BPM。Rhodes のソロ、ボサノバ寄り(約 1 分 57 秒のループ) |
+| `radio/morning_clear.ogg` | 朝 7:00 | G、約 112 BPM。ボサノバ、ナイロンギターとフルート(約 1 分 34 秒) |
+| `radio/day_clear.ogg` | 昼 11:00 | A、約 103 BPM。軽いジャズフュージョン(約 2 分 14 秒) |
+| `radio/evening_clear.ogg` | 夕方 16:00 | F、約 88 BPM。スムースジャズ、ミュートトランペット(約 1 分 49 秒) |
+| `radio/night_clear.ogg` | 夜 19:00 | E♭、約 88 BPM、3 拍子。ジャズワルツ、ヴィブラフォン(約 1 分 55 秒) |
+| `radio/late_night_clear.ogg` | 深夜 23:00 | D♭、約 57 BPM。Rhodes のトリオ(約 1 分 43 秒) |
+
+どれも小節の頭で切った継ぎ目なしのループ(`"loop": "seamless"`、OGG Vorbis 44.1kHz ステレオ、-16 LUFS)。
+Suno の曲は Pro の月の枠でダウンロードしたものだけ商用で使える。元の WAV はリポジトリに入れていない。
+
+## イオリの声
+
+ElevenLabs の Voice Library の声「Chinyaku - Cute Japanese Actor」を、モデル Eleven v4 Turbo(日本語)で読ませた仮の声。いずれ自前の声に差し替える予定。
+`voice/{場面}_{番号}.ogg`(OGG Vorbis 44.1kHz モノラル、-18 LUFS、頭とおしりの無音を詰めてある)。まだコードからは鳴らしていない。
+
+| ファイル | 場面 | セリフ |
+| --- | --- | --- |
+| `greet_early_morning_01` | 早朝に開いた | 早いね。……火、つけといたよ。 |
+| `greet_morning_01` | 朝に開いた | おはよ。 |
+| `greet_day_01` | 昼に開いた | いい天気。……眠くなるね。 |
+| `greet_evening_01` | 夕方に開いた | 太陽、落ちてきたね。 |
+| `greet_night_01` | 夜に開いた | 星、出てきたね。 |
+| `greet_late_night_01` | 深夜に開いた | まだ起きてるんだ。……私もだけど。 |
+| `rain_start_01` | 雨が降り始めた | 降ってきた。 |
+| `rain_stop_01` | 雨が止んだ | ……止んだね。 |
+| `okaeri_01` | 帰宅した | おかえり。 |
+| `okaeri_02` | 帰宅した(遅い時間) | おかえり。……遅かったね。 |
+| `itterasshai_01` | 出かける | いってらっしゃい。 |
+| `itterasshai_02` | 出かける | 気をつけて。 |
+| `tap_01` `tap_02` `tap_03` | イオリをタップ | ん。/……なーに。/見てるよ。 |
+| `firewood_01` | 薪をくべた | ありがと。(小声) |
+| `music_stopped_01` | 曲が止まった | 曲、止まっちゃったね。 |
+| `player_open_01` | 音楽プレーヤーを開いた | 今日はなに聴く? |
 
 ## 環境音・チャイム・UI の効果音
 
