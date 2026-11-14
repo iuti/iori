@@ -9,6 +9,6 @@ open fire: True
 music: 12 songs, 7 albums, 6 artists, Unity Audio (PC)
 open player: True
 playing: 遠まわりの帰り道, play 11/12 ready 73s/228s, player has the floor True, radio silent True
-player: play 11/12 ready 75s/228s
+player: play 11/12 ready 76s/228s
 open radio while the player plays: True
 released: player has the floor False, radio silent False
