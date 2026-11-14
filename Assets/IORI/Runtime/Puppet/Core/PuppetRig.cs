@@ -5,8 +5,8 @@
 // This file is a C# port of parts of LivLiv Player's src/runtime/puppet.ts
 // (https://github.com/livliv-dev/player, Copyright 2026 LivLiv, Apache License 2.0; see ../NOTICE.md).
 // Changed from the original: no drawing here (the caller draws `draws` with its own renderer), no brows' lift,
-// keyforms, full-body figures, chest spring, soft iris masks or lid curves; added the head's own tilt and the
-// body's pivot (PuppetModel's x-iori).
+// keyforms, full-body figures, chest spring, soft iris masks or lid curves; added the head's own tilt, the
+// body's pivot, layers that never move and short hair whose tips swing (PuppetModel's x-iori).
 using System;
 using System.Collections.Generic;
 
@@ -336,6 +336,15 @@ namespace Iori.Puppet
                     P.wHead[i] = f + (1 - f) * longHead;
                     P.wPhys1[i] = f * tb + (1 - f) * lp1; P.wPhys2[i] = f * tb * tb + (1 - f) * lp2;
                     P.wFront[i] = f;
+                    if (model.hairTips != null)
+                    {
+                        // (ours, x-iori.hair_tips) short hair: all of it is the head's, and a lock swings by how far it
+                        // sticks out past the head, on the long hair's soft springs. Again a function of position only
+                        float tip = Smooth(model.hairTips[0], model.hairTips[1], rr);
+                        P.wHead[i] = 1;
+                        P.wPhys1[i] = Math.Max(P.wPhys1[i] * (1 - tip), tip); P.wPhys2[i] = Math.Max(P.wPhys2[i] * (1 - tip), tip * tip);
+                        P.wFront[i] = f * (1 - tip);
+                    }
                     if (L.group == "hair_inner") { P.wHead[i] *= 0.5f; P.wPhys1[i] *= 0.35f; P.wPhys2[i] *= 0.35f; }
                 }
                 // the lower face follows the jaw when the mouth opens. The same field, a function of position only, for

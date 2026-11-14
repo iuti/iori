@@ -427,6 +427,91 @@ namespace Iori.Puppet.Tests
         }
 
         [Test]
+        public void Idle_TurnTiltAndLean_EachMakeTheirOwnMotionBigger_AndNeverLeaveTheRange()
+        {
+            float[] Most(float turn, float tilt, float lean)
+            {
+                var idle = new PuppetIdle(5) { turn = turn, tilt = tilt, lean = lean };
+                var P = new PuppetParams();
+                var most = new float[5];
+                for (int i = 0; i < 120 * 30; i++)
+                {
+                    idle.Apply(P, 1f / 30f);
+                    float[] v = { P.angleX, P.angleY, P.angleZ, P.bodyX, P.bodyZ };
+                    for (int k = 0; k < 5; k++) most[k] = Math.Max(most[k], Math.Abs(v[k]));
+                }
+                return most;
+            }
+            var calm = Most(1, 1, 1);
+            var turned = Most(3, 1, 1);
+            Assert.That(turned[0], Is.EqualTo(3 * calm[0]).Within(0.01f));
+            Assert.That(turned[1], Is.EqualTo(3 * calm[1]).Within(0.01f));
+            Assert.That(turned[2], Is.EqualTo(calm[2]));
+            Assert.That(turned[4], Is.EqualTo(calm[4]));
+            var tilted = Most(1, 2, 1);
+            Assert.That(tilted[2], Is.EqualTo(2 * calm[2]).Within(0.01f));
+            Assert.That(tilted[0], Is.EqualTo(calm[0]));
+            var leaned = Most(1, 1, 1.5f);
+            Assert.That(leaned[3], Is.EqualTo(1.5f * calm[3]).Within(0.01f));
+            Assert.That(leaned[4], Is.EqualTo(1.5f * calm[4]).Within(0.01f));
+            Assert.That(leaned[2], Is.EqualTo(calm[2]));
+            // asked for far more than the model can do, they stay inside what the rig takes
+            var wild = Most(20, 20, 20);
+            for (int k = 0; k < 3; k++) { Assert.That(wild[k], Is.LessThanOrEqualTo(30f)); Assert.That(wild[k], Is.GreaterThan(27f)); }
+            for (int k = 3; k < 5; k++) Assert.That(wild[k], Is.LessThanOrEqualTo(10f));
+        }
+
+        [Test]
+        public void HairTips_ShortHairSwingsByHowFarItSticksOut_AndAllOfItGoesWithTheHead()
+        {
+            // the head's radii are 90 and 110 about (256, 200): a lock at x = 420 is 1.8 radii out, one at x = 300 is inside
+            string wide = Model.Replace(@"""x"": 150, ""y"": 80, ""w"": 212, ""h"": 400, ""depth"": -0.3", @"""x"": 60, ""y"": 80, ""w"": 392, ""h"": 400, ""depth"": -0.3")
+                               .Replace(@"""wind"": 0, ""chains""", @"""wind"": 3, ""chains""");
+            string tips = wide.Replace(@"""head_tilt"": 0,", @"""head_tilt"": 0, ""hair_tips"": [1.0, 2.0],");
+            Assert.That(PuppetModel.Parse(tips).hairTips, Is.EqualTo(new[] { 1f, 2f }));
+            Assert.That(PuppetModel.Parse(wide).hairTips, Is.Null);
+            Assert.Throws<FormatException>(() => PuppetModel.Parse(wide.Replace(@"""head_tilt"": 0,", @"""head_tilt"": 0, ""hair_tips"": [2.0, 1.0],")));
+
+            // in the wind, head still: the lock that sticks out sways, the hair on the head no more than it did; without
+            // hair_tips the lock does not sway at all (LivLiv's long hair only swings below the jaw)
+            float Sway(string json, float x, float y)
+            {
+                var r = Rig(json); var L = Layer(r, "hair_back"); int i = Nearest(L, x, y);
+                float most = 0;
+                for (int k = 0; k < 6 * 60; k++) { r.Update(1f / 60f); most = Math.Max(most, Math.Abs(L.pos[2 * i] - L.rest[2 * i])); }
+                AssertFinite(r);
+                return most;
+            }
+            Assert.That(Sway(tips, 420, 200), Is.GreaterThan(4f));
+            Assert.That(Sway(tips, 300, 200), Is.EqualTo(Sway(wide, 300, 200)).Within(0.01f));
+            Assert.That(Sway(tips, 300, 200), Is.LessThan(0.4f * Sway(tips, 420, 200)));
+            Assert.That(Sway(wide, 420, 200), Is.LessThan(0.5f));
+
+            // tilted and settled (no wind), a low lock is where the head's turn about the neck (256, 310) puts it, as the
+            // face is: it is not left half way between the head and the body
+            // (the body is kept from leaning along with the tilt, so that only the head's turn moves things)
+            string still = tips.Replace(@"""wind"": 3, ""chains""", @"""wind"": 0, ""body"": { ""roll"": 0 }, ""chains""");
+            float Off(string json)
+            {
+                var t = Rig(json);
+                t.physicsScale = 0;
+                t.param.angleZ = 20;
+                Run(t, 2f);
+                var hair = Layer(t, "hair_back"); var face = Layer(t, "face");
+                int h = Nearest(hair, 256, 400), f = Nearest(face, 256, 200);
+                double a = 20 * Math.PI / 180 * t.model.rig.roll * t.model.tuning.turn, c = Math.Cos(a), sn = Math.Sin(a);
+                // where the turn alone puts a point, and how far the face is from there (the neck's own shift with the body)
+                double Tx(float x, float y) => 256 + (x - 256) * c - (y - 310) * sn;
+                double Ty(float x, float y) => 310 + (x - 256) * sn + (y - 310) * c;
+                double nx = face.pos[2 * f] - Tx(face.rest[2 * f], face.rest[2 * f + 1]), ny = face.pos[2 * f + 1] - Ty(face.rest[2 * f], face.rest[2 * f + 1]);
+                double dx = hair.pos[2 * h] - (Tx(hair.rest[2 * h], hair.rest[2 * h + 1]) + nx), dy = hair.pos[2 * h + 1] - (Ty(hair.rest[2 * h], hair.rest[2 * h + 1]) + ny);
+                return (float)Math.Sqrt(dx * dx + dy * dy);
+            }
+            Assert.That(Off(still), Is.LessThan(1.5f));
+            Assert.That(Off(still.Replace(@" ""hair_tips"": [1.0, 2.0],", "")), Is.GreaterThan(4f));
+        }
+
+        [Test]
         public void Idle_DrivesTheRig_WithoutBreakingIt()
         {
             var r = Rig();

@@ -19,8 +19,11 @@ namespace Iori.Puppet
         [Tooltip("レイヤーを描くシェーダー(IORI/Puppet/Layer)")] public Shader layerShader;
         [Tooltip("描きためる絵の長い辺(px)。小さいほど軽い")] public int maxSize = 1024;
         [Tooltip("待機中の動き(まばたき、呼吸、視線、首のかしげ、体の揺れ)")] public bool idle = true;
-        [Tooltip("頭と体の動きの大きさ")] [Range(0f, 2f)] public float amount = 1f;
-        [Tooltip("髪と揺れものの揺れの大きさ")] [Range(0f, 2f)] public float swing = 1f;
+        [Tooltip("頭と体の動き全体の大きさ(下の 3 つに掛かる)")] [Range(0f, 2f)] public float amount = 1f;
+        [Tooltip("首を向ける、うなずく大きさ。4.5 あたりが、絵が崩れない上限")] [Range(0f, 6f)] public float turn = 4.5f;
+        [Tooltip("首をかしげる大きさ。3.5 あたりが、絵が崩れない上限")] [Range(0f, 5f)] public float tilt = 3.5f;
+        [Tooltip("体を揺らす、傾ける大きさ。1.5 あたりが、絵が崩れない上限")] [Range(0f, 3f)] public float lean = 1.5f;
+        [Tooltip("髪と揺れものの揺れの大きさ。1 あたりが、絵が崩れない上限")] [Range(0f, 2f)] public float swing = 1f;
         [Tooltip("口の開き(声に合わせて外から入れる)")] [Range(0f, 1f)] public float mouthOpen;
         [Tooltip("口の形(-1: お、う / 1: い、え)")] [Range(-1f, 1f)] public float vowel;
         [Tooltip("ほほえみ")] [Range(0f, 1f)] public float smile;
@@ -202,7 +205,7 @@ namespace Iori.Puppet
         void Step(float dt)
         {
             var P = _rig.param;
-            _idle.amount = amount; _idle.asleep = asleep;
+            _idle.amount = amount; _idle.turn = turn; _idle.tilt = tilt; _idle.lean = lean; _idle.asleep = asleep;
             if (idle) _idle.Apply(P, dt);
             P.mouthOpen = mouthOpen; P.vowel = vowel; P.smile = smile;
             _rig.physicsScale = swing;

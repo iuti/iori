@@ -47,16 +47,16 @@
   ]
  },
  "rig": {
-  "yaw": 0.18,
-  "pitch": 0.14,
-  "roll": 0.3,
+  "yaw": 0.314,
+  "pitch": 0.3,
+  "roll": 0.5,
   "bulge": 0.6,
   "breath": 1,
   "sway": 1,
-  "wind": 1.2,
+  "wind": 2.0,
   "body": {
    "yaw": 0.25,
-   "roll": 0.25,
+   "roll": 0.06,
    "breath": 1,
    "bust": 0
   },
@@ -98,7 +98,7 @@
     "damp": 4,
     "drive": 0.8,
     "hang": 0.5,
-    "wind": 2.0,
+    "wind": 1.2,
     "freq": 0.7,
     "limit": 25,
     "sigma": 22
@@ -132,7 +132,7 @@
     "damp": 4,
     "drive": 0.9,
     "hang": 0.6,
-    "wind": 1.5,
+    "wind": 0.9,
     "freq": 0.9,
     "limit": 20,
     "sigma": 10
@@ -170,16 +170,32 @@
     "damp": 4.5,
     "drive": 0.9,
     "hang": 0.1,
-    "wind": 3.0,
+    "wind": 1.8,
     "freq": 0.6,
     "limit": 30,
     "sigma": 60
    }
-  ]
+  ],
+  "hair": {
+   "front": [
+    140,
+    11,
+    0.022,
+    70,
+    7
+   ],
+   "back": [
+    48,
+    5.5,
+    1.5,
+    24,
+    3.5
+   ]
+  }
  },
  "tuning": {
-  "turn": 0.6,
-  "nod": 0.7,
+  "turn": 1,
+  "nod": 1,
   "hair": 1,
   "blink": 1,
   "expr": 0,
@@ -212,7 +228,7 @@
    "x": 309,
    "y": 60,
    "w": 452,
-   "h": 340,
+   "h": 368,
    "texture": "textures/back_hair.png"
   },
   {
@@ -492,6 +508,10 @@
   "still": [
    "base",
    "strap"
+  ],
+  "hair_tips": [
+   1.0,
+   2.0
   ]
  }
 }

@@ -10,6 +10,9 @@ namespace Iori.Puppet
     {
         /// <summary>How much the head and the body move (0: only breath, blinks and eyes).</summary>
         public float amount = 1f;
+        /// <summary>On top of amount, each on its own: how far the head turns and nods, how far it tilts, how far the
+        /// body sways and leans (1: as written here; the model's rig decides what a degree of these comes to).</summary>
+        public float turn = 1f, tilt = 1f, lean = 1f;
         /// <summary>Seconds between blinks, on average.</summary>
         public float blinkEvery = 4.2f;
         /// <summary>Seconds a breath takes, on average.</summary>
@@ -105,6 +108,14 @@ namespace Iori.Puppet
             x += v * dt;
         }
 
+        /// <summary>x as it is up to four fifths of the limit, then bending over so that it never passes the limit.</summary>
+        static float Within(float x, float limit)
+        {
+            float knee = 0.8f * limit, m = Math.Abs(x);
+            if (m <= knee) return x;
+            return Math.Sign(x) * (knee + (limit - knee) * MathF.Tanh((m - knee) / (limit - knee)));
+        }
+
         /// <summary>Writes this moment's head, eyes, body and breath into P (the mouth and the smile are left alone).</summary>
         public void Apply(PuppetParams P, float dt)
         {
@@ -133,11 +144,12 @@ namespace Iori.Puppet
             P.eyeBallX = Math.Max(-1f, Math.Min(1f, gx)); P.eyeBallY = Math.Max(-1f, Math.Min(1f, gy));
 
             float a = amount, w = a * (1 - 0.6f * sleep);
-            P.angleX = _hx * a + 2.2f * w * Wander(_t * 0.11f, 1);
-            P.angleY = _hy * a + 1.6f * w * Wander(_t * 0.13f, 2) - 9f * sleep * a;
-            P.angleZ = _tilt * a + 1.8f * w * Wander(_t * 0.09f, 3);
-            P.bodyX = 2.2f * w * Wander(_t * 0.07f, 4);
-            P.bodyZ = _lean * a + 1.4f * w * Wander(_t * 0.06f, 5);
+            // (asked for more than the model's range, they come to rest against it softly instead of stopping dead)
+            P.angleX = Within((_hx * a + 2.2f * w * Wander(_t * 0.11f, 1)) * turn, 30f);
+            P.angleY = Within((_hy * a + 1.6f * w * Wander(_t * 0.13f, 2)) * turn - 9f * sleep * a, 30f);
+            P.angleZ = Within((_tilt * a + 1.8f * w * Wander(_t * 0.09f, 3)) * tilt, 30f);
+            P.bodyX = Within(2.2f * w * Wander(_t * 0.07f, 4) * lean, 10f);
+            P.bodyZ = Within((_lean * a + 1.4f * w * Wander(_t * 0.06f, 5)) * lean, 10f);
         }
 
         void Step(float dt)

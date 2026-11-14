@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    人形(Assets/IORI/Runtime/Puppet/Core)を Unity なしで動かして、その瞬間の網目を書き出す。
+    書き出したものは render.js(ヘッドレスの Chromium の WebGL)が Unity と同じ重ね方で絵にする。
+    使い方は README.md。
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../Assets/IORI/Runtime/Puppet/Core/**/*.cs" />
+    <Compile Include="../../Assets/IORI/Runtime/Audio/Core/**/*.cs" />
+  </ItemGroup>
+</Project>
