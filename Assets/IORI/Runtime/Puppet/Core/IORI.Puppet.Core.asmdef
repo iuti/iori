@@ -1,0 +1,16 @@
+{
+    "name": "IORI.Puppet.Core",
+    "rootNamespace": "Iori.Puppet",
+    "references": [
+        "IORI.Audio.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

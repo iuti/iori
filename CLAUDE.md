@@ -8,6 +8,8 @@
 - 選曲などのロジックは `Assets/IORI/Runtime/Audio/Core/` に置き、UnityEngine を参照しない(asmdef の `noEngineReferences: true`)。テストは `Assets/IORI/Tests/EditMode/` に書き、Unity なしでも `dotnet test tools/CoreTests` で通ること。
 - 何を鳴らすかを決めるのは `RadioScheduler` だけ。Android の `PlanEngine.java` と PC の `UnityAudioBackend.cs` は予定表を鳴らすだけで、同じ決まり(フェードの式、再生位置の式、消えたクリップのフェードアウト、単発音の遅延許容)を持つ。片方を変えたらもう片方も直す。
 - 予定表の JSON の形は `PlaybackPlan.cs` が正。`Plan.java` はそれに合わせる。
+- イオリを動かす人形(1 枚絵をレイヤーに分けて動かす)の計算は `Assets/IORI/Runtime/Puppet/Core/` に置き、ここも UnityEngine を参照しない。テストは `Assets/IORI/Tests/EditMode/Puppet/`、`dotnet test tools/CoreTests` で通ること。`PuppetRig.cs` は LivLiv Player(Apache-2.0)の一部を移したものなので、冒頭の出どころの記載と `Assets/IORI/Runtime/Puppet/NOTICE.md` を残す。
+- 人形の絵は、Unity なしでも `tools/PuppetPreview`(Core をそのまま動かして、ヘッドレスの Chromium の WebGL で重ねる)で原寸で描ける。ポーズや動きの大きさを変えたら、まずこれで穴やずれを見る(使い方は `tools/PuppetPreview/README.md`)。光とノーマルは Unity でしか見られない。
 - 音楽プレーヤー(端末の曲)の鳴らす順を決めるのは `PlayQueue` だけ。再生係(`IMusicBackend`: PC は `UnityMusicBackend`、Android は `AndroidMusicBackend` と再生サービスの中の `MusicEngine.java`)は渡された列を鳴らすだけで、曲が終わったときの決まり(くり返しなしは最後で止まる、全部は最初へ回る、1 曲は同じ曲、読めない曲は飛ばす)を同じにする。片方を変えたらもう片方も直す。鳴らすのはラジオかプレーヤーのどちらか片方(`MusicDirector.Active` の間、ラジオは黙って環境音だけ。chico が決めた仕様)。
 - 曲の一覧のタブは 曲 / アルバム / 演奏者 / リスト。「リスト」は自分で作る曲の並び(プレイリスト)で、中身は Core の `MusicPlaylists`(作る、名前、足す、外す、並べ替え、JSON の保存)。保存は `MusicDirector` が端末の `playlists.json` に書く(`Persist` が false の撮影中は読み書きしない)。曲は Id と、曲名・演奏者・アルバム名の鍵で覚え、見つからない曲は消さずに見せるときだけ飛ばす。曲の行を長押しすると `PlaylistPicker` が出る。検索は `MusicLibrary.Search` で、文字は `TextFold` でそろえる(大文字小文字、全角半角、ひらがなカタカナ、空白)。
 - Android の曲の一覧は `MusicStore.java` が MediaStore から集めて JSON で渡し、Core の `MediaStoreJson.cs` が読む。形を変えたら両方直す。集めるのは `AndroidMusicBackend.Folder`(既定は `PC-Music`)という名前のフォルダの下だけ。

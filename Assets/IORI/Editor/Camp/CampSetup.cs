@@ -46,7 +46,7 @@ namespace Iori.Camp.EditorTools
         const string UrpAssetPath = "Assets/IORI/Settings/IORI_URP.asset";
         const string UrpRendererPath = "Assets/IORI/Settings/IORI_URP_Renderer.asset";
 
-        static readonly string[] ShaderFiles = { "IoriLit", "IoriGround", "IoriFoliage", "IoriSky", "IoriWater", "IoriWaterClassic", "IoriFire", "IoriSparks", "IoriRain", "IoriCharacter", "IoriContact" };
+        static readonly string[] ShaderFiles = { "IoriLit", "IoriGround", "IoriFoliage", "IoriSky", "IoriWater", "IoriWaterClassic", "IoriFire", "IoriSparks", "IoriRain", "IoriCharacter", "IoriContact", "IoriPuppetLayer" };
 
         // ------------------------------------------------------------------ layout file
 
@@ -508,6 +508,9 @@ namespace Iori.Camp.EditorTools
             EnsureLayer(CampLayers.MirrorOnly, CampLayers.MirrorOnlyName);
             EnsureFolder(MaterialDir);
             ConfigureTextures();
+            // a puppet model, if one lies in the project (its pictures are imported here, before anything is built)
+            string puppetDir = PuppetImport.FindFolder();
+            var puppet = puppetDir != null ? PuppetImport.Import(puppetDir) : null;
             ConfigurePipeline();
             if (PlayerSettings.colorSpace != ColorSpace.Linear) PlayerSettings.colorSpace = ColorSpace.Linear;
 
@@ -548,6 +551,8 @@ namespace Iori.Camp.EditorTools
             AssetDatabase.SaveAssets();
 
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            // opening a scene clears away assets nothing holds: the puppet made above is one of them
+            if (puppetDir != null) puppet = Load<Iori.Puppet.PuppetAsset>(puppetDir + "/puppet.asset");
             foreach (var go in scene.GetRootGameObjects()) UnityEngine.Object.DestroyImmediate(go);
 
             // ---- camera
@@ -739,6 +744,17 @@ namespace Iori.Camp.EditorTools
                 bb.picture = ioriTex;
                 if (sitting) bb.height = IoriSitHeight;
                 bb.viewer = cam;
+                // a puppet model, if one is in the project: she moves, drawn into the board's picture (PuppetRenderer)
+                if (puppet)
+                {
+                    var canvas = Iori.Puppet.PuppetModel.Parse(puppet.model.text);
+                    var pr = board.AddComponent<Iori.Puppet.PuppetRenderer>();
+                    pr.asset = puppet;
+                    pr.layerShader = Load<Shader>(ShaderDir + "/IoriPuppetLayer.shader");
+                    bb.aspect = canvas.canvasW / (float)canvas.canvasH;
+                    board.name = "イオリの板(動く人形)";
+                    Debug.Log("[IORI] puppet on the board: " + puppetDir);
+                }
             }
             // the shade under her and her chair (a flat picture cannot shade the ground under itself)
             if (sitting)
@@ -828,6 +844,8 @@ namespace Iori.Camp.EditorTools
             public bool small;
             /// <summary>The lake painted the earlier way (CampLook.lakeClassic).</summary>
             public bool lakeClassic;
+            /// <summary>Seconds of her idle motion played before the picture (a puppet on the board). 0: as drawn, at rest.</summary>
+            public float puppet;
         }
 
         const float ShotTime = 37.3f;
@@ -885,6 +903,26 @@ namespace Iori.Camp.EditorTools
             return shots;
         }
 
+        /// <summary>How many pictures a second, for how long, the pictures of her motion are taken (-puppetFps, -puppetSeconds).</summary>
+        static void PuppetPace(out float fps, out float seconds)
+        {
+            fps = 8f; seconds = 12f;
+            if (float.TryParse(ArgValue("-puppetFps"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f) && f >= 1f && f <= 60f) fps = f;
+            if (float.TryParse(ArgValue("-puppetSeconds"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float sec) && sec > 0f && sec <= 60f) seconds = sec;
+        }
+
+        /// <summary>Iori by the fire at night while she moves: to see the puppet's idle motion (names 80_puppet_000 on;
+        /// "-shots 80" picks them all). An eighth of a second apart for twelve seconds unless -puppetFps (pictures a
+        /// second) and -puppetSeconds say otherwise.</summary>
+        static Shot[] PuppetShots()
+        {
+            PuppetPace(out float fps, out float seconds);
+            var shots = new Shot[Mathf.Clamp(Mathf.RoundToInt(fps * seconds), 1, 999)];
+            for (int i = 0; i < shots.Length; i++)
+                shots[i] = new Shot { name = "80_puppet_" + i.ToString("000"), hour = 22f, focus = CampPropKind.Iori, time = ShotTime + i / fps, puppet = 1f + i / fps, small = true };
+            return shots;
+        }
+
         [MenuItem("IORI/Camp/スクショを撮る")]
         public static void CaptureMenu()
         {
@@ -903,6 +941,7 @@ namespace Iori.Camp.EditorTools
                 _plainFire = HasArg("-ioriPlainFire");
                 var shots = new List<Shot>(DefaultShots);
                 shots.AddRange(FlickerShots());
+                shots.AddRange(PuppetShots());
                 if (!string.IsNullOrEmpty(only))
                 {
                     var keep = new HashSet<string>(only.Split(','));
@@ -928,6 +967,7 @@ namespace Iori.Camp.EditorTools
             var rig = UnityEngine.Object.FindFirstObjectByType<CampCameraRig>();
             var quality = UnityEngine.Object.FindFirstObjectByType<CampQuality>();
             var board = UnityEngine.Object.FindFirstObjectByType<CampBillboard>();
+            var puppet = UnityEngine.Object.FindFirstObjectByType<Iori.Puppet.PuppetRenderer>();
             var rain = UnityEngine.Object.FindFirstObjectByType<CampRain>();
             var mirrors = UnityEngine.Object.FindObjectsByType<CampReflection>(FindObjectsSortMode.None);
             if (!atm || !rig || !quality) throw new Exception("Camp scene is not set up (IORI/Camp/シーンを組み立てる)");
@@ -981,6 +1021,7 @@ namespace Iori.Camp.EditorTools
                     rig.Snap();
                     atm.Snap();          // again: the camera has now said how far away its subject is
                     if (board) board.Place();
+                    if (puppet) puppet.RenderAt(s.puppet);
                     if (rain) rain.Refresh();
                     foreach (var m in mirrors)
                     {
@@ -1012,11 +1053,32 @@ namespace Iori.Camp.EditorTools
                 atm.followClock = oldClock; atm.previewHour = oldHour; atm.weather = oldWeather; atm.season = oldSeason; atm.sleep = false; atm.timeOverride = -1f;
                 rig.focus = null; rig.yaw = 0f; rig.autoSway = oldSway;
                 if (atm.look) atm.look.lakeClassic = oldLakeClassic;
+                if (puppet) puppet.RenderAt(0f);
                 quality.level = oldLevel;
                 quality.Apply();
                 atm.Snap();
                 rig.Snap();
                 ShaderUtil.allowAsyncCompilation = oldAsync;
+            }
+            // the puppet as it was drawn into its texture, apart from the board and its light: to tell a fault in the
+            // layers from a fault in the board
+            // -puppetAmount / -puppetSwing: how big her head and body motion and the hair's swing are in the pictures
+            // below (PuppetRenderer.amount / .swing, 0 to 4; 1 is as set on the puppet), to compare sizes of motion
+            if (puppet)
+            {
+                if (float.TryParse(ArgValue("-puppetAmount"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float am) && am >= 0f && am <= 4f) puppet.amount = am;
+                if (float.TryParse(ArgValue("-puppetSwing"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float sw) && sw >= 0f && sw <= 4f) puppet.swing = sw;
+            }
+            if (puppet) PuppetImport.Dump(puppet, dir);
+            // -puppetPoses: and in a set of poses, one thing moved at a time, at the model's own size
+            if (puppet && HasArg("-puppetPoses")) PuppetImport.DumpPoses(puppet, dir);
+            // -puppetSweep: each motion alone, made bigger step by step (how far it can go before the layers part)
+            if (puppet && HasArg("-puppetSweep")) PuppetImport.DumpSweep(puppet, dir);
+            // -puppetMotion: and her idle motion as pictures of the puppet alone, at the model's own size (-puppetFps, -puppetSeconds)
+            if (puppet && HasArg("-puppetMotion"))
+            {
+                PuppetPace(out float motionFps, out float motionSeconds);
+                PuppetImport.DumpMotion(puppet, dir, motionFps, motionSeconds);
             }
             Debug.Log("[IORI] shots saved to " + dir);
             LogShaderMessages();

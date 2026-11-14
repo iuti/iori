@@ -1,0 +1,21 @@
+model Iori canvas 1024x1536 lattice 12 layers 19 chains 3 head_tilt -27.1
+texture 683x1024
+  0 base                     group body       role            Main alpha 1 stencil None 0 verts 4430 still
+  1 back_hair                group hair_back  role            Main alpha 1 stencil None 0 verts 917
+  2 body                     group body       role            Main alpha 1 stencil None 0 verts 2910
+  3 face                     group head       role            Main alpha 1 stencil None 0 verts 433
+  4 eye_L                    group head       role eye_L      Main alpha 1 stencil None 0 verts 24
+  4 eye_L                    group head       role eye_L      Mask alpha 1 stencil Write 1 verts 24
+  5 iris_L                   group head       role iris_L     Main alpha 1 stencil Test 1 verts 20
+  6 lash_L                   group head       role eye_L      Main alpha 1 stencil None 0 verts 48
+  8 eye_R                    group head       role eye_R      Main alpha 1 stencil None 0 verts 34
+  8 eye_R                    group head       role eye_R      Mask alpha 1 stencil Write 2 verts 34
+  9 iris_R                   group head       role iris_R     Main alpha 1 stencil Test 2 verts 25
+ 10 lash_R                   group head       role eye_R      Main alpha 1 stencil None 0 verts 48
+ 12 mouth                    group head       role mouth      Frame 0 alpha 1 stencil None 0 verts 77
+ 13 side_hair                group hair_side  role            Main alpha 1 stencil None 0 verts 938
+ 14 earring                  group hair_side  role            Main alpha 1 stencil None 0 verts 25
+ 15 tag                      group hair_side  role            Main alpha 1 stencil None 0 verts 71
+ 16 front_hair               group hair_front role            Main alpha 1 stencil None 0 verts 390
+ 17 ahoge                    group hair_back  role            Main alpha 1 stencil None 0 verts 149
+ 18 goggles                  group head       role            Main alpha 1 stencil None 0 verts 242

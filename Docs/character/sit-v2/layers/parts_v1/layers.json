@@ -1,0 +1,303 @@
+{
+ "order_bottom_first": [
+  "base",
+  "strap",
+  "back_hair",
+  "body",
+  "neck",
+  "face",
+  "eye_L",
+  "iris_L",
+  "lash_L",
+  "eye_R",
+  "iris_R",
+  "lash_R",
+  "mouth",
+  "side_hair",
+  "earring",
+  "tag",
+  "front_hair",
+  "brow_L",
+  "brow_R",
+  "ahoge",
+  "goggles"
+ ],
+ "ids": {
+  "bg": 0,
+  "base": 1,
+  "strap": 2,
+  "back_hair": 3,
+  "body": 4,
+  "neck": 5,
+  "face": 6,
+  "eye_L": 7,
+  "iris_L": 8,
+  "lash_L": 9,
+  "eye_R": 10,
+  "iris_R": 11,
+  "lash_R": 12,
+  "mouth": 13,
+  "side_hair": 14,
+  "earring": 15,
+  "tag": 16,
+  "front_hair": 17,
+  "ahoge": 18,
+  "goggles": 19,
+  "brow_L": 20,
+  "brow_R": 21
+ },
+ "layers": [
+  {
+   "id": "base",
+   "name": "土台(脚・椅子)",
+   "bbox": [
+    55,
+    435,
+    997,
+    1500
+   ],
+   "pixels": 277294,
+   "soft": 13250
+  },
+  {
+   "id": "strap",
+   "name": "垂れたストラップ",
+   "bbox": [
+    318,
+    999,
+    769,
+    1195
+   ],
+   "pixels": 6129,
+   "soft": 639
+  },
+  {
+   "id": "back_hair",
+   "name": "後ろ髪",
+   "bbox": [
+    317,
+    68,
+    753,
+    308
+   ],
+   "pixels": 17498,
+   "soft": 2698
+  },
+  {
+   "id": "body",
+   "name": "胴・腕・マグ",
+   "bbox": [
+    311,
+    321,
+    925,
+    1067
+   ],
+   "pixels": 235131,
+   "soft": 2663
+  },
+  {
+   "id": "neck",
+   "name": "首・ヘッドホン",
+   "bbox": [
+    500,
+    265,
+    688,
+    433
+   ],
+   "pixels": 13467,
+   "soft": 71
+  },
+  {
+   "id": "face",
+   "name": "顔",
+   "bbox": [
+    452,
+    184,
+    636,
+    348
+   ],
+   "pixels": 8779,
+   "soft": 0
+  },
+  {
+   "id": "eye_L",
+   "name": "白目(絵の左)",
+   "bbox": [
+    466,
+    277,
+    486,
+    290
+   ],
+   "pixels": 124,
+   "soft": 0
+  },
+  {
+   "id": "iris_L",
+   "name": "黒目(絵の左)",
+   "bbox": [
+    474,
+    274,
+    495,
+    289
+   ],
+   "pixels": 217,
+   "soft": 0
+  },
+  {
+   "id": "lash_L",
+   "name": "まつげ(絵の左)",
+   "bbox": [
+    453,
+    265,
+    498,
+    295
+   ],
+   "pixels": 571,
+   "soft": 0
+  },
+  {
+   "id": "eye_R",
+   "name": "白目(絵の右)",
+   "bbox": [
+    532,
+    235,
+    568,
+    259
+   ],
+   "pixels": 159,
+   "soft": 0
+  },
+  {
+   "id": "iris_R",
+   "name": "黒目(絵の右)",
+   "bbox": [
+    541,
+    236,
+    564,
+    255
+   ],
+   "pixels": 318,
+   "soft": 0
+  },
+  {
+   "id": "lash_R",
+   "name": "まつげ(絵の右)",
+   "bbox": [
+    523,
+    227,
+    578,
+    263
+   ],
+   "pixels": 876,
+   "soft": 0
+  },
+  {
+   "id": "mouth",
+   "name": "口",
+   "bbox": [
+    521,
+    301,
+    553,
+    322
+   ],
+   "pixels": 350,
+   "soft": 0
+  },
+  {
+   "id": "side_hair",
+   "name": "横髪",
+   "bbox": [
+    385,
+    168,
+    771,
+    402
+   ],
+   "pixels": 21200,
+   "soft": 2515
+  },
+  {
+   "id": "earring",
+   "name": "耳飾り",
+   "bbox": [
+    616,
+    259,
+    629,
+    286
+   ],
+   "pixels": 212,
+   "soft": 0
+  },
+  {
+   "id": "tag",
+   "name": "タグ",
+   "bbox": [
+    650,
+    227,
+    695,
+    302
+   ],
+   "pixels": 1672,
+   "soft": 0
+  },
+  {
+   "id": "front_hair",
+   "name": "前髪",
+   "bbox": [
+    446,
+    137,
+    626,
+    329
+   ],
+   "pixels": 15925,
+   "soft": 0
+  },
+  {
+   "id": "brow_L",
+   "name": "眉(絵の左)",
+   "bbox": [
+    443,
+    250,
+    474,
+    269
+   ],
+   "pixels": 175,
+   "soft": 0
+  },
+  {
+   "id": "brow_R",
+   "name": "眉(絵の右)",
+   "bbox": [
+    497,
+    210,
+    563,
+    242
+   ],
+   "pixels": 414,
+   "soft": 0
+  },
+  {
+   "id": "ahoge",
+   "name": "アホ毛",
+   "bbox": [
+    360,
+    50,
+    585,
+    162
+   ],
+   "pixels": 1959,
+   "soft": 857
+  },
+  {
+   "id": "goggles",
+   "name": "ゴーグル",
+   "bbox": [
+    395,
+    96,
+    659,
+    233
+   ],
+   "pixels": 10508,
+   "soft": 127
+  }
+ ]
+}
