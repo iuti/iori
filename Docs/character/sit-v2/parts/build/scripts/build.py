@@ -287,12 +287,29 @@ _Bc = _chi; _C = final
 _D = np.abs(_C - _Bc).max(2)
 _overbody = _strand & ~(np.abs(_Bc - final[5, 5]).max(2) < 14)          # only where the under-colour is body, not background
 _core = _overbody & (_D > 60)
-_Hc = cv2.inpaint(np.where(_core[..., None], _C, 0).clip(0, 255).astype(np.uint8), (~_core).astype(np.uint8), 5, cv2.INPAINT_TELEA).astype(np.float32)
+# H = the colour of the pixel with the largest |C-B| within 5px (thin 1-2px locks have no flat core, so their
+# own strongest pixel is the core and gets a = 1)
+_Dm = np.where(_overbody, _D, -1.0)
+_best = _Dm.copy(); _Hc = np.where(_overbody[..., None], _C, 0.0)
+for _dy in range(-5, 6):
+    for _dx in range(-5, 6):
+        if _dy * _dy + _dx * _dx > 25 or (_dy == 0 and _dx == 0): continue
+        _sD = np.roll(np.roll(_Dm, _dy, 0), _dx, 1); _sC = np.roll(np.roll(_C, _dy, 0), _dx, 1)
+        _up = _sD > _best; _best = np.where(_up, _sD, _best); _Hc = np.where(_up[..., None], _sC, _Hc)
+_core = _overbody & (_D >= _best - 1e-3) & (_D > 30)
 _HB = _Hc - _Bc; _den = (_HB ** 2).sum(2)
-_solv = _overbody & (_den > 20 ** 2) & dil(_core, 9)
+_solv = _overbody & (_den > 20 ** 2)
 _a = np.clip(((_C - _Bc) * _HB).sum(2) / np.maximum(_den, 1e-3), 0, 1)
+_a[_core] = 1.0
+# smooth a along the lock: halfway between the 3x3 max and the 3x3 mean (joined thin line rather than dots)
+_am = np.where(_solv, _a, 0).astype(np.float32)
+_a = np.where(_solv, 0.5 * (cv2.dilate(_am, np.ones((3, 3), np.uint8)) + cv2.blur(_am, (3, 3))), _a).clip(0, 1)
 _unmixed = _solv & (_a < 0.97)
-sh_rgb[_unmixed] = _Hc[_unmixed]
+# the colour is solved back from the smoothed a, so at rest C = a*rgb + (1-a)*B still holds; it is kept near H
+_ac = np.maximum(_a, 0.05)[..., None]
+_rs = ((_C - (1 - _ac) * _Bc) / _ac)
+_rs = np.clip(_rs, _Hc - 40, _Hc + 40).clip(0, 255)
+sh_rgb[_unmixed] = _rs[_unmixed]
 sh_a[_solv] = np.where(_a[_solv] < 0.05, 0.0, np.where(_a[_solv] >= 0.97, 1.0, _a[_solv]))
 print('lock edges un-mixed', int(_unmixed.sum()), 'dropped', int((_solv & (_a < 0.05)).sum()))
 fh_a = fh_a * ~_strand; fc_a = fc_a * ~_strand
@@ -304,6 +321,38 @@ _jaw = darkf & (fc_a > 0.5) & (yy > 295) & (xx > 540) & ~_strand     # the jaw's
 bd_a = bd_a * ~_jaw
 _set('body', bd_rgb, bd_a)
 fc_a = fc_a * ~((bd_a > 0.5) & (yy > 300) & (xx > 540) & ~_jaw)
+# 5: the body holds the whole neck behind the face and the locks, up under the jaw, fully opaque, so the back
+# hair never shows through when the head moves (the face stops at y300 and the body used to start at y301)
+_nbox = (xx >= 565) & (xx <= 665) & (yy >= 275) & (yy <= 400)
+_chbg = np.abs(_chi - final[5, 5]).max(2) < 14
+_over = (np.maximum(np.maximum(fc_a, sh_a), fh_a) > 0.3)
+_nfill = _nbox & _over & ~_chbg & (bd_a < 0.98)
+_nfill = _nfill & ((yy > 300) | (fc_a > 0.3) | (sh_a > 0.3) | (fh_a > 0.3))
+# colour: chico's picture; above y305 its dark/purple pixels (jaw line, hair) become skin filled from around
+_drk = (gray(_chi) < 130) | ((_chi[..., 2] > _chi[..., 0] + 4) & (gray(_chi) < 175))
+_unk = _nfill & _drk & (yy <= 305)
+_srcm = (bd_a > 0.98) | (_nfill & ~_unk)
+_fillc = np.where(_srcm[..., None], np.where(_nfill[..., None], _chi, bd_rgb), 0).clip(0, 255).astype(np.uint8)
+_fillc = cv2.inpaint(_fillc, (_unk | (_nbox & ~_srcm)).astype(np.uint8), 6, cv2.INPAINT_TELEA).astype(np.float32)
+_new = _nfill & (bd_a < 0.5)
+bd_rgb[_new] = _fillc[_new]
+bd_rgb[_unk] = _fillc[_unk]
+bd_a = np.where(_nfill, 1.0, bd_a)
+print('neck under the face/locks filled into the body', int(_nfill.sum()), 'of which skin-filled', int(_unk.sum()))
+# 6: tiny isolated bits of the side hair over the neck (< 20 px, not touching any lock) go; chico's skin shows
+_sho = sh_a > 0.3
+_lab, _nl = ndi.label(_sho, np.ones((3, 3)))
+_sz = ndi.sum(np.ones_like(_lab), _lab, range(1, _nl + 1))
+_cent = ndi.center_of_mass(np.ones_like(_lab), _lab, range(1, _nl + 1))
+_drop = np.zeros_like(_sho)
+for _k, (_s, (_cy, _cx)) in enumerate(zip(_sz, _cent), 1):
+    if _s < 20 and 565 <= _cx <= 665 and 300 <= _cy <= 400:
+        _drop |= _lab == _k
+_drop &= ~_chbg
+sh_a = sh_a * ~_drop
+bd_rgb[_drop] = _chi[_drop]; bd_a = np.maximum(bd_a, _drop.astype(np.float32))
+print('isolated side-hair bits dropped', int(_drop.sum()), 'px in', int(len(np.unique(_lab[_drop])) - (0 in _lab[_drop])), 'pieces')
+_set('body', bd_rgb, bd_a)
 _set('side_hair', sh_rgb, sh_a); _set('front_hair', fh_rgb, fh_a); _set('back_hair', bk_rgb, bk_a); _set('face', fc_rgb, fc_a)
 
 # ---- what the hair cleanup dropped stays where it was drawn: bake it into the layer below
