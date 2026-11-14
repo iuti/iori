@@ -1,0 +1,18 @@
+# インペイントのために入れた物(2026-11-14、chico の了承のうえで)
+
+すべて `C:\ai\ComfyUI` の中。ComfyUI 本体と venv のパッケージは変えていない(追加の pip は無し。必要な spandrel 0.4.1、kornia 0.8.0、opencv 4.11 はもともと入っていた)。
+
+| 名前 | 版 / コミット | 置いた場所 | 大きさ | 配布元 | ライセンス |
+|---|---|---|---|---|---|
+| comfyui-inpaint-nodes(Acly) | v1.4.4、コミット 5b7681746fe19e563113d27366ba85236bc1ba5b | `custom_nodes/comfyui-inpaint-nodes` | 数百 KB | https://github.com/Acly/comfyui-inpaint-nodes | GPL-3.0 |
+| big-lama.pt(LaMa) | Sanster/models の add_big_lama | `models/inpaint/big-lama.pt` | 205,669,692 バイト | https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt | Apache-2.0(advimman/lama) |
+| fooocus_inpaint_head.pth | lllyasviel/fooocus_inpaint | `models/inpaint/fooocus_inpaint_head.pth` | 52,602 バイト | https://huggingface.co/lllyasviel/fooocus_inpaint | Fooocus と同じ(GPL-3.0) |
+| inpaint_v26.fooocus.patch | lllyasviel/fooocus_inpaint | `models/inpaint/inpaint_v26.fooocus.patch` | 1,323,362,033 バイト | https://huggingface.co/lllyasviel/fooocus_inpaint | 同上 |
+
+MAT(Acly/MAT の fp16)は一度ダウンロードしたが、了承の範囲に入っていなかったので消した。
+
+## 使い方の注意
+
+- カスタムノードを ComfyUI に読み込ませて起動する操作は、この PC の自動許可の判定で止められたので、まだ一度も読み込んでいない。そのため Fooocus のパッチ(ノードが要る)は今回使っていない。
+- LaMa は、ComfyUI の venv にもともとある spandrel で big-lama.pt を直接読んで動かした(`parts/build/scripts/lama.py`)。
+- ComfyUI Desktop をふつうに起動すると、`custom_nodes` にあるこのノードは読み込まれる(Desktop は全部のカスタムノードを読む)。

@@ -67,9 +67,28 @@ add('back_hair', bh_rgb, soft(bhm), group='hair_back', depth=-0.3)
 
 # 3. body (incl. headphones): final pixels; where hair hangs over the shoulders, the bare-head picture's shirt
 BG0 = np.median(np.concatenate([final[:6].reshape(-1, 3), final[:, :6].reshape(-1, 3)]), 0)
-under_hair = (hair_f | hair_s) & U & (yy >= 300) & ~phones & (np.abs(head - BG0).max(2) > 16)
-body_rgb = final.copy(); body_rgb[under_hair] = head[under_hair]
-body_a = rim(body | under_hair)
+# the body under the hair, without any generated picture: the visible body (B) is closed over the hair that crosses it,
+# the inside is diffused from body pixels only, and the outline is carried along the new edge
+satb = final.max(2) - final.min(2)
+huehair = (satb > 22) & (final[..., 2] > final[..., 0] + 6) & (final[..., 2] > final[..., 1] + 14) & (gray(final) < 175)
+hcore = (hair_f | hair_s | ahoge) & huehair
+hairall = hcore | ((gray(final) < 95) & dil(hcore, 5) & (hair_f | hair_s | ahoge))   # the locks and their own outlines only
+B = body & ~hairall
+B = B & ~(cv2.morphologyEx(B.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) == 0)   # drop 1-px specks
+Bc = cv2.morphologyEx(B.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (31, 31))).astype(bool)
+Bc = ndi.binary_fill_holes(Bc)
+F = Bc & ~B & hairall & (yy >= 280) & (yy < 415) & ~skull & ~phones
+Image.fromarray((F * 255).astype(np.uint8)).save('body_fill_F.png')
+src = final.clip(0, 255).astype(np.uint8)
+filled = cv2.inpaint(src, (~B).astype(np.uint8), 6, cv2.INPAINT_TELEA).astype(np.float32)
+body_rgb = final.copy(); body_rgb[F] = filled[F]
+# the outline along the new edge: the colour of the body's own outline
+edgeF = F & ~cv2.erode((B | F).astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+line_px = final[B & ~cv2.erode(B.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool) & (gray(final) < 90)]
+line_col = np.median(line_px, 0) if len(line_px) else np.array([60, 50, 70.])
+body_rgb[edgeF] = line_col
+Image.fromarray(np.where(F[..., None], body_rgb, final).clip(0, 255).astype(np.uint8)).save('nogen_composite.png')
+body_a = (B | F) | (dil(B | F, 3) & darkf & ~hairall)
 add('body', body_rgb, soft(body_a), group='body')
 
 # 4. face: visible skin from the final, hidden forehead/ears/neck from the shifted bare head
