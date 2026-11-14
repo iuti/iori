@@ -99,6 +99,8 @@ ElevenLabs の Voice Library の声「Chinyaku - Cute Japanese Actor」を、モ
 | `itterasshai_02` | 出かける | 気をつけて。 |
 | `tap_01` `tap_02` `tap_03` | イオリをタップ | ん。/……なーに。/見てるよ。 |
 | `firewood_01` | 薪をくべた | ありがと。(小声) |
+| `music_stopped_01` | 曲が止まった | 曲、止まっちゃったね。 |
+| `player_open_01` | 音楽プレーヤーを開いた | 今日はなに聴く? |
 
 ## 環境音・チャイム・UI の効果音
 
