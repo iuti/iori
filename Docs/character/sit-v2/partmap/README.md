@@ -1,4 +1,8 @@
-# 塗り分けの地図(下書き)
+# 塗り分けの地図
+
+**今の正は chico が直した版**(2026-11-14、`partmap_chico_v1.psd`。手前にある部位は、輪郭より少し太らせてある)。`labels.png` はそれを読み戻したもの。下書きは `draft_source/` に移した(`labels_draft.png`、`partmap_draft.psd`)。この地図で切り出したレイヤーは `../layers/`(`iori_sit_v2_parts.psd` と `parts_v1/`)。
+
+以下は下書きを作ったときの説明。
 
 最終版(`../final/iori_sit_v2_final.png`)の全画素を、ちょうど 1 つの部位に割り当てた地図。人形のレイヤーは、これからこの地図で最終版を切り出して作る(色や差で振り分けるのはやめた)。
 
@@ -36,6 +40,7 @@ python3 tools/character/partmap/build_draft.py --final <最終版> --below draft
 python3 tools/character/partmap/sheet.py <最終版> labels.png labels.json .
 python3 tools/character/partmap/psd_map.py write <最終版> labels.png labels.json partmap_draft.psd
 python3 tools/character/partmap/psd_map.py read <直した PSD> labels.json labels.png
+python3 tools/character/partmap/cut_layers.py <最終版> labels.png labels.json ../layers/parts_v1 ../layers/iori_sit_v2_parts.psd
 ```
 
 `shapes.py` が、読んだ輪郭と髪の分け方の種。

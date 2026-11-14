@@ -47,24 +47,27 @@ def pascal(s):
     return r + b'\0' * ((-len(r)) % 4)
 
 def write_psd(path, W, H, layers, merged):
-    """layers: (name, RGBA array of the whole canvas, opacity 0..255, rle) bottom first."""
+    """layers: (name, RGBA array of the whole canvas, opacity 0..255, rle[, hidden]) bottom first.
+    merged: the flattened picture, RGB, or RGBA when the document has no background."""
     recs, chans = b'', b''
-    for nm, c, op, rle in layers:
+    for nm, c, op, rle, *rest in layers:
+        hid = bool(rest and rest[0])
         ys, xs = np.where(c[..., 3] > 0)
         t, l, b, r = (int(ys.min()), int(xs.min()), int(ys.max()) + 1, int(xs.max()) + 1) if len(ys) else (0, 0, 1, 1)
         crop = np.ascontiguousarray(c[t:b, l:r])
         data = [channel(crop[..., i], rle) for i in (3, 0, 1, 2)]
         rec = struct.pack('>iiiiH', t, l, b, r, 4)
         for cid, d in zip((-1, 0, 1, 2), data): rec += struct.pack('>hI', cid, len(d))
-        rec += b'8BIMnorm' + struct.pack('>BBBB', op, 0, 0, 0)
+        rec += b'8BIMnorm' + struct.pack('>BBBB', op, 0, 0x02 if hid else 0, 0)
         u = nm.encode('utf-16-be'); luni = struct.pack('>I', len(nm)) + u; luni += b'\0' * ((-len(luni)) % 4)
         extra = struct.pack('>II', 0, 0) + pascal(nm) + b'8BIMluni' + struct.pack('>I', len(luni)) + luni
         recs += rec + struct.pack('>I', len(extra)) + extra
         chans += b''.join(data)
-    linfo = struct.pack('>h', len(layers)) + recs + chans; linfo += b'\0' * ((-len(linfo)) % 2)
+    nch = merged.shape[-1]      # 4: the first extra channel is the flattened picture's transparency (layer count < 0)
+    linfo = struct.pack('>h', -len(layers) if nch == 4 else len(layers)) + recs + chans; linfo += b'\0' * ((-len(linfo)) % 2)
     lm = struct.pack('>I', len(linfo)) + linfo + struct.pack('>I', 0)
-    psd = b'8BPS' + struct.pack('>H6xHIIHH', 1, 3, H, W, 8, 3) + struct.pack('>II', 0, 0)
-    psd += struct.pack('>I', len(lm)) + lm + struct.pack('>H', 0) + b''.join(merged[..., i].tobytes() for i in range(3))
+    psd = b'8BPS' + struct.pack('>H6xHIIHH', 1, nch, H, W, 8, 3) + struct.pack('>II', 0, 0)
+    psd += struct.pack('>I', len(lm)) + lm + struct.pack('>H', 0) + b''.join(merged[..., i].tobytes() for i in range(nch))
     open(path, 'wb').write(psd)
 
 def legend_layer(parts, W, H):
