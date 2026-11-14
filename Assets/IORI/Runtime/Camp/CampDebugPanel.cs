@@ -59,8 +59,10 @@ namespace Iori.Camp
 
             public Styles()
             {
-                // a font that has Japanese on Windows, Android and macOS; the default skin's font is the fallback
-                font = Font.CreateDynamicFontFromOSFont(new[] { "Yu Gothic UI", "Meiryo UI", "Meiryo", "Noto Sans CJK JP", "Noto Sans JP", "Hiragino Sans", "Roboto" }, 16);
+                // the UI's own Japanese font, shipped in Resources (OS font names differ by phone maker: on an OPPO the
+                // OS lookup gave a font without Japanese and the panel showed only boxes). OS fonts are the fallback.
+                font = Resources.Load<Font>("IoriUI/Fonts/ZenKakuGothicNew-Regular");
+                if (!font) font = Font.CreateDynamicFontFromOSFont(new[] { "Yu Gothic UI", "Meiryo UI", "Meiryo", "Noto Sans CJK JP", "Noto Sans JP", "Hiragino Sans", "Roboto" }, 16);
                 var text = new Color(0.90f, 0.92f, 1f);
                 var dim = new Color(0.63f, 0.68f, 0.90f);
                 var panel = Round(new Color(0.07f, 0.08f, 0.19f, 0.90f), 14);
