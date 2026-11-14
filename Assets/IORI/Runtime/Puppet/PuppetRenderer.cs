@@ -175,6 +175,27 @@ namespace Iori.Puppet
             Bind();
         }
 
+        /// <summary>From rest, holds a pose for `seconds` (no idle motion; `pose` writes the head, eyes, mouth and
+        /// body it wants every step) and draws that moment. A short time shows the hair still catching up with
+        /// the head, a long one shows it settled. For looking at one pose closely.</summary>
+        public void RenderPose(System.Action<PuppetParams> pose, float seconds)
+        {
+            if (!Ready()) return;
+            var P = _rig.param;
+            P.angleX = P.angleY = P.angleZ = P.eyeBallX = P.eyeBallY = P.bodyX = P.bodyZ = P.breath = 0f;
+            P.eyeLOpen = P.eyeROpen = 1f;
+            P.mouthOpen = P.vowel = P.smile = 0f;
+            _rig.time = 0f;
+            _rig.ResetPhysics(); _rig.ResetMouth();
+            _idle.Reset();
+            _rig.physicsScale = swing;
+            const float dt = 1f / 30f;
+            int steps = Mathf.Max(1, Mathf.CeilToInt(seconds / dt));
+            for (int i = 0; i < steps; i++) { pose?.Invoke(P); _rig.Update(dt); }
+            Draw();
+            Bind();
+        }
+
         void Step(float dt)
         {
             var P = _rig.param;

@@ -1053,6 +1053,8 @@ namespace Iori.Camp.EditorTools
             // the puppet as it was drawn into its texture, apart from the board and its light: to tell a fault in the
             // layers from a fault in the board
             if (puppet) PuppetImport.Dump(puppet, dir);
+            // -puppetPoses: and in a set of poses, one thing moved at a time, at the model's own size
+            if (puppet && HasArg("-puppetPoses")) PuppetImport.DumpPoses(puppet, dir);
             Debug.Log("[IORI] shots saved to " + dir);
             LogShaderMessages();
             LogStats(mirrors.Length > 0 ? mirrors[0] : null);

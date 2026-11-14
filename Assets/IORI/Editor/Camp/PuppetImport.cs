@@ -73,6 +73,63 @@ namespace Iori.Camp.EditorTools
             Debug.Log("[IORI] puppet written out to " + dir);
         }
 
+        /// <summary>The poses DumpPoses writes: each asks one thing of the model, far enough to show where its
+        /// layers part (a head turned further than her idle motion ever turns it).</summary>
+        static readonly (string name, float seconds, Action<PuppetParams> pose)[] Poses =
+        {
+            ("rest", 0.1f, P => { }),
+            ("eyes_closed", 0.5f, P => { P.eyeLOpen = 0; P.eyeROpen = 0; }),
+            ("eyes_half", 0.5f, P => { P.eyeLOpen = 0.5f; P.eyeROpen = 0.5f; }),
+            ("eyes_left", 0.5f, P => P.eyeBallX = -1),
+            ("eyes_right", 0.5f, P => P.eyeBallX = 1),
+            ("eyes_up", 0.5f, P => P.eyeBallY = 1),
+            ("eyes_down", 0.5f, P => P.eyeBallY = -1),
+            ("mouth_small", 0.5f, P => P.mouthOpen = 0.2f),
+            ("mouth_half", 0.5f, P => P.mouthOpen = 0.45f),
+            ("mouth_open", 0.5f, P => P.mouthOpen = 1f),
+            ("mouth_round", 0.5f, P => { P.mouthOpen = 0.5f; P.vowel = -1f; }),
+            ("head_left", 2f, P => P.angleX = -15),
+            ("head_right", 2f, P => P.angleX = 15),
+            ("head_up", 2f, P => P.angleY = 12),
+            ("head_down", 2f, P => P.angleY = -12),
+            ("tilt_left", 2f, P => P.angleZ = -10),
+            ("tilt_right", 2f, P => P.angleZ = 10),
+            ("head_right_moving", 0.2f, P => P.angleX = 15),
+            ("tilt_left_moving", 0.2f, P => P.angleZ = -10),
+            ("lean_left", 2f, P => P.bodyZ = -5),
+            ("lean_right", 2f, P => P.bodyZ = 5),
+            ("turn_body", 2f, P => P.bodyX = 8),
+            ("breath_in", 0.5f, P => P.breath = 1),
+            ("all_at_once", 2f, P => { P.angleX = 12; P.angleY = -8; P.angleZ = 8; P.bodyZ = 4; P.breath = 1; P.eyeBallX = 0.6f; P.mouthOpen = 0.45f; }),
+        };
+
+        /// <summary>Writes the puppet in each of Poses, drawn at the model's own size (not the smaller size the board
+        /// keeps): pose_NN_name.png under dir/poses, her colors only, not lit. To look closely for gaps, doubled
+        /// lines and things showing that should be hidden.</summary>
+        public static void DumpPoses(PuppetRenderer puppet, string dir)
+        {
+            if (!puppet || puppet.Rig == null) { Debug.LogWarning("[IORI] puppet: no poses to write out"); return; }
+            int oldSize = puppet.maxSize;
+            string outDir = Path.Combine(dir, "poses");
+            Directory.CreateDirectory(outDir);
+            try
+            {
+                puppet.maxSize = Mathf.Max(puppet.Rig.model.canvasW, puppet.Rig.model.canvasH);
+                for (int i = 0; i < Poses.Length; i++)
+                {
+                    puppet.RenderPose(Poses[i].pose, Poses[i].seconds);
+                    if (!puppet.ColorTexture) break;
+                    File.WriteAllBytes(Path.Combine(outDir, $"pose_{i:00}_{Poses[i].name}.png"), Straight(puppet.ColorTexture));
+                }
+                Debug.Log("[IORI] puppet poses written out to " + outDir);
+            }
+            finally
+            {
+                puppet.maxSize = oldSize;
+                puppet.RenderAt(0f);
+            }
+        }
+
         /// <summary>A texture the puppet drew into, as a PNG with its colors divided by alpha again.</summary>
         static byte[] Straight(RenderTexture rt)
         {
