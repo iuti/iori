@@ -49,6 +49,8 @@ namespace Iori.Audio
         public event Action<string> Replied;
         /// <summary>最後の返事(動作確認用)。</summary>
         public string LastReply { get; private set; } = "";
+        /// <summary>最後に声へ渡した文(動作確認用)。</summary>
+        public string LastSpoken { get; private set; } = "";
 
         void Tell(string text)
         {
@@ -248,7 +250,7 @@ namespace Iori.Audio
             Tell(reply.Say);
 
             if (reply.HasVoice && VoiceOn && HasVoiceKey && VoiceDirector.Instance)
-                yield return SpeakRoutine(reply.Say, asking);
+                yield return SpeakRoutine(reply.Say, reply.Voice, scene.Hour, asking);
         }
 
         void Fail(string why)
@@ -264,11 +266,15 @@ namespace Iori.Audio
 
         // ---- 声
 
-        IEnumerator SpeakRoutine(string text, int asking)
+        IEnumerator SpeakRoutine(string say, string voiceLine, int localHour, int asking)
         {
             float started = Time.realtimeSinceStartup;
             if (_voiceId == null) yield return ResolveVoice();
             if (_voiceId == null) yield break;
+
+            // 声に渡す文(読み、調子のタグ)は Core が組む。モデルが決まってから組む(タグを読めないモデルにはタグを渡さない)
+            var text = TalkSpeech.Compose(say, voiceLine, _voiceModel, localHour, Book.Voice);
+            LastSpoken = text;
 
             byte[] pcm = null;
             string error = null;
@@ -386,6 +392,7 @@ namespace Iori.Audio
                 var s = $"会話: LLM のキー {(HasLlmKey ? "あり" : "なし")} / 声のキー {(HasVoiceKey ? "あり" : "なし")} / 声 {(VoiceOn ? "オン" : "オフ")} / 声の ID {(VoiceIdByHand.Length > 0 ? "手で決めた" : "名前で探す")}\n"
                         + $"覚え書き {Memory.Notes.Count} 個、やり取り {Memory.Turns.Count} 回  {LastInfo}";
                 if (LastReply.Length > 0) s += "\n最後の返事: " + LastReply;
+                if (LastSpoken.Length > 0) s += "\n声に渡した文: " + LastSpoken;
                 if (LastError.Length > 0) s += "\n" + LastError;
                 return s;
             }

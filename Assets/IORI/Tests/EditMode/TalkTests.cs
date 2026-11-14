@@ -42,18 +42,22 @@ namespace Iori.Audio.Tests
             Assert.Throws<FormatException>(() => TalkBook.Parse(@"{ ""persona"": [""a""], ""examples"": [ { ""user"": ""x"" } ] }"));
         }
 
-        [Test]
-        public void ShippedBook_IsValid()
+        static string ShippedBookPath()
         {
             var dir = AppContext.BaseDirectory;
-            string path = null;
             for (int i = 0; i < 8 && dir != null; i++, dir = Path.GetDirectoryName(dir))
             {
                 var p = Path.Combine(dir, "Assets", "StreamingAssets", "IORI", "talk.json");
-                if (File.Exists(p)) { path = p; break; }
+                if (File.Exists(p)) return p;
             }
-            if (path == null) Assert.Ignore("talk.json が見つからない場所で動いています");
-            var b = TalkBook.Parse(File.ReadAllText(path));
+            Assert.Ignore("talk.json が見つからない場所で動いています");
+            return null;
+        }
+
+        [Test]
+        public void ShippedBook_IsValid()
+        {
+            var b = TalkBook.Parse(File.ReadAllText(ShippedBookPath()));
             Assert.That(b.Persona.Count, Is.GreaterThan(0));
             Assert.That(b.FailLines.Count, Is.GreaterThan(0));
             // 見本は自分の決まり(文の数と長さ)を守っている
@@ -271,6 +275,98 @@ namespace Iori.Audio.Tests
             Assert.That(f[0], Is.EqualTo(0f));
             Assert.That(f[1], Is.EqualTo(32767 / 32768f));
             Assert.That(f[2], Is.EqualTo(-1f));
+        }
+
+        static TalkVoice SpeechVoice() => TalkBook.Parse(@"{
+  ""llm"": { ""model"": ""m"" },
+  ""voice"": { ""tagModels"": [""v3"", ""v4""], ""tags"": [""[softly]"", ""[眠たそうな声]"", ""[sighs]""],
+             ""hourTags"": [ { ""hours"": ""2-6"", ""tag"": ""[眠たそうな声]"" }, { ""hours"": ""22-2"", ""tag"": ""[softly]"" } ] },
+  ""persona"": [""あなたはイオリ。""]
+}").Voice;
+
+        [Test]
+        public void Book_ReadsVoiceTags()
+        {
+            var v = SpeechVoice();
+            Assert.That(v.TagModels, Is.EqualTo(new[] { "v3", "v4" }));
+            Assert.That(v.Tags.Count, Is.EqualTo(3));
+            Assert.That(v.HourTags.Count, Is.EqualTo(2));
+            Assert.That(v.HourTags[1].Hours.Contains(1) && !v.HourTags[1].Hours.Contains(2));
+            Assert.Throws<FormatException>(() => TalkBook.Parse(@"{ ""llm"": { ""model"": ""m"" }, ""persona"": [""a""],
+                ""voice"": { ""hourTags"": [ { ""hours"": ""25-3"", ""tag"": ""[softly]"" } ] } }"));
+        }
+
+        [Test]
+        public void Reply_SplitsVoiceLine_AndKeepsItOutOfTheShownText()
+        {
+            var r = Tidy("「春泥」、いい曲だね。\nVOICE: [softly] しゅんでい、いい曲だね。\nMEMO: キミは春泥が好き");
+            Assert.That(r.Say, Is.EqualTo("「春泥」、いい曲だね。"));
+            Assert.That(r.Voice, Is.EqualTo("[softly] しゅんでい、いい曲だね。"));
+            Assert.That(r.Memo, Is.EqualTo("キミは春泥が好き"));
+
+            // 全角のコロン、見せる文に紛れたタグ
+            var w = Tidy("[sighs] そっか。\nVOICE\uFF1A そっか。");
+            Assert.That(w.Say, Is.EqualTo("そっか。"));
+            Assert.That(w.Voice, Is.EqualTo("そっか。"));
+
+            // 読みは見せる文と同じ文の数まで
+            Assert.That(Tidy("ん。\nVOICE: ん。よけいな文。").Voice, Is.EqualTo("ん。"));
+            Assert.That(Tidy("ん。").Voice, Is.Null);
+            Assert.That(Tidy("ん。\nVOICE:").Voice, Is.Null);
+        }
+
+        [Test]
+        public void Reply_StripsFullWidthAsides()
+        {
+            Assert.That(Tidy("\uFF08少し笑って\uFF09そっか\uFF01").Say, Is.EqualTo("そっか\uFF01"));
+            Assert.That(Tidy("一つ\uFF01二つ\uFF1F三つ。").Say, Is.EqualTo("一つ\uFF01二つ\uFF1F"));
+        }
+
+        [Test]
+        public void Speech_UsesTheReading_AndOnlyListedTags()
+        {
+            var v = SpeechVoice();
+            Assert.That(TalkSpeech.Compose("春泥、いい曲だね。", "[sighs] しゅんでい、いい曲だね。", "eleven_v3", 12, v),
+                Is.EqualTo("[sighs] しゅんでい、いい曲だね。"));
+            // 一覧に無いタグは落とし、頭に一覧のタグが無ければ時間帯の既定
+            Assert.That(TalkSpeech.Compose("春泥、いい曲だね。", "[angry] しゅんでい、いい曲だね。", "eleven_v3", 23, v),
+                Is.EqualTo("[softly] しゅんでい、いい曲だね。"));
+            Assert.That(TalkSpeech.Compose("ん。", "ん。", "eleven_turbo_v4", 3, v), Is.EqualTo("[眠たそうな声] ん。"));
+            Assert.That(TalkSpeech.Compose("ん。", "ん。", "eleven_v3", 12, v), Is.EqualTo("ん。"));
+            // 全角の角かっこと、大文字小文字の違い
+            Assert.That(TalkSpeech.Compose("ん。", "\uFF3BSoftly\uFF3D ん。", "eleven_v3", 12, v), Is.EqualTo("[softly] ん。"));
+        }
+
+        [Test]
+        public void Speech_FallsBackToTheShownText()
+        {
+            var v = SpeechVoice();
+            // 読みが無い、短すぎる、長すぎる
+            Assert.That(TalkSpeech.Compose("いいね。夜に合う。", null, "eleven_v3", 12, v), Is.EqualTo("いいね。夜に合う。"));
+            Assert.That(TalkSpeech.Compose("いいね。夜に合う。", "ん。", "eleven_v3", 12, v), Is.EqualTo("いいね。夜に合う。"));
+            Assert.That(TalkSpeech.Compose("ん。", "ぜんぜんちがう、ながいながいぶんしょう。", "eleven_v3", 12, v), Is.EqualTo("ん。"));
+            // 見せる文の側にあるタグも声には混ぜない(タグは VOICE の行からだけ)
+            Assert.That(TalkSpeech.Compose("[sighs] ん。", null, "eleven_v3", 12, v), Is.EqualTo("ん。"));
+        }
+
+        [Test]
+        public void Speech_DropsTagsForModelsThatCannotReadThem()
+        {
+            var v = SpeechVoice();
+            Assert.That(TalkSpeech.Compose("ん。", "[sighs] ん。", "eleven_multilingual_v2", 23, v), Is.EqualTo("ん。"));
+            Assert.That(TalkSpeech.Compose("ん。", "[sighs] ん。", "eleven_flash_v2_5", 3, v), Is.EqualTo("ん。"));
+            Assert.That(TalkSpeech.TakesTags("eleven_v3", v.TagModels), Is.True);
+            Assert.That(TalkSpeech.TakesTags("eleven_v30", v.TagModels), Is.False);
+            Assert.That(TalkSpeech.TakesTags(null, v.TagModels), Is.False);
+        }
+
+        [Test]
+        public void Prompt_AsksForTheVoiceLine()
+        {
+            var b = TalkBook.Parse(File.ReadAllText(ShippedBookPath()));
+            var p = TalkPrompt.System(b, new TalkScene { Year = 2026, Month = 11, Day = 15, Hour = 1, Weather = WeatherIds.Clear }, null);
+            Assert.That(p, Does.Contain(TalkPrompt.VoiceMark));
+            Assert.That(p, Does.Contain("[softly]"));
         }
     }
 }

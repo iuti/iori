@@ -176,7 +176,7 @@ namespace Iori.Audio
             return null;
         }
 
-        static HashSet<string> Tokens(string s)
+        internal static HashSet<string> Tokens(string s)
         {
             var set = new HashSet<string>();
             var word = "";
