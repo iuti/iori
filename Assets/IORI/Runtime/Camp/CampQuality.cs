@@ -82,6 +82,7 @@ namespace Iori.Camp
         bool _covered;
         // fitting the render scale to the device
         readonly FrameTiming[] _timing = new FrameTiming[1];
+        const string FitKey = "iori.camp.fitScale";
         float _fit = -1f, _fitFrom = -1f, _fitT, _fitGpu, _fitWait = 6f;
         int _fitFrames, _fitGpuFrames;
         bool _fitPaused;
@@ -228,7 +229,9 @@ namespace Iori.Camp
                     urp.supportsCameraDepthTexture = full;
                     urp.msaaSampleCount = full ? 4 : 2;
                     // (the fitted scale starts over when the starting value is changed)
-                    if (_fit < 0f || !Mathf.Approximately(_fitFrom, phoneRenderScale)) { _fit = phoneRenderScale; _fitFrom = phoneRenderScale; }
+                    // (the first time, it starts where it settled the last time the app ran: no slow first seconds)
+                    if (_fit < 0f) { _fit = Mathf.Clamp(PlayerPrefs.GetFloat(FitKey, phoneRenderScale), phoneScaleRange.x, phoneScaleRange.y); _fitFrom = phoneRenderScale; }
+                    else if (!Mathf.Approximately(_fitFrom, phoneRenderScale)) { _fit = phoneRenderScale; _fitFrom = phoneRenderScale; }
                     _fitPaused = AdaptPaused;
                     float phone = adaptScaleOnPhone && !AdaptPaused ? _fit : phoneRenderScale;
                     Scale = full ? 1f : (covered ? Mathf.Min(phoneCoveredScale, phone) : phone);
@@ -303,6 +306,8 @@ namespace Iori.Camp
             _fit = want;
             // (the change itself costs a slow frame or two: the next measurement starts after it)
             _fitWait = 1f;
+            PlayerPrefs.SetFloat(FitKey, _fit);
+            PlayerPrefs.Save();
             Apply();
             if (logPerformance && Debug.isDebugBuild && !Application.isEditor)
                 Debug.Log($"[IORI] perf scale={_fit:0.00} (gpu_ms={gpu:0.0} avg_ms={frame:0.0})");
