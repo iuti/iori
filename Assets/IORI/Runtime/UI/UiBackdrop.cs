@@ -21,6 +21,9 @@ namespace Iori.Ui
         static readonly int GroundId = Shader.PropertyToID("_IoriUiGround");
         static readonly int SpreadId = Shader.PropertyToID("_IoriBlurSpread");
 
+        /// <summary>For measuring what the blur costs: when set, the glass never shows the scene (as on a device without the shader).</summary>
+        public static bool Off;
+
         public Camera sceneCamera;
         public bool wanted;
         [Tooltip("ガラス越しの絵が上下逆さに出る機種でだけ入れる")] public bool flip;
@@ -57,7 +60,7 @@ namespace Iori.Ui
 
         void OnBeginCamera(ScriptableRenderContext context, Camera cam)
         {
-            if (!wanted || _failed)
+            if (!wanted || _failed || Off)
             {
                 Publish(false);
                 return;
