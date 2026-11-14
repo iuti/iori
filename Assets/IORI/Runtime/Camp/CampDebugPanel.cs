@@ -47,6 +47,29 @@ namespace Iori.Camp
             ("あいさつ", VoiceCues.Greet), ("タップ", VoiceCues.Tap), ("プレーヤー", VoiceCues.PlayerOpen),
             ("曲が止まった", VoiceCues.MusicStopped), ("雨が降った", VoiceCues.RainStart), ("雨が止んだ", VoiceCues.RainStop), ("火をつけた", VoiceCues.Firewood),
         };
+        static readonly string[] TalkActions = { "LLM のキーを貼る", "声のキーを貼る", "返事の声", "キーを消す", "記憶を消す", "話しかけてみる" };
+        string _talkNote = "";
+
+        void TalkAction(TalkDirector talk, int action)
+        {
+            var pasted = (GUIUtility.systemCopyBuffer ?? "").Trim();
+            switch (action)
+            {
+                case 0:
+                    if (pasted.StartsWith("sk-ant-")) { talk.SetLlmKey(pasted); _talkNote = "LLM のキーをしまったよ。"; }
+                    else _talkNote = "コピーしてあるものが Claude の API キー(sk-ant- で始まる)じゃないみたい。";
+                    break;
+                case 1:
+                    if (pasted.Length >= 20 && pasted.IndexOf(' ') < 0 && !pasted.StartsWith("sk-ant-")) { talk.SetVoiceKey(pasted); _talkNote = "声のキーをしまったよ。"; }
+                    else _talkNote = "コピーしてあるものが ElevenLabs の API キーじゃないみたい。";
+                    break;
+                case 2: talk.VoiceOn = !talk.VoiceOn; break;
+                case 3: talk.SetLlmKey(""); talk.SetVoiceKey(""); _talkNote = "キーを消したよ。"; break;
+                case 4: talk.ForgetAll(); _talkNote = "記憶を消したよ。"; break;
+                case 5: _talkNote = talk.Ask("こんばんは") ? "「こんばんは」と話しかけたよ。" : "いまは話せない(キーが無いか、返事待ち)。"; break;
+            }
+        }
+
         static readonly string[] Tabs = { "景色", "カメラ・画質", "音" };
         static readonly (string id, string label)[] PhaseNames = { ("early_morning", "早朝"), ("morning", "朝"), ("day", "昼"), ("evening", "夕方"), ("night", "夜"), ("late_night", "深夜") };
         static readonly (string id, string label)[] LayerNames = { ("fire", "焚き火"), ("wind", "風"), ("insects", "虫"), ("rain", "雨") };
@@ -463,6 +486,14 @@ namespace Iori.Camp
                 GUILayout.Label("イオリの声を聞く", _s.header);
                 Row(width, VoiceTests.Length, i => VoiceTests[i].label, i => false, i => voice.Say(VoiceTests[i].cue, true), 4, _s.chipSmall, _s.chipSmallOn);
                 GUILayout.Label("押すと、いまの時間帯と時刻に合うセリフを言うよ(本番は間隔と確率の決まりで黙ることも多い)。時報は「次の正時の直前へ」で聞ける。\n" + voice.Status, _s.note, GUILayout.Width(width));
+            }
+
+            var talk = TalkDirector.Instance;
+            if (talk)
+            {
+                GUILayout.Label("イオリと話す(LLM)", _s.header);
+                Row(width, TalkActions.Length, i => i == 2 ? (talk.VoiceOn ? "返事の声 オン" : "返事の声 オフ") : TalkActions[i], i => i == 2 && talk.VoiceOn, i => TalkAction(talk, i), 3, _s.chipSmall, _s.chipSmallOn);
+                GUILayout.Label("キーをコピーしてから「貼る」を押すと、この端末の中に暗号化してしまうよ(設定画面ができるまでの入口)。キーがあるとき、イオリを長押しすると話せる。\n" + talk.Status + (_talkNote.Length > 0 ? "\n" + _talkNote : ""), _s.note, GUILayout.Width(width));
             }
 
             // ---- volumes
