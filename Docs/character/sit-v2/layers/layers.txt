@@ -1,0 +1,23 @@
+goggles	ゴーグル	表示
+ahoge	アホ毛	表示
+front_hair	前髪	表示
+tag	タグ	表示
+earring	耳飾り	表示
+side_hair	横髪	表示
+mouth_round	口 う	非表示
+mouth_open	口 開き	非表示
+mouth_half	口 半開き	非表示
+mouth_small	口 小さい半開き	非表示
+mouth_closed	口 閉じ	表示
+lid_R	閉じ目 右	非表示
+lash_R	まつ毛 右	表示
+iris_R	黒目 右	表示
+eye_R	白目 右	表示
+lid_L	閉じ目 左	非表示
+lash_L	まつ毛 左	表示
+iris_L	黒目 左	表示
+eye_L	白目 左	表示
+face	顔	表示
+body	体	表示
+back_hair	後ろ髪	表示
+base	脚と椅子(動かない土台)	表示
