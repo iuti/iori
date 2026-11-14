@@ -71,8 +71,25 @@ namespace Iori.Ui
             return t;
         }
 
-        /// <summary>A text too long for its box ends in "…" instead of running out of it.</summary>
-        public static void Clip(TextMeshProUGUI t) => t.overflowMode = TextOverflowModes.Ellipsis;
+        /// <summary>
+        /// A text too long for its box ends in "…" instead of running out of it. (When it clips, TextMeshPro
+        /// also drops a line that is taller than its box, so the box is made tall enough around the same middle.)
+        /// Place such a text again with <see cref="PlaceLine"/>.
+        /// </summary>
+        public static void Clip(TextMeshProUGUI t)
+        {
+            t.overflowMode = TextOverflowModes.Ellipsis;
+            var rt = t.rectTransform;
+            float need = t.fontSize * 2f;
+            if (rt.sizeDelta.y < need) rt.sizeDelta = new Vector2(rt.sizeDelta.x, need);
+        }
+
+        /// <summary>Places a clipped line of text as <see cref="Place"/> does: its middle is the middle of the given box.</summary>
+        public static void PlaceLine(TextMeshProUGUI t, float x, float y, float w, float h)
+        {
+            float tall = Mathf.Max(h, t.fontSize * 2f);
+            Place(t.rectTransform, x, y - (tall - h) * 0.5f, w, tall);
+        }
 
         public static Texture2D LoadIcon(string icon)
         {

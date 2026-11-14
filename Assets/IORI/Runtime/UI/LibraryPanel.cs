@@ -393,13 +393,13 @@ namespace Iori.Ui
             row.title.color = it.kind == Kind.Head ? th.textBright : th.text;
             row.title.text = it.title;
             // (a row with one line only, an artist's name, has it in the middle of its height)
-            if (oneLine) UiKit.Place(row.title.rectTransform, TextX, 0, textWidth, RowHeight);
-            else UiKit.Place(row.title.rectTransform, TextX, 10.6f, textWidth, 21.7f);
+            if (oneLine) UiKit.PlaceLine(row.title, TextX, 0, textWidth, RowHeight);
+            else UiKit.PlaceLine(row.title, TextX, 10.6f, textWidth, 21.7f);
             row.sub.gameObject.SetActive(!oneLine);
             if (!oneLine)
             {
                 row.sub.text = it.sub;
-                UiKit.Place(row.sub.rectTransform, TextX, 33.3f, textWidth, 18.1f);
+                UiKit.PlaceLine(row.sub, TextX, 33.3f, textWidth, 18.1f);
             }
 
             row.time.gameObject.SetActive(song);
