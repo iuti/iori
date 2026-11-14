@@ -11,6 +11,8 @@ namespace Iori.Audio
     ///   何を言うかを <see cref="VoicePicker"/>(Core)に決めてもらい、Unity のオーディオで鳴らす(アプリが前にいる間だけ)。
     /// - 時報: ラジオの予定表に入っていて、再生係(Android はサービス、PC は UnityAudioBackend)が鳴らす。
     ///   ここでは鳴らさず、予定表の時刻に合わせて口だけ動かす(再生係と同じく、2 秒より遅れたものは無かったことにする)。
+    /// - 会話の返事: <see cref="TalkDirector"/> が作った声を <see cref="SpeakReply"/> で受け取って言う。時報と重なるなら時報のあとに回し、
+    ///   返事を言っている間は場面の声を言わない。
     /// - 口: 声の波形から <see cref="LipSync"/> で口の動きを作り、再生位置で引いて <see cref="IoriMouth"/> に渡す。
     /// </summary>
     public sealed class VoiceDirector : MonoBehaviour
@@ -46,6 +48,8 @@ namespace Iori.Audio
         bool _fireLit = true, _fireKnown;
         float _fireLitAt = -1f;
         bool _wasSpeaking;
+        AudioClip _replyClip;                // 会話の返事の声(その場で作ったもの)
+        Coroutine _replyWait;                // 返事を言い出すのを待っている(時報を先に通す)
 
         void Awake()
         {
@@ -106,6 +110,54 @@ namespace Iori.Audio
         {
             // 裏に回るとき、言いかけの声は止める(戻ってきたときの「おかえり」は、家に帰ったのが分かる仕組みができたら)
             if (paused && _source.isPlaying) _source.Stop();
+            if (paused) DropReply();
+        }
+
+        /// <summary>会話の返事を言おうとしている、または言っている。</summary>
+        public bool ReplySpeaking => _replyWait != null || (_replyClip && _source.isPlaying && _source.clip == _replyClip);
+
+        /// <summary>
+        /// 会話の返事の声を言う(モノラルの波形)。予定された声(時報)が鳴っている、または返事の途中に始まるなら、それが終わるまで待つ。
+        /// 前の返事を言っている途中なら、それは止めて新しいほうを言う。
+        /// </summary>
+        public void SpeakReply(float[] samples, int sampleRate, float volume)
+        {
+            if (samples == null || samples.Length == 0 || sampleRate <= 0) return;
+            DropReply();
+            var clip = AudioClip.Create("talk reply", samples.Length, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            _replyClip = clip;
+            _replyWait = StartCoroutine(PlayReply(clip, LipSync.Analyze(samples, 1, sampleRate), volume));
+        }
+
+        IEnumerator PlayReply(AudioClip clip, MouthTrack track, float volume)
+        {
+            long lengthMs = (long)(clip.length * 1000);
+            for (float waited = 0f; waited < 20f; waited += Time.unscaledDeltaTime)
+            {
+                var now = PlanNow();
+                var next = NearestPlannedVoice(now);
+                bool soon = next != long.MaxValue && next > now - 1000 && next - now < lengthMs + 500;
+                if (_planned == null && !soon) break;
+                yield return null;
+            }
+            _replyWait = null;
+            _source.Stop();
+            _source.clip = clip;
+            _source.volume = Mathf.Clamp01(volume * Volume);
+            _source.Play();
+            _eventTrack = track;
+            LastEvent = "会話の返事";
+            _picker?.NoteSpoken(PlanNow() + lengthMs);
+        }
+
+        void DropReply()
+        {
+            if (_replyWait != null) { StopCoroutine(_replyWait); _replyWait = null; }
+            if (!_replyClip) return;
+            if (_source.clip == _replyClip) { _source.Stop(); _source.clip = null; _eventTrack = null; }
+            Destroy(_replyClip);
+            _replyClip = null;
         }
 
         /// <summary>
@@ -116,6 +168,7 @@ namespace Iori.Audio
         {
             if (cue == null || _picker == null) return false;
             if (!force && Hushed != null && Hushed()) { LastEvent = cue + ": 眠っているので黙る"; return false; }
+            if (!force && ReplySpeaking) { LastEvent = cue + ": 会話の返事の途中なので黙る"; return false; }
             var radio = RadioDirector.Instance;
             var now = PlanNow();
             var local = TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(now), TimeZoneInfo.Local);
@@ -133,6 +186,7 @@ namespace Iori.Audio
             {
                 // (読み込みの間に時報が始まっていたら、重ねない)
                 if (_planned != null && !force) return;
+                if (ReplySpeaking && !force) return;
                 _source.Stop();
                 _source.clip = clip;
                 _source.volume = Mathf.Clamp01(line.Volume * Volume);

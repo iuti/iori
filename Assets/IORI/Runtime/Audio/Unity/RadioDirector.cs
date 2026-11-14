@@ -47,6 +47,7 @@ namespace Iori.Audio
             go.AddComponent<RadioDirector>();
             go.AddComponent<MusicDirector>();
             go.AddComponent<VoiceDirector>();
+            go.AddComponent<TalkDirector>();
             go.AddComponent<RadioDebugPanel>();
         }
 

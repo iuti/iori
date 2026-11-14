@@ -21,6 +21,8 @@ namespace Iori.Audio
         public const string RainStop = "rain_stop";
         /// <summary>消えていた火をまたつけた(焚き火の音量をゼロから上げた)。</summary>
         public const string Firewood = "firewood";
+        /// <summary>話しかけられたのに、言葉を返せなかった(通信できない)。セリフ帳に無い間は文字だけで返す。</summary>
+        public const string TalkFail = "talk_fail";
     }
 
     /// <summary>セリフ 1 本。Phases と Hours が空なら、いつでも言える。</summary>

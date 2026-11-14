@@ -1,4 +1,4 @@
-"""IORI の UI アイコンのうち、リストと検索で足したもの(白、128 角、線は 16 の枠で 1.3)を描く。
+"""IORI の UI アイコンのうち、リストと検索、会話で足したもの(白、128 角、線は 16 の枠で 1.3)を描く。
 
 使い方: python3 tools/ui/make_icons.py Assets/IORI/Resources/IoriUI/Icons
 線の端は角ばらせる(butt)。ほかのアイコンと同じ太さに見えるように、16 の枠の座標で書く。
@@ -86,7 +86,13 @@ def trash(d):
     seg(d, (9.1, 6.6), (8.9, 11.4), 1.0)
 
 
-ICONS = {"plus": plus, "minus": minus, "close": close, "check": check, "grip": grip, "pencil": pencil, "trash": trash}
+def send(d):
+    """話しかける(上向きの矢印)。"""
+    seg(d, (8, 3.2), (8, 13.5))
+    poly(d, [(3.4, 7.6), (8, 3), (12.6, 7.6)])
+
+
+ICONS = {"send": send, "plus": plus, "minus": minus, "close": close, "check": check, "grip": grip, "pencil": pencil, "trash": trash}
 
 
 def main(out):

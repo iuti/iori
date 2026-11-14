@@ -34,6 +34,7 @@ namespace Iori.Ui
         AmbientPanel _ambient;
         PlayerPanel _player;
         LibraryPanel _library;
+        TalkPanel _talk;
         MiniBar _bar;
         UiPanel[] _panels;
         /// <summary>The open sheets, the one on top last (only the music player's two screens lie over one another).</summary>
@@ -45,6 +46,7 @@ namespace Iori.Ui
         public UiPanel OpenPanel => _stack.Count > 0 ? _stack[_stack.Count - 1] : null;
         public UiBackdrop Backdrop => _backdrop;
         public LibraryPanel Library => _library;
+        public TalkPanel Talk => _talk;
         public MiniBar HomeBar => _bar;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -97,7 +99,8 @@ namespace Iori.Ui
             _ambient = MakePanel<AmbientPanel>("Ambient sheet");
             _player = MakePanel<PlayerPanel>("Player screen");
             _library = MakePanel<LibraryPanel>("Library screen");
-            _panels = new UiPanel[] { _radio, _ambient, _player, _library };
+            _talk = MakePanel<TalkPanel>("Talk sheet");
+            _panels = new UiPanel[] { _radio, _ambient, _player, _library, _talk };
         }
 
         T MakePanel<T>(string name) where T : UiPanel
@@ -119,6 +122,7 @@ namespace Iori.Ui
         void OnEnable()
         {
             CampProp.Tapped += OnPropTapped;
+            CampProp.Held = OnPropHeld;
             // Iori says nothing while she sleeps (the lantern's sleep mode)
             VoiceDirector.Hushed = () => CampAtmosphere.Instance && CampAtmosphere.Instance.sleep;
         }
@@ -126,6 +130,7 @@ namespace Iori.Ui
         void OnDisable()
         {
             CampProp.Tapped -= OnPropTapped;
+            if (CampProp.Held == OnPropHeld) CampProp.Held = null;
             VoiceDirector.Hushed = null;
             CampCameraRig.UiBlocked = false;
         }
@@ -137,6 +142,28 @@ namespace Iori.Ui
             if (_stack.Count > 0) return;
             if (prop.kind == CampPropKind.Iori && VoiceDirector.Instance) VoiceDirector.Instance.Say(VoiceCues.Tap);
             Open(prop.kind, prop);
+        }
+
+        /// <summary>
+        /// A long press on Iori: the sheet to talk to her, if she can talk (a key for the LLM is set) and is awake.
+        /// If not, the press is not used, and letting go is the usual tap (she says one of her lines).
+        /// </summary>
+        bool OnPropHeld(CampProp prop)
+        {
+            if (_stack.Count > 0 || prop.kind != CampPropKind.Iori) return false;
+            return OpenTalk(prop);
+        }
+
+        /// <summary>Raises the sheet to talk to Iori (also used by the screenshot runner, which passes force). Returns false if she cannot talk now.</summary>
+        public bool OpenTalk(CampProp prop = null, bool force = false)
+        {
+            var talk = TalkDirector.Instance;
+            if (!force)
+            {
+                if (!talk || !talk.Ready) return false;
+                if (VoiceDirector.Hushed != null && VoiceDirector.Hushed()) return false;
+            }
+            return Open(CampPropKind.Iori, prop, _talk);
         }
 
         UiPanel PanelFor(CampPropKind kind)
@@ -154,9 +181,10 @@ namespace Iori.Ui
         }
 
         /// <summary>Opens the panel of a prop (also used by the screenshot runner). Returns false if that prop has none.</summary>
-        public bool Open(CampPropKind kind, CampProp prop = null)
+        public bool Open(CampPropKind kind, CampProp prop = null) => Open(kind, prop, PanelFor(kind));
+
+        bool Open(CampPropKind kind, CampProp prop, UiPanel panel)
         {
-            var panel = PanelFor(kind);
             if (!panel) return false;
             if (panel == _radio || panel == _ambient)
             {

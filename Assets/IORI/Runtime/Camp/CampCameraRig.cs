@@ -47,6 +47,10 @@ namespace Iori.Camp
 
         // input
         Vector2 _downPos;
+        /// <summary>A finger resting this long on a prop is a long press.</summary>
+        public const float HoldSeconds = 0.5f;
+        float _downTime;
+        bool _holdTried, _held;
         float _downYaw, _downPitch;
         bool _dragging, _down;
         float _pinch;
@@ -125,11 +129,18 @@ namespace Iori.Camp
             {
                 _down = true; _dragging = false;
                 _downPos = Input.mousePosition; _downYaw = yaw; _downPitch = pitch;
+                _downTime = Time.unscaledTime; _holdTried = _held = false;
             }
             if (_down && Input.GetMouseButton(0))
             {
                 Vector2 d = (Vector2)Input.mousePosition - _downPos;
                 if (d.magnitude > 8f) _dragging = true;
+                // a finger that rests on a prop: a long press (the prop may take it; if not, letting go is still a tap)
+                if (!_dragging && !_holdTried && Time.unscaledTime - _downTime >= HoldSeconds)
+                {
+                    _holdTried = true;
+                    _held = Hold(_downPos);
+                }
                 if (_dragging)
                 {
                     yaw = Mathf.Clamp(_downYaw + d.x / Mathf.Max(1, Screen.width) * dragSensitivity, -yawLimit, yawLimit);
@@ -139,8 +150,16 @@ namespace Iori.Camp
             if (_down && Input.GetMouseButtonUp(0))
             {
                 _down = false;
-                if (!_dragging) Tap(Input.mousePosition);
+                if (!_dragging && !_held) Tap(Input.mousePosition);
             }
+        }
+
+        bool Hold(Vector2 screen)
+        {
+            var ray = _cam.ScreenPointToRay(screen);
+            if (!Physics.Raycast(ray, out var info, 100f, ~0, QueryTriggerInteraction.Collide)) return false;
+            var hit = info.collider.GetComponentInParent<CampProp>();
+            return hit && hit.Hold();
         }
 
         void Tap(Vector2 screen)

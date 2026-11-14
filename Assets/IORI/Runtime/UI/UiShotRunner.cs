@@ -341,6 +341,28 @@ namespace Iori.Ui
             yield return Wait(0.4f);
         }
 
+        /// <summary>The sheet to talk to Iori, with made-up words (nothing is sent anywhere).</summary>
+        IEnumerator TalkShots(UiRoot ui)
+        {
+            _report.AppendLine("open talk: " + ui.OpenTalk(null, true));
+            yield return Wait(3.2f);
+            yield return Shot("ui_35_talk");
+            ui.Talk.Stage("この曲どう?", "", false);
+            yield return Wait(0.4f);
+            yield return Shot("ui_36_talk_typed");
+            ui.Talk.Stage("", "", true);
+            yield return Wait(0.5f);
+            yield return Shot("ui_37_talk_waiting");
+            ui.Talk.Stage("", "いいね。夜に合う。", false);
+            yield return Wait(0.4f);
+            yield return Shot("ui_38_talk_reply");
+            ui.Talk.Stage("", "そっか。……座ってなよ、何もしなくていいから。火は私が見てるし、曲もこのままにしておく。", false);
+            yield return Wait(0.4f);
+            yield return Shot("ui_39_talk_reply_long");
+            ui.Close();
+            yield return Wait(2.5f);
+        }
+
         IEnumerator Shot(string name)
         {
             yield return new WaitForEndOfFrame();
@@ -421,6 +443,19 @@ namespace Iori.Ui
             yield return Wait(2.5f);
             yield return Shot("ui_01_idle");
 
+            // "-ioriUiShotTalkOnly": only the sheet to talk to Iori
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-ioriUiShotTalkOnly") >= 0)
+            {
+                yield return TalkShots(ui);
+                radio.SetClockOffset(0);
+                radio.SetWeather(wasWeather);
+                radio.SetQuiet(wasQuiet);
+                radio.SetAmbientVolume("fire", wasFire);
+                yield return null;
+                Finish(0);
+                yield break;
+            }
+
             _report.AppendLine("open radio: " + ui.Open(CampPropKind.Radio));
             yield return Wait(0.12f);
             yield return Shot("ui_02_radio_opening");
@@ -499,6 +534,7 @@ namespace Iori.Ui
             SetRadioClock(radio, 17, 20);
             yield return Wait(1.5f);
             yield return MusicShots(ui, radio);
+            yield return TalkShots(ui);
 
             radio.SetClockOffset(0);
             radio.SetWeather(wasWeather);
