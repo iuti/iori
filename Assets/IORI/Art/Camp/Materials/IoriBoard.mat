@@ -24,15 +24,37 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 2e5e566471dae1c4eaa2facf365062e9, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0812eae372059934da9dc9ba74e2b892, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalTex:
+        m_Texture: {fileID: 2800000, guid: 6563f2ea978b1d849af50472b5abcb60, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _Breath: 1
+    - _Cel: 0.7
+    - _CelEdge: 0.08
+    - _CelSoft: 0.07
     - _Cutoff: 0.5
-    - _RimCool: 0.35
-    - _RimWarm: 0.7
+    - _Dance: 1
+    - _EdgeGlow: 0.9
+    - _EdgeGlowOnWhite: 0.25
+    - _EdgeWidth: 0.12
+    - _Flicker: 1
+    - _Glint: 1
+    - _LampFill: 0.4
+    - _LampFromSide: 0.6
+    - _LampInDaylight: 1.2
+    - _LampSoft: 0.14
+    - _LampUpFade: 0.3
+    - _NormalStrength: 1
+    - _RimCool: 0
+    - _RimWarm: 0.15
+    - _ShadeDeep: 0.4
+    - _SkyBack: 0.3
+    - _Wrap: 0.35
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

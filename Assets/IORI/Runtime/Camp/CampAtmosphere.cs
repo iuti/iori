@@ -108,6 +108,13 @@ namespace Iori.Camp
         public float SleepAmount => _sleep;
         public float CurrentHour { get; private set; }
         public float ShaderTime { get; private set; }
+
+        /// <summary>0 below a, 1 above b, a smooth step between (Mathf.SmoothStep is something else: it blends two values).</summary>
+        static float Smooth01(float a, float b, float x)
+        {
+            float k = Mathf.Clamp01((x - a) / (b - a));
+            return k * k * (3f - 2f * k);
+        }
         public CampSeason CurrentSeason { get; private set; }
         public CampPalette Palette => _pal;
         public CampLook Look => look != null ? look : (_defaultLook ??= CampLook.CreateDefault());
@@ -143,6 +150,7 @@ namespace Iori.Camp
             public static readonly int Front = Shader.PropertyToID("_IoriFront");
             public static readonly int MirrorLights = Shader.PropertyToID("_IoriMirrorLights");
             public static readonly int Fire = Shader.PropertyToID("_IoriFire");
+            public static readonly int FireFlicker = Shader.PropertyToID("_IoriFireFlicker");
             public static readonly int SeasonGrass = Shader.PropertyToID("_IoriSeasonGrass");
             public static readonly int SeasonLeaf = Shader.PropertyToID("_IoriSeasonLeaf");
             public static readonly int SkyHorizon = Shader.PropertyToID("_IoriSkyHorizon");
@@ -440,8 +448,17 @@ namespace Iori.Camp
                 keyLight.shadowStrength = p.keyShadow * Mathf.Lerp(1f, 0.4f, rain);
             }
 
-            // ---- the fire: it breathes, and its light wanders a little so the shadows move
-            float flick = 0.9f + 0.07f * Mathf.Sin(t * 2.3f) * Mathf.Sin(t * 1.7f + 1f) + 0.035f * Mathf.Sin(t * 5.1f) + 0.02f * Mathf.Sin(t * 11.3f + 2f);
+            // ---- the fire: it breathes unevenly (no two seconds alike), flares up now and then, and its light
+            // wanders a little so the shadows move. Around 0.9 as before, about 0.8 to 1.15.
+            float slow = Mathf.PerlinNoise(t * 1.3f, 3.7f), quick = Mathf.PerlinNoise(t * 4.1f, 11.3f);
+            float flare = Smooth01(0.6f, 0.8f, Mathf.PerlinNoise(t * 0.5f, 27.1f)) * Smooth01(0.35f, 0.7f, quick);
+            float flick = 0.9f + 0.22f * (slow - 0.5f) + 0.10f * (quick - 0.5f) + 0.12f * flare;
+            // for the shaders that show the flicker on things (Iori): x how strongly the fire burns right now
+            // against its usual (about -1..2), y the flare, zw which way the flame leans (-1..1)
+            Shader.SetGlobalVector(Id.FireFlicker, new Vector4(
+                Mathf.Clamp((flick - 0.9f) / 0.1f, -1.5f, 2f), flare,
+                Mathf.Clamp((Mathf.PerlinNoise(t * 2.1f, 5.5f) - 0.5f) * 2.6f, -1f, 1f),
+                Mathf.Clamp((Mathf.PerlinNoise(t * 2.6f, 41.9f) - 0.5f) * 2.6f, -1f, 1f)));
             // The fire's volume slider sets the flame's size; with the volume at zero the fire is out (no flame, no
             // light, no sparks, the embers nearly dark). The fire's light is as it always was from the slider's
             // first place to its right end, and dimmer to the left of that.
@@ -462,7 +479,9 @@ namespace Iori.Camp
                 if (!_fireHomeSet) { _fireLightHome = fireLight.transform.position; _fireHomeSet = true; }
                 if (fire) _fireLightHome = firePos;
                 fireLight.transform.position = _fireLightHome + new Vector3(Mathf.Sin(t * 3.1f) * 0.02f, Mathf.Sin(t * 4.3f + 1f) * 0.025f, Mathf.Cos(t * 2.7f) * 0.02f);
-                fireLight.color = L.fireColor;
+                // a fire burning high is yellower, one sinking back is redder (no change at its usual strength)
+                float heat = (flick - 0.9f) / 0.25f;
+                fireLight.color = new Color(L.fireColor.r, L.fireColor.g * (1f + 0.10f * heat), L.fireColor.b * (1f + 0.30f * heat), 1f);
                 fireLight.intensity = L.fireIntensity * fireLevel * flick;
                 fireLight.range = L.fireRange;
                 fireLight.enabled = fireLevel > 0.01f;
