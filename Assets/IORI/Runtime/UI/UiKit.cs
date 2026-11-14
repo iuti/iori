@@ -136,25 +136,77 @@ namespace Iori.Ui
             return b;
         }
 
+        /// <summary>
+        /// A box to type one line into (TextMeshPro's input field): the letters, a thin caret, nothing else
+        /// (no frame, no placeholder words). On a phone the keyboard comes up without its own line of text above it.
+        /// </summary>
+        public static TMP_InputField Field(string name, Transform parent, float x, float y, float w, float h, TMP_FontAsset font, float size, Color32 color)
+        {
+            var rt = Node(name, parent, x, y, w, h);
+            // (set up while asleep, so it wakes with all its parts in place)
+            rt.gameObject.SetActive(false);
+            var hit = rt.gameObject.AddComponent<UiHit>();
+            var area = Node("Text Area", rt, 0, 0, w, h);
+            Stretch(area);
+            area.gameObject.AddComponent<UnityEngine.UI.RectMask2D>();
+            var text = Text("Text", area, 0, 0, w, h, "", font, size, color);
+            Stretch(text.rectTransform);
+            var field = rt.gameObject.AddComponent<TMP_InputField>();
+            field.transition = UnityEngine.UI.Selectable.Transition.None;
+            field.targetGraphic = hit;
+            field.textViewport = area;
+            field.textComponent = text;
+            field.fontAsset = font;
+            field.pointSize = size;
+            field.lineType = TMP_InputField.LineType.SingleLine;
+            field.richText = false;
+            field.customCaretColor = true;
+            field.caretColor = color;
+            field.caretWidth = 1;
+            field.caretBlinkRate = 0.9f;
+            field.selectionColor = new Color32(241, 238, 255, 60);
+            field.shouldHideMobileInput = true;
+            field.restoreOriginalTextOnEscape = false;
+            field.onFocusSelectAll = true;
+            field.characterLimit = 60;
+            rt.gameObject.SetActive(true);
+            return field;
+        }
+
         public static float EaseOut(float t) { t = 1f - Mathf.Clamp01(t); return 1f - t * t * t; }
         public static float EaseInOut(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
     }
 
-    /// <summary>A button: shrinks a little while held, plays its sound and calls <see cref="onClick"/> when let go on it.</summary>
+    /// <summary>
+    /// A button: shrinks a little while held, plays its sound and calls <see cref="onClick"/> when let go on it.
+    /// With <see cref="onLongPress"/> set, a finger that rests on it for half a second calls that instead (and the
+    /// press is not also a click). A finger that starts a stroke (the list moves) is not a long press.
+    /// </summary>
     public sealed class UiButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
     {
+        public const float LongPressSeconds = 0.5f;
         public Action onClick;
+        public Action onLongPress;
+        float _held;
+        bool _longDone;
         public RectTransform visual;
         public UiShape icon;
         public string sound = UiSounds.Tap;
         public float shrink = 0.10f;
         float _press, _target;
 
-        public void OnPointerDown(PointerEventData e) => _target = 1f;
+        public void OnPointerDown(PointerEventData e)
+        {
+            _target = 1f;
+            _held = 0f;
+            _longDone = false;
+        }
+
         public void OnPointerUp(PointerEventData e) => _target = 0f;
 
         public void OnPointerClick(PointerEventData e)
         {
+            if (_longDone) return;
             UiSounds.Play(sound);
             onClick?.Invoke();
         }
@@ -162,14 +214,49 @@ namespace Iori.Ui
         void OnDisable()
         {
             _press = _target = 0f;
+            _longDone = false;
             if (visual) visual.localScale = Vector3.one;
         }
 
         void Update()
         {
+            if (onLongPress != null && _target > 0f && !_longDone)
+            {
+                _held += Time.unscaledDeltaTime;
+                if (_held >= LongPressSeconds)
+                {
+                    _longDone = true;
+                    _target = 0f;
+                    UiSounds.Play(UiSounds.Open);
+                    onLongPress();
+                }
+            }
             if (Mathf.Approximately(_press, _target)) return;
             _press = Mathf.MoveTowards(_press, _target, Time.unscaledDeltaTime * (_target > _press ? 14f : 7f));
             if (visual) visual.localScale = Vector3.one * (1f - shrink * UiKit.EaseInOut(_press));
+        }
+    }
+
+    /// <summary>
+    /// A grip to drag a row by (to change the order of a list). It takes the stroke from its first move, in
+    /// any direction, so neither the list nor the sheet moves meanwhile; it only tells where the finger is.
+    /// </summary>
+    public sealed class UiDragHandle : MonoBehaviour, IPointerDownHandler, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+    {
+        public Action<PointerEventData> onBegin, onDrag, onEnd;
+        bool _dragging;
+
+        public void OnPointerDown(PointerEventData e) { } // (so the press is not the row's)
+        public void OnInitializePotentialDrag(PointerEventData e) => e.useDragThreshold = false;
+        public void OnBeginDrag(PointerEventData e) { _dragging = true; onBegin?.Invoke(e); }
+        public void OnDrag(PointerEventData e) { if (_dragging) onDrag?.Invoke(e); }
+        public void OnEndDrag(PointerEventData e) { if (!_dragging) return; _dragging = false; onEnd?.Invoke(e); }
+
+        void OnDisable()
+        {
+            if (!_dragging) return;
+            _dragging = false;
+            onEnd?.Invoke(null);
         }
     }
 

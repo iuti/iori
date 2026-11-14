@@ -9,6 +9,7 @@
 - 何を鳴らすかを決めるのは `RadioScheduler` だけ。Android の `PlanEngine.java` と PC の `UnityAudioBackend.cs` は予定表を鳴らすだけで、同じ決まり(フェードの式、再生位置の式、消えたクリップのフェードアウト、単発音の遅延許容)を持つ。片方を変えたらもう片方も直す。
 - 予定表の JSON の形は `PlaybackPlan.cs` が正。`Plan.java` はそれに合わせる。
 - 音楽プレーヤー(端末の曲)の鳴らす順を決めるのは `PlayQueue` だけ。再生係(`IMusicBackend`: PC は `UnityMusicBackend`、Android は `AndroidMusicBackend` と再生サービスの中の `MusicEngine.java`)は渡された列を鳴らすだけで、曲が終わったときの決まり(くり返しなしは最後で止まる、全部は最初へ回る、1 曲は同じ曲、読めない曲は飛ばす)を同じにする。片方を変えたらもう片方も直す。鳴らすのはラジオかプレーヤーのどちらか片方(`MusicDirector.Active` の間、ラジオは黙って環境音だけ。chico が決めた仕様)。
+- 曲の一覧のタブは 曲 / アルバム / 演奏者 / リスト。「リスト」は自分で作る曲の並び(プレイリスト)で、中身は Core の `MusicPlaylists`(作る、名前、足す、外す、並べ替え、JSON の保存)。保存は `MusicDirector` が端末の `playlists.json` に書く(`Persist` が false の撮影中は読み書きしない)。曲は Id と、曲名・演奏者・アルバム名の鍵で覚え、見つからない曲は消さずに見せるときだけ飛ばす。曲の行を長押しすると `PlaylistPicker` が出る。検索は `MusicLibrary.Search` で、文字は `TextFold` でそろえる(大文字小文字、全角半角、ひらがなカタカナ、空白)。
 - Android の曲の一覧は `MusicStore.java` が MediaStore から集めて JSON で渡し、Core の `MediaStoreJson.cs` が読む。形を変えたら両方直す。集めるのは `AndroidMusicBackend.Folder`(既定は `PC-Music`)という名前のフォルダの下だけ。
 - イオリが場面で何を言うか(黙るか)を決めるのは Core の `VoicePicker` だけ(セリフ帳は `StreamingAssets/IORI/voice.json`)。時報の声はチャイムと同じくラジオの予定表(`RadioScheduler`、`radio.json` の `jiho`、種類 `voice`)で、静けさの時間でもプレーヤーの番でも毎正時に言う(chico の指定)。「おかえり」は家に帰ってきたとき用にとっておく(アプリに戻っただけでは言わない)。口パクは `VoiceDirector` が `LipSync` で声から作った値を `IoriMouth` に渡し、口の相手は `IMouthTarget` を実装して受け取るだけ(モデルの種類を声の側に持ち込まない)。人形の値(パーツ、動き)は声の側から触らず、`mouthOpen` と `vowel` だけを書く。
 - Android のネイティブコードは Java(Unity 6 の .androidlib で Kotlin プラグインを抱えないため)。

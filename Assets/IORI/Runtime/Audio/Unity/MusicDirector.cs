@@ -24,6 +24,8 @@ namespace Iori.Audio
 
         public MusicLibrary Library { get; private set; } = new MusicLibrary();
         public PlayQueue Queue { get; } = new PlayQueue();
+        /// <summary>自分で作る曲の並び(リスト)。変えたら <see cref="SavePlaylists"/> を呼ぶ。</summary>
+        public MusicPlaylists Playlists { get; } = new MusicPlaylists();
         public IMusicBackend Backend { get; private set; }
         /// <summary>端末の曲を集めている最中か。</summary>
         public bool Scanning { get; private set; }
@@ -73,7 +75,49 @@ namespace Iori.Audio
 #endif
         }
 
-        void Start() => Rescan();
+        void Start()
+        {
+            LoadPlaylists();
+            Rescan();
+        }
+
+        // ---- リスト(端末の中のファイルに JSON で保存する)
+
+        static string PlaylistsPath => System.IO.Path.Combine(Application.persistentDataPath, "playlists.json");
+
+        void LoadPlaylists()
+        {
+            if (!Persist) return;
+            try
+            {
+                if (System.IO.File.Exists(PlaylistsPath) && !Playlists.Load(System.IO.File.ReadAllText(PlaylistsPath)))
+                    Debug.LogWarning("[IORI] リストの保存を読めませんでした: " + PlaylistsPath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[IORI] リストの保存を読めませんでした: " + e.Message);
+            }
+            Touch();
+        }
+
+        /// <summary>リストを変えたあとに呼ぶ: 保存して、画面に描き直させる。</summary>
+        public void SavePlaylists()
+        {
+            Touch();
+            if (!Persist) return;
+            try
+            {
+                // (書きかけで落ちても前の保存が残るように、別のファイルに書いてから置き換える)
+                var tmp = PlaylistsPath + ".tmp";
+                System.IO.File.WriteAllText(tmp, Playlists.Save());
+                if (System.IO.File.Exists(PlaylistsPath)) System.IO.File.Replace(tmp, PlaylistsPath, null);
+                else System.IO.File.Move(tmp, PlaylistsPath);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[IORI] リストを保存できませんでした: " + e.Message);
+            }
+        }
 
         void OnDestroy() { if (Instance == this) Instance = null; }
 
