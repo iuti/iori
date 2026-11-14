@@ -65,12 +65,33 @@ body_a = rim(body | under_hair)
 add('body', body_rgb, soft(body_a), group='body')
 
 # 4. face: visible skin from the final, hidden forehead/ears/neck from the shifted bare head
+# the open eyes: where the final differs from the closed-eye picture, per eye
+closedA = L('closed')
+dE = diff(final, closedA)
+whites0 = M('whites') | M('iris')
+eyeM = np.zeros((H, W), bool)
+eyeM_side = {}
+for _s, (x0, y0, x1, y1) in (('L', (436, 246, 516, 318)), ('R', (508, 212, 596, 286))):
+    inb_ = (xx >= x0) & (xx < x1) & (yy >= y0) & (yy < y1)
+    m_ = (dE > 40) & inb_
+    m_ = cv2.morphologyEx(m_.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))).astype(bool)
+    lab_, n_ = ndi.label(m_)
+    keep_ = np.zeros_like(m_)
+    seed = dil(whites0 & inb_, 9)
+    for k_ in range(1, n_ + 1):
+        c_ = lab_ == k_
+        if c_.sum() > 25 and (c_ & seed).any(): keep_ |= c_
+    keep_ = dil(ndi.binary_fill_holes(keep_ | (whites0 & inb_)), 3) & inb_
+    eyeM_side[_s] = keep_; eyeM |= keep_
+save_dbg = Image.fromarray((eyeM * 255).astype(np.uint8)).save('eyeM.png')
 hidden = face & (hair_f | hair_s | gog | tag | earring | phones | ahoge)
 face_rgb = final.copy(); face_rgb[hidden] = headf[hidden]
 face_rgb[skull & ~face] = headf[skull & ~face]
 face_a = skull & ~(M('U') & ~skull)
 shirt = (gray(final) > 185) & (yy > 300) & ~((final[..., 0] > 205) & (final[..., 0] - final[..., 2] > 15))
 face_a = skull & ~(shirt & ~hair_f & ~hair_s & ~phones) & ~phones
+fr8 = face_rgb.clip(0, 255).astype(np.uint8)
+face_rgb = cv2.inpaint(fr8, dil(eyeM, 3).astype(np.uint8), 9, cv2.INPAINT_TELEA).astype(np.float32)
 add('face', face_rgb, soft(rim(face_a, 3) & ~phones), group='head')
 
 # 5. eyes (image left = L)
@@ -98,10 +119,10 @@ for side, box in (('L', (440, 252, 512, 312)), ('R', (512, 218, 592, 280))):
     irgb[vis] = final[vis]
     add(f'iris_{side}', irgb, soft(ir, 0.5), group='head', role=f'iris_{side}', pivot=[round(cx, 1), round(cy, 1)], clip=f'eye_{side}', range=[5.0, 3.0])
     # lashes over the iris: the final's dark lines around the opening
-    lm = inb & dil(opening, 9) & ~ero(opening, 3) & (gray(final) < 140)
+    lm = eyeM_side[side] & ~ero(opening, 2)
     add(f'lash_{side}', final, soft(lm, 0.5), group='head', role=f'eye_{side}', pivot=[round(cx, 1), round(cy, 1)])
     # the closed lid: the closed-eye picture over the whole eye area
-    core = dil(opening | lm, 5) & inb
+    core = dil(eyeM_side[side], 3)
     lid = dil(core, 6) & inb
     la = np.maximum(core.astype(np.float32), cv2.GaussianBlur(lid.astype(np.float32), (0, 0), 1.5) * lid)
     add(f'lid_{side}', closed, la, group='head', role=f'lid_{side}')
@@ -127,6 +148,7 @@ satf = final.max(2) - final.min(2)
 hairc = ((satf > 38) & (final[..., 2] > final[..., 0])) | (gray(final) < 105)
 shirtish = (gray(final) > 188) & (satf < 34)
 hs_a &= ~((shirtish | (skin_f & ~skull)) & ~behind & ~g_out)
+hs_a &= ~eyeM
 add('side_hair', hs_rgb, soft(rim(hs_a)), group='hair_side', depth=0.05)
 add('earring', final, soft(rim(earring, 3), 0.5), group='hair_side', depth=0.05, bones=['earring'])
 add('tag', final, soft(tag, 0.5), group='hair_side', depth=0.05, bones=['tag'])
@@ -138,7 +160,7 @@ hf_rgb[g_in] = ug[g_in]
 opening_all = M('whites') | M('iris')
 eyezone = dil(opening_all, 3)
 lashy = dil(opening_all, 4) & (gray(final) < 70) & (satf < 40)
-hf_a = (hair_f & ~eyezone & ~lashy & ~(skin_f & ~g_in)) | g_in
+hf_a = ((hair_f & ~eyezone & ~lashy & ~(skin_f & ~g_in)) | g_in) & ~eyeM
 hf_a = cv2.morphologyEx(hf_a.astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2), np.uint8)).astype(bool)
 add('front_hair', hf_rgb, soft(rim(hf_a, 3) & ~eyezone & ~lashy), group='hair_front', depth=0.1)
 add('ahoge', final, soft(ahoge, 0.5), group='hair_back', depth=0.0, bones=['ahoge'])
