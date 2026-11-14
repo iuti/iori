@@ -57,6 +57,14 @@ namespace Iori.Camp
         void OnEnable()
         {
             Instance = this;
+            // "-ioriQuality phone" (or full) on the command line: to look at the phone's picture on a desktop
+            if (Application.isPlaying && !Application.isEditor)
+            {
+                var args = System.Environment.GetCommandLineArgs();
+                for (int i = 0; i < args.Length - 1; i++)
+                    if (args[i] == "-ioriQuality")
+                        level = args[i + 1] == "phone" ? CampQualityLevel.Phone : args[i + 1] == "full" ? CampQualityLevel.Full : level;
+            }
             _last = (CampQualityLevel)(-1);
             Apply();
         }
