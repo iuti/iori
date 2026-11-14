@@ -19,6 +19,8 @@ namespace Iori.Camp
         [Tooltip("押したときにカメラが寄るか")] public bool focusOnTap = true;
 
         public static event Action<CampProp> Tapped;
+        /// <summary>A long press on a prop. Return true if it was used (letting go is then not a tap).</summary>
+        public static Func<CampProp, bool> Held;
 
         public Vector3 FocusPoint => transform.position + focusOffset;
 
@@ -43,6 +45,8 @@ namespace Iori.Camp
                 CampAtmosphere.Instance.SetSleep(!CampAtmosphere.Instance.sleep);
             Tapped?.Invoke(this);
         }
+
+        public bool Hold() => Held != null && Held(this);
 
         void OnDrawGizmosSelected()
         {
