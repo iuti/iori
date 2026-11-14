@@ -1,10 +1,12 @@
 """Add the hidden continuation of a layer under the layers above it, without changing the still picture.
 
   python3 extend_under.py <in.psd> <out.psd> <layer>:<pixels>:<x0,y0,x1,y1>[:flat] [...]
+  python3 extend_under.py <in.psd> <out.psd> <layer>:restore:<x0,y0,x1,y1>:<ref.psd> [...]   (undoes a fill in the box)
 
 For each rule the named layer grows by up to <pixels> inside the box, only into pixels where it holds nothing and
 which the layers drawn above it cover completely at rest (so the flattened picture stays exactly the same). The
-colour continues the layer's own edge. Everything else in the PSD is written back as it was."""
+colour continues the layer's own edge. `restore` copies the layer's pixels in the box back from another PSD (a fill
+that turned out to show when the layer moves); the line printed at the end says whether the still picture changed. Everything else in the PSD is written back as it was."""
 import sys, numpy as np, cv2
 from scipy import ndimage as ndi
 from psd_tools import PSDImage
@@ -27,11 +29,17 @@ def flat():
     return c, t
 before, tb = flat()
 for name, n, box, *opt in rules:
-    n = int(n); x0, y0, x1, y1 = [int(v) for v in box.split(',')]
+    x0, y0, x1, y1 = [int(v) for v in box.split(',')]
     k = next(i for i, l in enumerate(L) if l[0].split(' ')[0] == name); px = L[k][1]
     cov = np.zeros((H, W), np.float32)
     for nm, q, op, vis in L[k + 1:]:
         if vis: cov = 1 - (1 - cov) * (1 - q[..., 3].astype(np.float32) / 255 * op / 255)
+    if n == 'restore':  # the layer's pixels in the box go back to what another PSD (opt[0]) holds there
+        ref = next(full(l) for l in PSDImage.open(opt[0]) if l.name.split(' ')[0] == name)
+        out = px.copy(); out[y0:y1, x0:x1] = ref[y0:y1, x0:x1]; L[k][1] = out
+        print(f'{name}: {int((out != px).any(-1).sum())} pixels back to {opt[0]} in {box}')
+        continue
+    n = int(n)
     solid = px[..., 3] >= 250
     d, idx = ndi.distance_transform_edt(~solid, return_distances=True, return_indices=True)
     inbox = np.zeros((H, W), bool); inbox[y0:y1, x0:x1] = True
