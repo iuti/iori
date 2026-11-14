@@ -191,46 +191,55 @@
    "id": "base",
    "group": "body",
    "x": 47,
-   "y": 428,
-   "w": 957,
-   "h": 1079,
+   "y": 427,
+   "w": 958,
+   "h": 1081,
    "texture": "textures/base.png"
+  },
+  {
+   "group": "body",
+   "id": "strap",
+   "x": 310,
+   "y": 938,
+   "w": 467,
+   "h": 265,
+   "texture": "textures/strap.png"
   },
   {
    "id": "back_hair",
    "group": "hair_back",
    "depth": -0.3,
    "x": 309,
-   "y": 44,
-   "w": 458,
-   "h": 359,
+   "y": 60,
+   "w": 452,
+   "h": 330,
    "texture": "textures/back_hair.png"
   },
   {
    "id": "body",
    "group": "body",
    "x": 303,
-   "y": 151,
+   "y": 295,
    "w": 630,
-   "h": 924,
+   "h": 768,
    "texture": "textures/body.png"
   },
   {
    "id": "neck",
    "group": "body",
-   "x": 393,
-   "y": 151,
-   "w": 365,
-   "h": 290,
+   "x": 492,
+   "y": 251,
+   "w": 204,
+   "h": 190,
    "texture": "textures/neck.png"
   },
   {
    "id": "face",
    "group": "head",
-   "x": 435,
-   "y": 106,
-   "w": 228,
-   "h": 260,
+   "x": 434,
+   "y": 135,
+   "w": 192,
+   "h": 220,
    "texture": "textures/face.png"
   },
   {
@@ -241,10 +250,10 @@
     482.0,
     283.2
    ],
-   "x": 458,
-   "y": 266,
+   "x": 456,
+   "y": 263,
    "w": 47,
-   "h": 33,
+   "h": 36,
    "texture": "textures/eye_L.png",
    "mask": "textures/eye_L_mask.png"
   },
@@ -262,9 +271,9 @@
     3.0
    ],
    "x": 466,
-   "y": 266,
+   "y": 263,
    "w": 37,
-   "h": 31,
+   "h": 34,
    "texture": "textures/iris_L.png"
   },
   {
@@ -275,10 +284,10 @@
     482.0,
     283.2
    ],
-   "x": 435,
-   "y": 242,
-   "w": 71,
-   "h": 61,
+   "x": 445,
+   "y": 257,
+   "w": 61,
+   "h": 46,
    "texture": "textures/lash_L.png"
   },
   {
@@ -299,10 +308,10 @@
     551.0,
     247.9
    ],
-   "x": 524,
-   "y": 227,
-   "w": 52,
-   "h": 40,
+   "x": 523,
+   "y": 225,
+   "w": 53,
+   "h": 42,
    "texture": "textures/eye_R.png",
    "mask": "textures/eye_R_mask.png"
   },
@@ -320,9 +329,9 @@
     3.0
    ],
    "x": 533,
-   "y": 228,
+   "y": 227,
    "w": 39,
-   "h": 35,
+   "h": 36,
    "texture": "textures/iris_R.png"
   },
   {
@@ -333,10 +342,10 @@
     551.0,
     247.9
    ],
-   "x": 489,
-   "y": 202,
-   "w": 97,
-   "h": 69,
+   "x": 515,
+   "y": 218,
+   "w": 70,
+   "h": 53,
    "texture": "textures/lash_R.png"
   },
   {
@@ -384,7 +393,7 @@
    "x": 377,
    "y": 160,
    "w": 402,
-   "h": 251,
+   "h": 250,
    "texture": "textures/side_hair.png"
   },
   {
@@ -396,7 +405,7 @@
    ],
    "x": 608,
    "y": 251,
-   "w": 29,
+   "w": 28,
    "h": 43,
    "texture": "textures/earring.png"
   },
@@ -417,11 +426,38 @@
    "id": "front_hair",
    "group": "hair_front",
    "depth": 0.1,
-   "x": 438,
-   "y": 129,
-   "w": 196,
-   "h": 208,
+   "x": 404,
+   "y": 126,
+   "w": 225,
+   "h": 211,
    "texture": "textures/front_hair.png"
+  },
+  {
+   "group": "head",
+   "id": "ear",
+   "x": 599,
+   "y": 199,
+   "w": 45,
+   "h": 68,
+   "texture": "textures/ear.png"
+  },
+  {
+   "group": "head",
+   "id": "brow_L",
+   "x": 435,
+   "y": 243,
+   "w": 47,
+   "h": 34,
+   "texture": "textures/brow_L.png"
+  },
+  {
+   "group": "head",
+   "id": "brow_R",
+   "x": 489,
+   "y": 202,
+   "w": 82,
+   "h": 48,
+   "texture": "textures/brow_R.png"
   },
   {
    "id": "ahoge",
@@ -430,20 +466,20 @@
    "bones": [
     "ahoge"
    ],
-   "x": 353,
-   "y": 43,
-   "w": 240,
-   "h": 127,
+   "x": 352,
+   "y": 42,
+   "w": 241,
+   "h": 128,
    "texture": "textures/ahoge.png"
   },
   {
    "id": "goggles",
    "group": "head",
    "depth": 0.12,
-   "x": 387,
-   "y": 88,
-   "w": 280,
-   "h": 153,
+   "x": 391,
+   "y": 89,
+   "w": 276,
+   "h": 152,
    "texture": "textures/goggles.png"
   }
  ],
@@ -454,7 +490,8 @@
    885
   ],
   "still": [
-   "base"
+   "base",
+   "strap"
   ]
  }
 }
