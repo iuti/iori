@@ -191,61 +191,66 @@
    "id": "base",
    "group": "body",
    "x": 47,
-   "y": 426,
+   "y": 428,
    "w": 957,
-   "h": 1082,
+   "h": 1079,
    "texture": "textures/base.png"
   },
   {
    "id": "back_hair",
    "group": "hair_back",
-   "x": 335,
-   "y": 43,
-   "w": 433,
-   "h": 360,
    "depth": -0.3,
+   "x": 309,
+   "y": 44,
+   "w": 458,
+   "h": 359,
    "texture": "textures/back_hair.png"
   },
   {
    "id": "body",
    "group": "body",
-   "x": 225,
+   "x": 303,
    "y": 151,
-   "w": 724,
-   "h": 860,
+   "w": 630,
+   "h": 924,
    "texture": "textures/body.png"
+  },
+  {
+   "id": "neck",
+   "group": "body",
+   "x": 393,
+   "y": 151,
+   "w": 365,
+   "h": 290,
+   "texture": "textures/neck.png"
   },
   {
    "id": "face",
    "group": "head",
-   "x": 434,
-   "y": 105,
-   "w": 251,
-   "h": 263,
+   "x": 435,
+   "y": 106,
+   "w": 228,
+   "h": 260,
    "texture": "textures/face.png"
   },
   {
    "id": "eye_L",
    "group": "head",
-   "x": 460,
-   "y": 268,
-   "w": 46,
-   "h": 32,
    "role": "eye_L",
    "pivot": [
     482.0,
     283.2
    ],
+   "x": 458,
+   "y": 266,
+   "w": 47,
+   "h": 33,
    "texture": "textures/eye_L.png",
    "mask": "textures/eye_L_mask.png"
   },
   {
    "id": "iris_L",
    "group": "head",
-   "x": 466,
-   "y": 264,
-   "w": 38,
-   "h": 34,
    "role": "iris_L",
    "pivot": [
     482.0,
@@ -256,20 +261,24 @@
     5.0,
     3.0
    ],
+   "x": 466,
+   "y": 266,
+   "w": 37,
+   "h": 31,
    "texture": "textures/iris_L.png"
   },
   {
    "id": "lash_L",
    "group": "head",
-   "x": 447,
-   "y": 257,
-   "w": 60,
-   "h": 61,
    "role": "eye_L",
    "pivot": [
     482.0,
     283.2
    ],
+   "x": 435,
+   "y": 242,
+   "w": 71,
+   "h": 61,
    "texture": "textures/lash_L.png"
   },
   {
@@ -285,25 +294,21 @@
   {
    "id": "eye_R",
    "group": "head",
-   "x": 525,
-   "y": 229,
-   "w": 52,
-   "h": 39,
    "role": "eye_R",
    "pivot": [
     551.0,
     247.9
    ],
+   "x": 524,
+   "y": 227,
+   "w": 52,
+   "h": 40,
    "texture": "textures/eye_R.png",
    "mask": "textures/eye_R_mask.png"
   },
   {
    "id": "iris_R",
    "group": "head",
-   "x": 533,
-   "y": 226,
-   "w": 40,
-   "h": 38,
    "role": "iris_R",
    "pivot": [
     551.0,
@@ -314,20 +319,24 @@
     5.0,
     3.0
    ],
+   "x": 533,
+   "y": 228,
+   "w": 39,
+   "h": 35,
    "texture": "textures/iris_R.png"
   },
   {
    "id": "lash_R",
    "group": "head",
-   "x": 515,
-   "y": 217,
-   "w": 69,
-   "h": 54,
    "role": "eye_R",
    "pivot": [
     551.0,
     247.9
    ],
+   "x": 489,
+   "y": 202,
+   "w": 97,
+   "h": 69,
    "texture": "textures/lash_R.png"
   },
   {
@@ -371,70 +380,70 @@
   {
    "id": "side_hair",
    "group": "hair_side",
-   "x": 309,
-   "y": 43,
-   "w": 470,
-   "h": 402,
    "depth": 0.05,
+   "x": 377,
+   "y": 160,
+   "w": 402,
+   "h": 251,
    "texture": "textures/side_hair.png"
   },
   {
    "id": "earring",
    "group": "hair_side",
-   "x": 609,
-   "y": 258,
-   "w": 28,
-   "h": 36,
    "depth": 0.05,
    "bones": [
     "earring"
    ],
+   "x": 608,
+   "y": 251,
+   "w": 29,
+   "h": 43,
    "texture": "textures/earring.png"
   },
   {
    "id": "tag",
    "group": "hair_side",
-   "x": 634,
-   "y": 201,
-   "w": 71,
-   "h": 109,
    "depth": 0.05,
    "bones": [
     "tag"
    ],
+   "x": 642,
+   "y": 219,
+   "w": 61,
+   "h": 91,
    "texture": "textures/tag.png"
   },
   {
    "id": "front_hair",
    "group": "hair_front",
-   "x": 436,
-   "y": 106,
-   "w": 247,
-   "h": 264,
    "depth": 0.1,
+   "x": 438,
+   "y": 129,
+   "w": 196,
+   "h": 208,
    "texture": "textures/front_hair.png"
   },
   {
    "id": "ahoge",
    "group": "hair_back",
-   "x": 372,
-   "y": 43,
-   "w": 218,
-   "h": 84,
    "depth": 0.0,
    "bones": [
     "ahoge"
    ],
+   "x": 353,
+   "y": 43,
+   "w": 240,
+   "h": 127,
    "texture": "textures/ahoge.png"
   },
   {
    "id": "goggles",
    "group": "head",
-   "x": 389,
-   "y": 85,
-   "w": 279,
-   "h": 159,
    "depth": 0.12,
+   "x": 387,
+   "y": 88,
+   "w": 280,
+   "h": 153,
    "texture": "textures/goggles.png"
   }
  ],
