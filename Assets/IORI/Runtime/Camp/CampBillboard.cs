@@ -14,12 +14,13 @@ namespace Iori.Camp
     {
         public Texture2D picture;
         [Tooltip("板の高さ(m)")] public float height = 1.6f;
+        [Tooltip("板の横÷縦(0 なら絵の大きさから)。動く人形を映すときは人形のキャンバスの比")] public float aspect;
         [Tooltip("足もとの高さの調整")] public float footOffset = -0.02f;
         public Camera viewer;
 
         Mesh _mesh;
         Texture2D _builtFor;
-        float _builtHeight;
+        float _builtHeight, _builtAspect;
 
         void OnEnable() => BuildMesh();
 
@@ -31,8 +32,8 @@ namespace Iori.Camp
 
         void BuildMesh()
         {
-            float aspect = picture ? picture.width / (float)picture.height : 0.35f;
-            float w = height * aspect, h = height;
+            float shape = aspect > 0f ? aspect : picture ? picture.width / (float)picture.height : 0.35f;
+            float w = height * shape, h = height;
             if (!_mesh) _mesh = new Mesh { name = "Iori board", hideFlags = HideFlags.DontSave };
             _mesh.Clear();
             _mesh.vertices = new[] { new Vector3(-w / 2, -h / 2, 0), new Vector3(w / 2, -h / 2, 0), new Vector3(w / 2, h / 2, 0), new Vector3(-w / 2, h / 2, 0) };
@@ -45,13 +46,14 @@ namespace Iori.Camp
             if (r.sharedMaterial && picture) r.sharedMaterial.SetTexture("_MainTex", picture);
             _builtFor = picture;
             _builtHeight = height;
+            _builtAspect = aspect;
         }
 
         void LateUpdate() => Place();
 
         public void Place()
         {
-            if (_builtFor != picture || !Mathf.Approximately(_builtHeight, height) || !_mesh) BuildMesh();
+            if (_builtFor != picture || !Mathf.Approximately(_builtHeight, height) || !Mathf.Approximately(_builtAspect, aspect) || !_mesh) BuildMesh();
             var parent = transform.parent;
             Vector3 basePos = parent ? parent.position : transform.position;
             transform.position = new Vector3(basePos.x, basePos.y + height / 2 + footOffset, basePos.z);

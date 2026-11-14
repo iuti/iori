@@ -46,3 +46,7 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+
+# 試しに置く人形のモデル(他の人のキャラなど。コミットしない)
+/Assets/IORI/Art/Character/Puppet/_local/
+/Assets/IORI/Art/Character/Puppet/_local.meta

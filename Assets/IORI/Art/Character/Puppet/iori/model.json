@@ -1,0 +1,522 @@
+{
+ "format": "livliv-model",
+ "version": 4,
+ "name": "Iori",
+ "meta": {
+  "generator": {
+   "name": "iori sit-v2 draft"
+  },
+  "watermark": {
+   "kind": "none"
+  }
+ },
+ "canvas": [
+  1024,
+  1536
+ ],
+ "anchors": {
+  "head": {
+   "cx": 532.0,
+   "cy": 238.0,
+   "rx": 118.0,
+   "ry": 150.0
+  },
+  "face": [
+   440,
+   190,
+   630,
+   352
+  ],
+  "neck_y": 352,
+  "top_y": 40,
+  "bottom_y": 895,
+  "hair_root_y": 120,
+  "eyes": [
+   [
+    469,
+    277,
+    496,
+    290
+   ],
+   [
+    534,
+    238,
+    567,
+    258
+   ]
+  ]
+ },
+ "rig": {
+  "yaw": 0.314,
+  "pitch": 0.3,
+  "roll": 0.5,
+  "bulge": 0.6,
+  "breath": 1,
+  "sway": 1,
+  "wind": 2.0,
+  "body": {
+   "yaw": 0.25,
+   "roll": 0.06,
+   "breath": 1,
+   "bust": 0
+  },
+  "neck": {
+   "twist": 0.4,
+   "reach": 0.4
+  },
+  "chains": [
+   {
+    "id": "tag",
+    "attach": "head",
+    "depth": 0.05,
+    "points": [
+     [
+      656,
+      214
+     ],
+     [
+      662,
+      238
+     ],
+     [
+      670,
+      262
+     ],
+     [
+      678,
+      286
+     ],
+     [
+      684,
+      300
+     ]
+    ],
+    "k": [
+     120,
+     30
+    ],
+    "damp": 4,
+    "drive": 0.8,
+    "hang": 0.5,
+    "wind": 1.2,
+    "freq": 0.7,
+    "limit": 25,
+    "sigma": 22
+   },
+   {
+    "id": "earring",
+    "attach": "head",
+    "depth": 0.05,
+    "points": [
+     [
+      628,
+      250
+     ],
+     [
+      629,
+      266
+     ],
+     [
+      630,
+      282
+     ],
+     [
+      631,
+      296
+     ]
+    ],
+    "k": [
+     160,
+     40
+    ],
+    "damp": 4,
+    "drive": 0.9,
+    "hang": 0.6,
+    "wind": 0.9,
+    "freq": 0.9,
+    "limit": 20,
+    "sigma": 10
+   },
+   {
+    "id": "ahoge",
+    "attach": "head",
+    "depth": 0.0,
+    "points": [
+     [
+      470,
+      118
+     ],
+     [
+      462,
+      96
+     ],
+     [
+      450,
+      78
+     ],
+     [
+      430,
+      66
+     ],
+     [
+      405,
+      70
+     ]
+    ],
+    "k": [
+     170,
+     45
+    ],
+    "damp": 4.5,
+    "drive": 0.9,
+    "hang": 0.1,
+    "wind": 1.8,
+    "freq": 0.6,
+    "limit": 30,
+    "sigma": 60
+   }
+  ],
+  "hair": {
+   "front": [
+    140,
+    11,
+    0.022,
+    70,
+    7
+   ],
+   "back": [
+    48,
+    5.5,
+    1.5,
+    24,
+    3.5
+   ]
+  }
+ },
+ "tuning": {
+  "turn": 1,
+  "nod": 1,
+  "hair": 1,
+  "blink": 1,
+  "expr": 0,
+  "mouth": 1,
+  "breath": 1
+ },
+ "layers": [
+  {
+   "id": "base",
+   "group": "body",
+   "x": 47,
+   "y": 427,
+   "w": 958,
+   "h": 1081,
+   "texture": "textures/base.png"
+  },
+  {
+   "group": "body",
+   "id": "strap",
+   "x": 310,
+   "y": 938,
+   "w": 467,
+   "h": 265,
+   "texture": "textures/strap.png"
+  },
+  {
+   "id": "back_hair",
+   "group": "hair_back",
+   "depth": -0.3,
+   "x": 309,
+   "y": 60,
+   "w": 452,
+   "h": 330,
+   "texture": "textures/back_hair.png"
+  },
+  {
+   "id": "body",
+   "group": "body",
+   "x": 303,
+   "y": 295,
+   "w": 630,
+   "h": 768,
+   "texture": "textures/body.png"
+  },
+  {
+   "id": "neck",
+   "group": "body",
+   "x": 492,
+   "y": 251,
+   "w": 204,
+   "h": 190,
+   "texture": "textures/neck.png"
+  },
+  {
+   "id": "face",
+   "group": "head",
+   "x": 434,
+   "y": 135,
+   "w": 192,
+   "h": 220,
+   "texture": "textures/face.png"
+  },
+  {
+   "id": "eye_L",
+   "group": "head",
+   "role": "eye_L",
+   "pivot": [
+    482.0,
+    283.2
+   ],
+   "x": 456,
+   "y": 263,
+   "w": 47,
+   "h": 36,
+   "texture": "textures/eye_L.png",
+   "mask": "textures/eye_L_mask.png"
+  },
+  {
+   "id": "iris_L",
+   "group": "head",
+   "role": "iris_L",
+   "pivot": [
+    482.0,
+    283.2
+   ],
+   "clip": "eye_L",
+   "range": [
+    5.0,
+    3.0
+   ],
+   "x": 466,
+   "y": 263,
+   "w": 37,
+   "h": 34,
+   "texture": "textures/iris_L.png"
+  },
+  {
+   "id": "lash_L",
+   "group": "head",
+   "role": "eye_L",
+   "pivot": [
+    482.0,
+    283.2
+   ],
+   "x": 445,
+   "y": 257,
+   "w": 61,
+   "h": 46,
+   "texture": "textures/lash_L.png"
+  },
+  {
+   "id": "lid_L",
+   "group": "head",
+   "x": 445,
+   "y": 255,
+   "w": 65,
+   "h": 65,
+   "role": "lid_L",
+   "texture": "textures/lid_L.png"
+  },
+  {
+   "id": "eye_R",
+   "group": "head",
+   "role": "eye_R",
+   "pivot": [
+    551.0,
+    247.9
+   ],
+   "x": 523,
+   "y": 225,
+   "w": 53,
+   "h": 42,
+   "texture": "textures/eye_R.png",
+   "mask": "textures/eye_R_mask.png"
+  },
+  {
+   "id": "iris_R",
+   "group": "head",
+   "role": "iris_R",
+   "pivot": [
+    551.0,
+    247.9
+   ],
+   "clip": "eye_R",
+   "range": [
+    5.0,
+    3.0
+   ],
+   "x": 533,
+   "y": 227,
+   "w": 39,
+   "h": 36,
+   "texture": "textures/iris_R.png"
+  },
+  {
+   "id": "lash_R",
+   "group": "head",
+   "role": "eye_R",
+   "pivot": [
+    551.0,
+    247.9
+   ],
+   "x": 515,
+   "y": 218,
+   "w": 70,
+   "h": 53,
+   "texture": "textures/lash_R.png"
+  },
+  {
+   "id": "lid_R",
+   "group": "head",
+   "x": 513,
+   "y": 215,
+   "w": 74,
+   "h": 59,
+   "role": "lid_R",
+   "texture": "textures/lid_R.png"
+  },
+  {
+   "id": "mouth",
+   "group": "head",
+   "x": 487,
+   "y": 285,
+   "w": 101,
+   "h": 75,
+   "role": "mouth",
+   "pivot": [
+    537,
+    322
+   ],
+   "texture": "textures/mouth_closed.png",
+   "frames": [
+    "textures/mouth_closed.png",
+    "textures/mouth_small.png",
+    "textures/mouth_half.png",
+    "textures/mouth_open.png",
+    "textures/mouth_round.png"
+   ],
+   "visemes": [
+    "closed",
+    "small",
+    "half",
+    "open",
+    "round"
+   ]
+  },
+  {
+   "id": "side_hair",
+   "group": "hair_side",
+   "depth": 0.05,
+   "x": 377,
+   "y": 160,
+   "w": 402,
+   "h": 250,
+   "texture": "textures/side_hair.png"
+  },
+  {
+   "id": "earring",
+   "group": "hair_side",
+   "depth": 0.05,
+   "bones": [
+    "earring"
+   ],
+   "x": 608,
+   "y": 251,
+   "w": 28,
+   "h": 43,
+   "texture": "textures/earring.png"
+  },
+  {
+   "id": "tag",
+   "group": "hair_side",
+   "depth": 0.05,
+   "bones": [
+    "tag"
+   ],
+   "x": 642,
+   "y": 219,
+   "w": 61,
+   "h": 91,
+   "texture": "textures/tag.png"
+  },
+  {
+   "id": "front_hair",
+   "group": "hair_front",
+   "depth": 0.1,
+   "x": 404,
+   "y": 126,
+   "w": 225,
+   "h": 211,
+   "texture": "textures/front_hair.png"
+  },
+  {
+   "group": "head",
+   "id": "ear",
+   "x": 599,
+   "y": 199,
+   "w": 45,
+   "h": 68,
+   "texture": "textures/ear.png"
+  },
+  {
+   "group": "head",
+   "id": "brow_L",
+   "x": 435,
+   "y": 243,
+   "w": 47,
+   "h": 34,
+   "texture": "textures/brow_L.png"
+  },
+  {
+   "group": "head",
+   "id": "brow_R",
+   "x": 489,
+   "y": 202,
+   "w": 82,
+   "h": 48,
+   "texture": "textures/brow_R.png"
+  },
+  {
+   "id": "ahoge",
+   "group": "hair_back",
+   "depth": 0.0,
+   "bones": [
+    "ahoge"
+   ],
+   "x": 352,
+   "y": 42,
+   "w": 241,
+   "h": 128,
+   "texture": "textures/ahoge.png"
+  },
+  {
+   "id": "goggles",
+   "group": "head",
+   "depth": 0.12,
+   "x": 391,
+   "y": 89,
+   "w": 276,
+   "h": 152,
+   "texture": "textures/goggles.png"
+  }
+ ],
+ "x-iori": {
+  "head_tilt": -27.1,
+  "body_pivot": [
+   585,
+   885
+  ],
+  "still": [
+   "base",
+   "strap"
+  ],
+  "hair_tips": [
+   1.0,
+   2.0
+  ],
+  "lean_from": 660,
+  "upright": [
+   10,
+   16
+  ]
+ }
+}

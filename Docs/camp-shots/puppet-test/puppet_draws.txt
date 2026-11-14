@@ -1,0 +1,28 @@
+model U+ canvas 1528x1959 lattice 15 layers 37 chains 21 head_tilt 0
+texture 799x1024
+  0 back_hair                group hair_back  role            Main alpha 1 stencil None 0 verts 3653
+  1 body                     group body       role            Main alpha 1 stencil None 0 verts 5094
+  2 string_L                 group body       role            Main alpha 1 stencil None 0 verts 196
+  3 string_R                 group body       role            Main alpha 1 stencil None 0 verts 216
+  4 hands                    group body       role            Main alpha 1 stencil None 0 verts 898
+  5 face                     group head       role            Main alpha 1 stencil None 0 verts 1816
+  7 eye_L                    group head       role eye_L      Main alpha 1 stencil None 0 verts 149
+  7 eye_L                    group head       role eye_L      Mask alpha 1 stencil Write 1 verts 149
+  8 iris_L                   group head       role iris_L     Main alpha 1 stencil Test 1 verts 100
+  9 shine_L                  group head       role shine_L    Main alpha 1 stencil Test 1 verts 38
+ 10 lash_L                   group head       role eye_L      Main alpha 1 stencil None 0 verts 155
+ 12 eye_R                    group head       role eye_R      Main alpha 1 stencil None 0 verts 145
+ 12 eye_R                    group head       role eye_R      Mask alpha 1 stencil Write 2 verts 145
+ 13 iris_R                   group head       role iris_R     Main alpha 1 stencil Test 2 verts 101
+ 14 shine_R                  group head       role shine_R    Main alpha 1 stencil Test 2 verts 36
+ 15 lash_R                   group head       role eye_R      Main alpha 1 stencil None 0 verts 155
+ 16 mouth                    group head       role mouth      Frame 0 alpha 1 stencil None 0 verts 127
+ 28 hair_shadow              group hair_side  role            Main alpha 1 stencil None 0 verts 139
+ 29 side_hair                group hair_side  role            Main alpha 1 stencil None 0 verts 1947
+ 30 ahoge                    group hair_back  role            Main alpha 1 stencil None 0 verts 488
+ 31 front_hair               group hair_front role            Main alpha 1 stencil None 0 verts 1982
+ 32 clip_plus                group hair_front role            Main alpha 1 stencil None 0 verts 82
+ 33 clip_u                   group hair_front role            Main alpha 1 stencil None 0 verts 111
+ 34 ribbon                   group hair_side  role            Main alpha 1 stencil None 0 verts 434
+ 35 glasses                  group head       role            Main alpha 1 stencil None 0 verts 287
+ 36 brows                    group head       role            Main alpha 1 stencil None 0 verts 151
