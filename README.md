@@ -28,11 +28,14 @@ radio.json(番組表) ─┐
 | --- | --- |
 | `Assets/IORI/Runtime/Audio/Core/` | 選曲の頭脳(番組表、予定表、ミキサー、仮素材の合成)。UnityEngine を参照しない |
 | `Assets/IORI/Runtime/Audio/Unity/` | 司令塔 `RadioDirector`(どのシーンでも自動で作られる)、PC の再生係、Android への橋渡し、動作確認パネル |
-| `Assets/IORI/Editor/` | メニュー「IORI/Audio」 |
+| `Assets/IORI/Runtime/UI/` | 本番の UI。小物(ラジオ、焚き火)を押すと、カメラが寄って下からガラスのシートが出る。uGUI と TextMeshPro をコードで組み、形はシェーダー `Resources/IoriUI/Shape.shader` 1 本で描く。色と寸法は `UiTheme` |
+| `Assets/IORI/Editor/` | メニュー「IORI/Audio」「IORI/UI」 |
 | `Assets/IORI/Tests/EditMode/` | Core のテスト |
 | `Assets/Plugins/Android/IoriPlayback.androidlib/` | Android のバックグラウンド再生サービス(Java、Media3) |
-| `Assets/StreamingAssets/IORI/radio.json` | 番組表(時間帯、曲、チャイム、静けさの時間のフレーズ、環境音) |
+| `Assets/StreamingAssets/IORI/radio.json` | 番組表(時間帯、曲、チャイム、時報の声、静けさの時間のフレーズ、環境音) |
+| `Assets/StreamingAssets/IORI/voice.json` | イオリのセリフ帳(場面ごとの声と、話す間隔の決まり) |
 | `Assets/StreamingAssets/IORI/Audio/` | 音声ファイル。`radio/`(ラジオの曲)、`voice/`(イオリの声)、`ambient/`(環境音)、`fx/`(チャイム)、`ui/`(UI の効果音)は本番素材。`placeholder/` はメニューで生成する仮素材(git に入れない) |
+| `Docs/ui-shots/` | デスクトップのビルドを `-ioriUiShots <フォルダ>` で起動して撮った、実際の UI の画面 |
 | `tools/CoreTests/` | Unity なしで Core のテストを動かす .NET プロジェクト |
 
 ## はじめに(デスクトップで)
@@ -81,7 +84,31 @@ Suno の曲は Pro の月の枠でダウンロードしたものだけ商用で�
 ## イオリの声
 
 ElevenLabs の Voice Library の声「Chinyaku - Cute Japanese Actor」を、モデル Eleven v4 Turbo(日本語)で読ませた仮の声。いずれ自前の声に差し替える予定。
-`voice/{場面}_{番号}.ogg`(OGG Vorbis 44.1kHz モノラル、-18 LUFS、頭とおしりの無音を詰めてある)。まだコードからは鳴らしていない。
+`voice/{場面}_{番号}.ogg`(OGG Vorbis 44.1kHz モノラル、-18 LUFS、頭とおしりの無音を詰めてある)。
+
+どの場面で何を言うかは `StreamingAssets/IORI/voice.json`(セリフ帳)に書く。場面の声は `VoiceDirector` が Unity のオーディオで鳴らす(アプリが前にいる間だけ)。
+何を言うか、黙るかを決めるのは Core の `VoicePicker` だけ: 前のセリフが終わって `minGapSeconds` は黙る、時報の前後 `scheduledMarginSeconds` は黙る、場面ごとの `cooldownSeconds` と `chance`、時間帯(`phase`)と時刻(`hours`、`"22-5"` のように 0 時をまたいでよい)が合うセリフから選び、同じセリフを続けない。
+
+| 場面(voice.json の cues) | いつ |
+| --- | --- |
+| `greet` | アプリを起動して 1.5 秒後。時間帯のあいさつ |
+| `player_open` | プレーヤーの曲が鳴っていないときに音楽プレーヤーを開いた(30 分に 1 回まで) |
+| `music_stopped` | プレーヤーの列を最後まで鳴らし終えて止まった(自分で止めたときは言わない) |
+| `tap` | イオリを押した |
+| `rain_start` / `rain_stop` | 天気が雨になった / 雨が止んだ |
+| `firewood` | 消えていた火をまたつけた(焚き火の音量をゼロから上げて、指を離した) |
+
+ランタンで眠らせている間は、場面の声は言わない。`okaeri`(家に帰ってきた)と `itterasshai`(出かける)は、位置のしかけができるまでとっておく(chico の指定)。
+キャンプ地のデバッグパネルの「音」タブの「イオリの声を聞く」で、決まりを飛ばして場面の声を聞ける。
+
+### 口パク
+
+`VoiceDirector` は声の波形から Core の `LipSync` で口の動き(20ms ごとの口の開き 0〜1 と、口の形 -1: お・う 〜 1: い・え)を作り、再生位置に合わせて `IoriMouth` に渡す。
+口を動かす相手は `IMouthTarget` を実装して `IoriMouth.Register` するだけ(モデルが変わっても、VRoid になっても同じ値を受け取る)。
+いまの人形(`Iori.Puppet.PuppetRenderer` の口のコマ差し替え)には、仮の橋 `PuppetMouthLink` が型を名前で探して `mouthOpen` と `vowel` だけを書く。人形がシーンに無ければ何もしない。
+時報は再生係が鳴らすので、`VoiceDirector` は予定表の時刻に合わせて口だけ動かす。
+
+起動引数 `-ioriVoiceTest` を付けると、場面の声をひととおり言わせ、次の正時の直前に時計を進めて時報を待ち、口の開きをログに書いて終わる。
 
 | ファイル | 場面 | セリフ |
 | --- | --- | --- |
@@ -101,6 +128,21 @@ ElevenLabs の Voice Library の声「Chinyaku - Cute Japanese Actor」を、モ
 | `firewood_01` | 薪をくべた | ありがと。(小声) |
 | `music_stopped_01` | 曲が止まった | 曲、止まっちゃったね。 |
 | `player_open_01` | 音楽プレーヤーを開いた | 今日はなに聴く? |
+
+### 時報
+
+`voice/jiho_{00〜23}.ogg`。`radio.json` の `jiho`(`file` の `{hh}` が時になる)で、チャイムの `delaySeconds`(1.6 秒)後に言う。
+チャイムと同じく予定表に入る(種類 `voice`)ので、Android では画面を消していても言う。静けさの時間でも、音楽プレーヤーで曲を聴いている間でも、毎正時に言う(chico の指定。チャイムはテーマの時間帯でラジオが鳴っているときだけ)。声の調子は時間帯で変えてある: 2〜6 時は眠たそう、22〜1 時はソフト、それ以外は普通。
+
+| 時 | セリフ | 調子 |
+| --- | --- | --- |
+| 0 | 日が変わったね。 | ソフト |
+| 1 | 午前1時だよ | ソフト |
+| 2〜6 | 午前N時だよ | 眠たそう |
+| 7〜11 | 午前N時だよ | 普通 |
+| 12 | 正午だよ | 普通 |
+| 13〜21 | 午後N時だよ(13 時は「午後1時」) | 普通 |
+| 22、23 | 午後10時だよ、午後11時だよ | ソフト |
 
 ## 環境音・チャイム・UI の効果音
 

@@ -13,6 +13,11 @@ namespace Iori.Audio
         public string Weather = WeatherIds.Clear;
         /// <summary>true なら時間帯に関係なく静けさの時間にする(寝る前など)。</summary>
         public bool QuietOverride;
+        /// <summary>
+        /// true なら音楽プレーヤーが自分の曲を鳴らしている: ラジオは黙る(曲、正時のチャイム、静けさのフレーズを予定表に入れない)。
+        /// 環境音は鳴り続け、時間帯の並びも変わらない。
+        /// </summary>
+        public bool PlayerOn;
         /// <summary>何時間先まで予定表を作るか。アプリが裏にいる間はこの範囲を鳴らす。24 時間以上にする。</summary>
         public TimeSpan Horizon = TimeSpan.FromHours(48);
         public long ClockOffsetMs;
@@ -67,7 +72,7 @@ namespace Iori.Audio
                 };
                 plan.Phases.Add(span);
 
-                var track = span.Mode == RadioMode.Theme ? program.FindTrack(b.Phase.Id, weather, b.DayIndex) : null;
+                var track = span.Mode == RadioMode.Theme && !ctx.PlayerOn ? program.FindTrack(b.Phase.Id, weather, b.DayIndex) : null;
                 // 同じ曲が続く時間帯はつなげて、無駄なクロスフェードをしない。
                 var last = runs.Count > 0 ? runs[runs.Count - 1] : null;
                 if (last != null && last.EndMs == span.StartMs && SameTrack(last.Track, track))
@@ -88,9 +93,11 @@ namespace Iori.Audio
             }
             plan.Music.Sort((a, c) => a.StartMs != c.StartMs ? a.StartMs.CompareTo(c.StartMs) : string.CompareOrdinal(a.Id, c.Id));
 
-            // 3. 単発音。
-            AddQuietPhrases(program, plan, ctx.TimeZone, nowMs, endMs);
-            if (program.Chime != null) AddChimes(program, plan, ctx.TimeZone, nowMs, endMs);
+            // 3. 単発音。フレーズとチャイムは音楽プレーヤーが鳴っている間は鳴らさない。
+            //    時報の声は、静けさの時間でもプレーヤーの番でも言う(chico の指定)。
+            if (!ctx.PlayerOn) AddQuietPhrases(program, plan, ctx.TimeZone, nowMs, endMs);
+            if ((program.Chime != null && !ctx.PlayerOn) || program.Jiho != null)
+                AddHourly(program, plan, ctx.TimeZone, nowMs, endMs, chime: !ctx.PlayerOn);
             plan.OneShots.Sort((a, c) => a.AtMs.CompareTo(c.AtMs));
 
             // 4. 環境音。
@@ -220,10 +227,15 @@ namespace Iori.Audio
             }
         }
 
-        static void AddChimes(RadioProgram program, PlaybackPlan plan, TimeZoneInfo tz, long nowMs, long endMs)
+        /// <summary>
+        /// 正時のチャイムと時報の声。チャイムはテーマの時間帯の正時だけ(chime が false なら鳴らさない)、
+        /// 時報の声は時間帯によらず毎正時。
+        /// </summary>
+        static void AddHourly(RadioProgram program, PlaybackPlan plan, TimeZoneInfo tz, long nowMs, long endMs, bool chime)
         {
             var local = TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(nowMs), tz).DateTime;
-            var hour = new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified).AddHours(1);
+            var hour = new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified);
+            var jihoDelayMs = program.Jiho != null ? (long)Math.Round(program.Jiho.DelaySeconds * 1000) : 0;
             while (true)
             {
                 if (!tz.IsInvalidTime(hour))
@@ -231,14 +243,27 @@ namespace Iori.Audio
                     var at = LocalToUtcMs(hour, tz);
                     if (at > endMs) break;
                     var span = plan.SpanAt(at);
-                    if (at > nowMs && span != null && span.Mode == RadioMode.Theme)
-                        plan.OneShots.Add(new ScheduledOneShot
-                        {
-                            AtMs = at,
-                            File = program.Chime.File,
-                            Volume = program.Chime.Volume,
-                            Kind = OneShotKinds.Chime,
-                        });
+                    if (span != null)
+                    {
+                        if (chime && program.Chime != null && span.Mode == RadioMode.Theme && at > nowMs)
+                            plan.OneShots.Add(new ScheduledOneShot
+                            {
+                                AtMs = at,
+                                File = program.Chime.File,
+                                Volume = program.Chime.Volume,
+                                Kind = OneShotKinds.Chime,
+                            });
+                        // (チャイムが鳴ったあと、声だけがまだ先にあることもある)
+                        var voiceAt = at + jihoDelayMs;
+                        if (program.Jiho != null && voiceAt > nowMs && voiceAt <= endMs)
+                            plan.OneShots.Add(new ScheduledOneShot
+                            {
+                                AtMs = voiceAt,
+                                File = program.Jiho.FileFor(hour.Hour),
+                                Volume = program.Jiho.Volume,
+                                Kind = OneShotKinds.Voice,
+                            });
+                    }
                 }
                 hour = hour.AddHours(1);
             }

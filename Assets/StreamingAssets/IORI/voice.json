@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "minGapSeconds": 6,
+  "scheduledMarginSeconds": 6,
+  "cues": {
+    "greet": {
+      "lines": [
+        { "file": "voice/greet_early_morning_01.ogg", "phase": "early_morning" },
+        { "file": "voice/greet_morning_01.ogg", "phase": "morning" },
+        { "file": "voice/greet_day_01.ogg", "phase": "day" },
+        { "file": "voice/greet_evening_01.ogg", "phase": "evening" },
+        { "file": "voice/greet_night_01.ogg", "phase": "night" },
+        { "file": "voice/greet_late_night_01.ogg", "phase": "late_night" }
+      ]
+    },
+    "player_open": {
+      "cooldownSeconds": 1800,
+      "lines": [ "voice/player_open_01.ogg" ]
+    },
+    "music_stopped": {
+      "cooldownSeconds": 600,
+      "lines": [ "voice/music_stopped_01.ogg" ]
+    },
+    "tap": {
+      "cooldownSeconds": 6,
+      "lines": [ "voice/tap_01.ogg", "voice/tap_02.ogg", "voice/tap_03.ogg" ]
+    },
+    "rain_start": {
+      "cooldownSeconds": 600,
+      "lines": [ "voice/rain_start_01.ogg" ]
+    },
+    "rain_stop": {
+      "cooldownSeconds": 600,
+      "lines": [ "voice/rain_stop_01.ogg" ]
+    },
+    "firewood": {
+      "cooldownSeconds": 120,
+      "lines": [ "voice/firewood_01.ogg" ]
+    }
+  }
+}

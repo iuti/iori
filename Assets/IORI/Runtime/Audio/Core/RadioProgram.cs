@@ -57,6 +57,20 @@ namespace Iori.Audio
         public float Volume = 1f;
     }
 
+    /// <summary>
+    /// 正時にイオリが時刻を言う声(時報)。File は時ごとのファイル名のひな形で、{hh} が 00〜23 に置き換わる。
+    /// 静けさの時間でも、音楽プレーヤーで曲を聴いている間でも、毎正時に言う(chico の指定)。
+    /// </summary>
+    public sealed class JihoDef
+    {
+        public string File;
+        public float Volume = 1f;
+        /// <summary>正時から何秒遅らせて言うか(チャイムの響きに少し重ねる)。</summary>
+        public double DelaySeconds;
+
+        public string FileFor(int hour) => File.Replace("{hh}", hour.ToString("00", CultureInfo.InvariantCulture));
+    }
+
     public sealed class QuietDef
     {
         public List<OneShotDef> Phrases = new List<OneShotDef>();
@@ -93,6 +107,8 @@ namespace Iori.Audio
         public List<TrackDef> Tracks = new List<TrackDef>();
         /// <summary>正時に鳴らす音。null なら鳴らさない。</summary>
         public OneShotDef Chime;
+        /// <summary>正時の時報の声。null なら言わない。</summary>
+        public JihoDef Jiho;
         public QuietDef Quiet = new QuietDef();
         public List<AmbientDef> Ambient = new List<AmbientDef>();
 
@@ -134,6 +150,17 @@ namespace Iori.Audio
 
             if (root.TryGetValue("chime", out var chime) && chime != null)
                 p.Chime = ReadOneShot(JsonRead.Obj(chime, "chime"));
+
+            if (root.TryGetValue("jiho", out var jiho) && jiho != null)
+            {
+                var o = JsonRead.Obj(jiho, "jiho");
+                p.Jiho = new JihoDef
+                {
+                    File = JsonRead.Str(o, "file", required: true),
+                    Volume = (float)JsonRead.Num(o, "volume", 1),
+                    DelaySeconds = JsonRead.Num(o, "delaySeconds", 0),
+                };
+            }
 
             if (root.TryGetValue("quiet", out var quiet) && quiet != null)
             {
@@ -216,6 +243,10 @@ namespace Iori.Audio
             }
             if (CrossfadeSeconds < 0) throw new FormatException("crossfadeSeconds は 0 以上です");
             if (IntroFadeSeconds < 0) throw new FormatException("introFadeSeconds は 0 以上です");
+            if (Jiho != null && !Jiho.File.Contains("{hh}"))
+                throw new FormatException("jiho の file には時刻を入れる {hh} が要ります: " + Jiho.File);
+            if (Jiho != null && (Jiho.DelaySeconds < 0 || Jiho.DelaySeconds >= 60))
+                throw new FormatException("jiho の delaySeconds は 0 以上 60 未満です");
             if (Quiet.MinGapSeconds <= 0 || Quiet.MaxGapSeconds < Quiet.MinGapSeconds)
                 throw new FormatException("quiet の minGapSeconds / maxGapSeconds が不正です");
             var ambientIds = new HashSet<string>();

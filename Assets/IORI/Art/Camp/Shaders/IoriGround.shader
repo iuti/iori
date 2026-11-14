@@ -21,7 +21,9 @@ Shader "IORI/Camp/Ground"
     }
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Geometry" }
+        // Drawn after the solid things and the plants (Geometry, Geometry+1): most of the ground lies under
+        // grass and props, and what they have already covered is then not worked out at all.
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Geometry+2" }
 
         HLSLINCLUDE
         #include "IoriCommon.hlsl"
