@@ -2,8 +2,8 @@ NVIDIA GeForce RTX 3070, Direct3D12, 486x1080, colour space Linear
 fonts: medium ZenKakuGothicNew-Medium, regular ZenKakuGothicNew-Regular, bold ZenKakuGothicNew-Bold, mincho ShipporiMincho-SemiBold
 open radio: True
 backdrop on 1, canvas scale 1.246
-[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_02.wav (HTTP/1.1 404 Not Found)
 [Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_01.wav (HTTP/1.1 404 Not Found)
+[Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_02.wav (HTTP/1.1 404 Not Found)
 [Warning] [IORI] 音声を読めませんでした: IORI/Audio/placeholder/piano_03.wav (HTTP/1.1 404 Not Found)
 open fire: True
 sheet drawn down 50 and let go: still open True, back in place True
