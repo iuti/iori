@@ -170,7 +170,10 @@ namespace Iori.Puppet
             _rig.ResetPhysics(); _rig.ResetMouth();
             _idle.Reset();
             const float dt = 1f / 30f;
-            for (float t = 0f; t < seconds; t += dt) Step(dt);
+            int whole = Mathf.FloorToInt(seconds / dt + 1e-4f);
+            for (int i = 0; i < whole; i++) Step(dt);
+            float rest = seconds - whole * dt;      // so that pictures taken at any rate are evenly apart in her motion
+            if (rest > 1e-4f) Step(rest);
             Draw();
             Bind();
         }

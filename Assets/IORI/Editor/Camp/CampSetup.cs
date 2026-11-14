@@ -903,13 +903,17 @@ namespace Iori.Camp.EditorTools
             return shots;
         }
 
-        /// <summary>Iori by the fire at night while she moves, an eighth of a second apart for twelve seconds: to see
-        /// the puppet's idle motion (names 80_puppet_000 to 80_puppet_095; "-shots 80" picks them all).</summary>
+        /// <summary>Iori by the fire at night while she moves: to see the puppet's idle motion (names 80_puppet_000 on;
+        /// "-shots 80" picks them all). An eighth of a second apart for twelve seconds unless -puppetFps (pictures a
+        /// second) and -puppetSeconds say otherwise.</summary>
         static Shot[] PuppetShots()
         {
-            var shots = new Shot[96];
+            float fps = 8f, seconds = 12f;
+            if (float.TryParse(ArgValue("-puppetFps"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f) && f >= 1f && f <= 60f) fps = f;
+            if (float.TryParse(ArgValue("-puppetSeconds"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float sec) && sec > 0f && sec <= 60f) seconds = sec;
+            var shots = new Shot[Mathf.Clamp(Mathf.RoundToInt(fps * seconds), 1, 999)];
             for (int i = 0; i < shots.Length; i++)
-                shots[i] = new Shot { name = "80_puppet_" + i.ToString("000"), hour = 22f, focus = CampPropKind.Iori, time = ShotTime + 0.125f * i, puppet = 1f + 0.125f * i, small = true };
+                shots[i] = new Shot { name = "80_puppet_" + i.ToString("000"), hour = 22f, focus = CampPropKind.Iori, time = ShotTime + i / fps, puppet = 1f + i / fps, small = true };
             return shots;
         }
 
