@@ -42,16 +42,24 @@ def add(id_, rgb, alpha, **extra):
 # 1. base: the seat plate (still). Where the upper body was, the chair/legs picture.
 Uw = cv2.GaussianBlur(dil(U, 3).astype(np.float32), (0, 0), 1.5)
 base = final * (1 - Uw[..., None]) + bb * Uw[..., None]
+base[:440] = bb[:440]   # above the shoulders the plate is only background: no stray hair tips stay behind
 add('base', base, np.ones((H, W), np.float32), group='body')
 
 # 2. back hair: what the back-hair picture has as hair (differs from the bare head), inside the head tile
 bg_bh = np.abs(bh - bh[40, 340]).max(2) < 16
 bhm = (diff(bh, head) > 30) & hv & ~bg_bh & (yy < 445)
 bhm = ndi.binary_fill_holes(cv2.morphologyEx(bhm.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)).astype(bool)) & ~bg_bh
+sat_bh = bh.max(2) - bh.min(2)
+bhm &= ((sat_bh > 30) & (bh[..., 2] > bh[..., 0])) | (gray(bh) < 100)
+bhm = ndi.binary_fill_holes(bhm) & ~bg_bh & ~((gray(bh) > 180) & (sat_bh < 35))
+_l, _n = ndi.label(cv2.morphologyEx(bhm.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)))
+_big = _l == (1 + int(np.argmax(ndi.sum(np.ones_like(_l), _l, range(1, _n + 1)))))
+bhm &= dil(_big, 7)
 add('back_hair', bh, soft(bhm), group='hair_back', depth=-0.3)
 
 # 3. body (incl. headphones): final pixels; where hair hangs over the shoulders, the bare-head picture's shirt
-under_hair = (hair_f | hair_s) & U & (yy >= 300) & ~phones
+BG0 = np.median(np.concatenate([final[:6].reshape(-1, 3), final[:, :6].reshape(-1, 3)]), 0)
+under_hair = (hair_f | hair_s) & U & (yy >= 300) & ~phones & (np.abs(head - BG0).max(2) > 16)
 body_rgb = final.copy(); body_rgb[under_hair] = head[under_hair]
 body_a = rim(body | under_hair)
 add('body', body_rgb, soft(body_a), group='body')
@@ -80,8 +88,14 @@ for side, box in (('L', (440, 252, 512, 312)), ('R', (512, 218, 592, 280))):
     add(f'eye_{side}', wh, soft(opening, 0.5), group='head', role=f'eye_{side}', pivot=[round(cx, 1), round(cy, 1)], mask=True)
     # the iris: the final's own iris where it shows, the isolated iris (complete oval) elsewhere
     ir = iris_m & inb
-    vis = ir & opening & (diff(final, wh) > 25)
-    irgb = iris_g.copy(); irgb[vis] = final[vis]
+    irgb = iris_g.copy()
+    gr = irgb[..., 1] - np.maximum(irgb[..., 0], irgb[..., 2])
+    spill = gr > 0
+    irgb[..., 1] = np.where(spill, np.maximum(irgb[..., 0], irgb[..., 2]), irgb[..., 1])
+    ir = ir & ~(gr > 25)
+    ir = ero(ir, 2) | (ir & opening)
+    vis = ir & opening
+    irgb[vis] = final[vis]
     add(f'iris_{side}', irgb, soft(ir, 0.5), group='head', role=f'iris_{side}', pivot=[round(cx, 1), round(cy, 1)], clip=f'eye_{side}', range=[5.0, 3.0])
     # lashes over the iris: the final's dark lines around the opening
     lm = inb & dil(opening, 9) & ~ero(opening, 3) & (gray(final) < 140)
@@ -109,20 +123,22 @@ hs_rgb[g_out] = ug[g_out]; hs_a |= g_out & (diff(ug, final) > 0)
 skin_f = (final[..., 0] > 205) & (final[..., 0] - final[..., 2] > 15) & (final[..., 1] > 170)
 satf = final.max(2) - final.min(2)
 hairc = ((satf > 38) & (final[..., 2] > final[..., 0])) | (gray(final) < 105)
-hs_a &= (hairc | behind | g_out)
-hs_a = cv2.morphologyEx(hs_a.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)).astype(bool)
+shirtish = (gray(final) > 188) & (satf < 34)
+hs_a &= ~((shirtish | (skin_f & ~skull)) & ~behind & ~g_out)
 add('side_hair', hs_rgb, soft(rim(hs_a)), group='hair_side', depth=0.05)
-add('earring', final, soft(earring, 0.5), group='hair_side', depth=0.05, bones=['earring'])
+add('earring', final, soft(rim(earring, 3), 0.5), group='hair_side', depth=0.05, bones=['earring'])
 add('tag', final, soft(tag, 0.5), group='hair_side', depth=0.05, bones=['tag'])
 
 # 8. front hair (+ the hair under the goggles inside the skull)
 hf_rgb = final.copy()
 g_in = gog & skull
 hf_rgb[g_in] = ug[g_in]
-eyezone = dil(M('whites') | M('iris'), 7)
-hf_a = (hair_f & hairc & ~eyezone) | g_in
+opening_all = M('whites') | M('iris')
+eyezone = dil(opening_all, 3)
+lashy = dil(opening_all, 4) & (gray(final) < 70) & (satf < 40)
+hf_a = (hair_f & ~eyezone & ~lashy & ~(skin_f & ~g_in)) | g_in
 hf_a = cv2.morphologyEx(hf_a.astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2), np.uint8)).astype(bool)
-add('front_hair', hf_rgb, soft(rim(hf_a, 3) & ~eyezone), group='hair_front', depth=0.1)
+add('front_hair', hf_rgb, soft(rim(hf_a, 3) & ~eyezone & ~lashy), group='hair_front', depth=0.1)
 add('ahoge', final, soft(ahoge, 0.5), group='hair_back', depth=0.0, bones=['ahoge'])
 add('goggles', final, soft(rim(gog, 3)), group='head', depth=0.12)
 
@@ -130,7 +146,8 @@ add('goggles', final, soft(rim(gog, 3)), group='head', depth=0.12)
 idx = {l[0]: i for i, l in enumerate(layers)}
 left_f = (hair_f | g_in) & ~hf_a & ~(hair_s)
 left_s = hair_s & ~hs_a
-for name, extra in (('face', left_f & skull), ('body', (left_s | (left_f & ~skull)))):
+fa = face_a
+for name, extra in (('face', (left_f & skull) | (left_s & fa)), ('body', ((left_s & ~fa) | (left_f & ~skull)))):
     i = idx[name]; _id, rgb, a, ex = layers[i]
     rgb = rgb.copy(); rgb[extra] = final[extra]
     a = np.maximum(a, extra.astype(np.float32))
@@ -139,7 +156,7 @@ for name, extra in (('face', left_f & skull), ('body', (left_s | (left_f & ~skul
 # ---- key out the flat gray background (every source has the same gray), unmixing edge colors from it
 edge = np.concatenate([final[:6].reshape(-1, 3), final[-6:].reshape(-1, 3), final[:, :6].reshape(-1, 3), final[:, -6:].reshape(-1, 3)])
 BG = np.median(edge, 0)
-def key(rgb, a):
+def key(rgb, a, loose=False):
     d = np.abs(rgb - BG).max(2)
     # background = near-gray pixels connected to the picture's border; only there (and in a thin band
     # around it) does the key act, so gray-ish fabric inside the figure stays opaque
@@ -147,6 +164,7 @@ def key(rgb, a):
     n, lab = cv2.connectedComponents(near)
     border = np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))
     bgm = np.isin(lab, border[border > 0]) | (np.isin(lab, np.arange(1, n))[...] & (ndi.sum(near, lab, np.arange(n + 1))[lab] > 400) & (d < 8))
+    if loose: bgm = bgm | (d < 10)
     band = dil(bgm, 5)
     ka = np.clip((d - 5) / (24 - 5), 0, 1)
     ka = ka * ka * (3 - 2 * ka)
@@ -156,7 +174,7 @@ def key(rgb, a):
     un = (rgb - (1 - safe) * BG) / safe
     rgb2 = np.where((ka < 1)[..., None], un, rgb)
     return rgb2.clip(0, 255), a2
-layers = [(i, *key(r, a), e) for i, r, a, e in layers]
+layers = [(i, *key(r, a, loose=(i != 'base')), e) for i, r, a, e in layers]
 
 # ---- write the textures
 model_layers = []
