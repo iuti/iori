@@ -792,6 +792,10 @@ namespace Iori.Puppet
 
         float MoodAlpha(PuppetLayerDef d) => (d.show != null ? Sum(d.show) : 1f) * (d.hide != null ? 1 - Sum(d.hide) : 1f);
 
+        // the eye's openness between which the closed lid fades in over the squashing eye (ours: x-iori.lid_fade)
+        float LidFrom => model.lidFade != null ? model.lidFade[0] : 0.05f;
+        float LidTo => model.lidFade != null ? model.lidFade[1] : 0.35f;
+
         float EyeOpen(PuppetLayer L) => L.side == 1 ? param.eyeLOpen : L.side == 2 ? param.eyeROpen : 1f;
 
         /// <summary>Whether the layer is drawn this frame (the rest is not moved either).</summary>
@@ -800,7 +804,7 @@ namespace Iori.Puppet
             var d = L.def; string role = d.role;
             if ((d.show != null || d.hide != null) && MoodAlpha(d) <= 0.01f) return false;
             if (role == "expr" || role == "expr_brows") return ExprAlpha(d) > 0.01f;
-            if (L.isLid) return 1 - Smooth(0.05f, 0.35f, EyeOpen(L)) > 0.01f;
+            if (L.isLid) return 1 - Smooth(LidFrom, LidTo, EyeOpen(L)) > 0.01f;
             if (role == "blush") return d.blush != null && Sum(d.blush) > 0.01f;
             if (role == "hole" || role == "edge" || role == "edge_wide") return false;
             return true;
@@ -979,7 +983,7 @@ namespace Iori.Puppet
                 if (L.isLid)
                 {
                     // closed lashes only appear in the last part of the blink
-                    float a = 1 - Smooth(0.05f, 0.35f, EyeOpen(L));
+                    float a = 1 - Smooth(LidFrom, LidTo, EyeOpen(L));
                     if (a > 0.01f) Add(li, PuppetTexture.Main, 0, a, PuppetStencil.None, 0, L.pos);
                     continue;
                 }

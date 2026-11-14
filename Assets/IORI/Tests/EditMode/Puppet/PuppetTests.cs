@@ -562,6 +562,24 @@ namespace Iori.Puppet.Tests
         }
 
         [Test]
+        public void LidFade_TheClosedLidTakesOverWhereTheModelSays()
+        {
+            string sharp = Model.Replace(@"""head_tilt"": 0,", @"""head_tilt"": 0, ""lid_fade"": [0.3, 0.34],");
+            Assert.That(PuppetModel.Parse(sharp).lidFade, Is.EqualTo(new[] { 0.3f, 0.34f }));
+            Assert.That(PuppetModel.Parse(Model).lidFade, Is.Null);
+            Assert.Throws<FormatException>(() => PuppetModel.Parse(Model.Replace(@"""head_tilt"": 0,", @"""head_tilt"": 0, ""lid_fade"": [0.4, 0.3],")));
+
+            PuppetRig At(string json, float open) { var r = Rig(json); r.param.eyeLOpen = open; r.Update(1f / 60f); return r; }
+            // LivLiv's own fade: half way through the blink the lid is half there, over the squashed eye
+            float a = Draw(At(Model, 0.2f), "lid_L").alpha;
+            Assert.That(a, Is.GreaterThan(0.2f)); Assert.That(a, Is.LessThan(0.8f));
+            // the sharp one: the squashed eye alone down to 0.34, the lid alone from 0.3 down
+            Assert.That(Drawn(At(sharp, 0.36f), "lid_L"), Is.False);
+            Assert.That(Draw(At(sharp, 0.28f), "lid_L").alpha, Is.GreaterThan(0.99f));
+            Assert.That(Draw(At(sharp, 0f), "lid_L").alpha, Is.GreaterThan(0.99f));
+        }
+
+        [Test]
         public void Idle_DrivesTheRig_WithoutBreakingIt()
         {
             var r = Rig();

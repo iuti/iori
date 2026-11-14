@@ -12,6 +12,8 @@
 //               goes with the head. Without it only hair below the jaw swings (long hair), as LivLiv has it.
 //   lean_from   y: the line the upper body leans and sways from, instead of anchors.bottom_y (a seated figure with
 //               its hands on its lap: a line above the hands, so that they stay on the knees while the back moves)
+//   lid_fade    [from, to]: the eye's openness (0 shut .. 1 open) between which the closed lid fades in over the
+//               squashing eye. LivLiv's is [0.05, 0.35]; a later pair hides the eye before it is squashed thin.
 //   upright     [lean, roll] degrees: how far the upper body leans about body_pivot, and how far the head then
 //               rolls on the neck, for the figure to sit with a straight back (the picture may be drawn leaning,
 //               head tilted). PuppetRig.posture (0 as drawn .. 1 upright) says how much of it is used; the
@@ -102,6 +104,8 @@ namespace Iori.Puppet
         public float[] bodyPivot;
         /// <summary>x-iori.hair_tips [r0, r1], or null</summary>
         public float[] hairTips;
+        /// <summary>x-iori.lid_fade [from, to], or null</summary>
+        public float[] lidFade;
         /// <summary>x-iori.lean_from, or NaN</summary>
         public float leanFrom = float.NaN;
         /// <summary>x-iori.upright [body lean, head roll] in degrees, or null</summary>
@@ -247,6 +251,8 @@ namespace Iori.Puppet
                 m.bodyPivot = Pair(x, "body_pivot");
                 m.hairTips = Pair(x, "hair_tips");
                 m.upright = Pair(x, "upright");
+                m.lidFade = Pair(x, "lid_fade");
+                if (m.lidFade != null && !(m.lidFade[1] > m.lidFade[0])) throw new FormatException("x-iori.lid_fade: the second openness must be the larger");
                 m.leanFrom = Num(x, "lean_from", float.NaN);
                 if (m.hairTips != null && !(m.hairTips[1] > m.hairTips[0])) throw new FormatException("x-iori.hair_tips: the second radius must be the larger");
                 if (x.TryGetValue("still", out var st) && st is List<object> stillIds)
