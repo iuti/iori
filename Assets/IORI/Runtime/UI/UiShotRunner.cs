@@ -373,7 +373,7 @@ namespace Iori.Ui
             ui.Close();
             yield return Wait(1.2f);
 
-            // the flame follows the fire's volume: the slider at its left end, then at its right end
+            // the flame follows the fire's volume: the slider at its left end (the fire is out), then at its right end
             radio.SetAmbientVolume("fire", 0f);
             ui.Open(CampPropKind.Fire);
             yield return Wait(3.2f);
