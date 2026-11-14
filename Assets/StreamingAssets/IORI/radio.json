@@ -32,62 +32,38 @@
     {
       "phase": "early_morning",
       "weather": "clear",
-      "file": "placeholder/music_early_morning_clear.wav"
-    },
-    {
-      "phase": "early_morning",
-      "weather": "rain",
-      "file": "placeholder/music_early_morning_rain.wav"
+      "file": "radio/early_morning_clear.ogg",
+      "loop": "seamless"
     },
     {
       "phase": "morning",
       "weather": "clear",
-      "file": "placeholder/music_morning_clear.wav"
-    },
-    {
-      "phase": "morning",
-      "weather": "rain",
-      "file": "placeholder/music_morning_rain.wav"
+      "file": "radio/morning_clear.ogg",
+      "loop": "seamless"
     },
     {
       "phase": "day",
       "weather": "clear",
-      "file": "placeholder/music_day_clear.wav"
-    },
-    {
-      "phase": "day",
-      "weather": "rain",
-      "file": "placeholder/music_day_rain.wav"
+      "file": "radio/day_clear.ogg",
+      "loop": "seamless"
     },
     {
       "phase": "evening",
       "weather": "clear",
-      "file": "placeholder/music_evening_clear.wav"
-    },
-    {
-      "phase": "evening",
-      "weather": "rain",
-      "file": "placeholder/music_evening_rain.wav"
+      "file": "radio/evening_clear.ogg",
+      "loop": "seamless"
     },
     {
       "phase": "night",
       "weather": "clear",
-      "file": "placeholder/music_night_clear.wav"
-    },
-    {
-      "phase": "night",
-      "weather": "rain",
-      "file": "placeholder/music_night_rain.wav"
+      "file": "radio/night_clear.ogg",
+      "loop": "seamless"
     },
     {
       "phase": "late_night",
       "weather": "clear",
-      "file": "placeholder/music_late_night_clear.wav"
-    },
-    {
-      "phase": "late_night",
-      "weather": "rain",
-      "file": "placeholder/music_late_night_rain.wav"
+      "file": "radio/late_night_clear.ogg",
+      "loop": "seamless"
     }
   ],
   "chime": {
