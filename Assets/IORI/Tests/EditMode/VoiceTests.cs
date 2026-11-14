@@ -12,7 +12,6 @@ namespace Iori.Audio.Tests
         const string BookJson = @"{
   ""minGapSeconds"": 5,
   ""scheduledMarginSeconds"": 6,
-  ""returnAfterMinutes"": 120,
   ""cues"": {
     ""greet"": { ""lines"": [
       { ""file"": ""voice/greet_morning.ogg"", ""phase"": ""morning"" },
@@ -75,14 +74,10 @@ namespace Iori.Audio.Tests
         }
 
         [Test]
-        public void Return_PicksByHour_AndArrivalDecidesTheCue()
+        public void Lines_PickByHour()
         {
             Assert.That(new VoicePicker(Book(), 1).Pick(VoiceCues.Return, At(0, hour: 23)).File, Is.EqualTo("voice/okaeri_late.ogg"));
             Assert.That(new VoicePicker(Book(), 1).Pick(VoiceCues.Return, At(0, hour: 18)).File, Is.EqualTo("voice/okaeri.ogg"));
-            var p = new VoicePicker(Book(), 1);
-            Assert.That(p.CueForArrival(-1), Is.EqualTo(VoiceCues.Greet));
-            Assert.That(p.CueForArrival(119 * 60_000L), Is.Null);
-            Assert.That(p.CueForArrival(120 * 60_000L), Is.EqualTo(VoiceCues.Return));
         }
 
         [Test]
@@ -163,14 +158,15 @@ namespace Iori.Audio.Tests
             new RadioContext { Now = now, TimeZone = JstZone, Horizon = TimeSpan.FromHours(hours) };
 
         [Test]
-        public void Jiho_FollowsEachChime_InThemeHoursOnly()
+        public void Jiho_EveryHour_ChimeOnlyInThemeHours()
         {
             var plan = RadioScheduler.BuildPlan(RadioProgram.Parse(ProgramJson), Ctx(Jst(14, 19, 30), 5));
             var chimes = plan.OneShots.Where(s => s.Kind == OneShotKinds.Chime).Select(s => s.AtMs).ToArray();
             var voices = plan.OneShots.Where(s => s.Kind == OneShotKinds.Voice).ToArray();
-            Assert.That(chimes, Is.EqualTo(new[] { 20, 21 }.Select(h => Jst(14, h).ToUnixTimeMilliseconds())), "22 時からは静けさの時間");
-            Assert.That(voices.Select(v => v.AtMs), Is.EqualTo(chimes.Select(c => c + 1500)));
-            Assert.That(voices.Select(v => v.File), Is.EqualTo(new[] { "voice/jiho_20.ogg", "voice/jiho_21.ogg" }));
+            Assert.That(chimes, Is.EqualTo(new[] { 20, 21 }.Select(h => Jst(14, h).ToUnixTimeMilliseconds())), "22 時からは静けさの時間: チャイムは鳴らない");
+            var hours = new[] { 20, 21, 22, 23, 24 };
+            Assert.That(voices.Select(v => v.AtMs), Is.EqualTo(hours.Select(h => Jst(14, 0).AddHours(h).ToUnixTimeMilliseconds() + 1500)), "時報の声は静けさの時間でも言う");
+            Assert.That(voices.Select(v => v.File), Is.EqualTo(new[] { "voice/jiho_20.ogg", "voice/jiho_21.ogg", "voice/jiho_22.ogg", "voice/jiho_23.ogg", "voice/jiho_00.ogg" }));
             Assert.That(voices.All(v => v.Volume == 0.9f));
             // 時刻順に並んでいる(再生係は前から順に見る)
             Assert.That(plan.OneShots.Select(s => s.AtMs), Is.Ordered);
@@ -189,11 +185,13 @@ namespace Iori.Audio.Tests
         }
 
         [Test]
-        public void Jiho_Silent_WhilePlayerOn()
+        public void Jiho_StillSpoken_WhilePlayerOn_ButNoChime()
         {
-            var ctx = Ctx(Jst(14, 9), 5);
+            var ctx = Ctx(Jst(14, 9, 30), 5);
             ctx.PlayerOn = true;
-            Assert.That(RadioScheduler.BuildPlan(RadioProgram.Parse(ProgramJson), ctx).OneShots, Is.Empty);
+            var shots = RadioScheduler.BuildPlan(RadioProgram.Parse(ProgramJson), ctx).OneShots;
+            Assert.That(shots.All(s => s.Kind == OneShotKinds.Voice), "チャイムとフレーズは鳴らない");
+            Assert.That(shots.Select(s => s.File), Is.EqualTo(new[] { 10, 11, 12, 13, 14 }.Select(h => $"voice/jiho_{h:00}.ogg")));
         }
 
         [Test]

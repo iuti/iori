@@ -2,7 +2,6 @@
   "version": 1,
   "minGapSeconds": 6,
   "scheduledMarginSeconds": 6,
-  "returnAfterMinutes": 180,
   "cues": {
     "greet": {
       "lines": [
@@ -12,12 +11,6 @@
         { "file": "voice/greet_evening_01.ogg", "phase": "evening" },
         { "file": "voice/greet_night_01.ogg", "phase": "night" },
         { "file": "voice/greet_late_night_01.ogg", "phase": "late_night" }
-      ]
-    },
-    "return": {
-      "lines": [
-        { "file": "voice/okaeri_01.ogg", "hours": "5-22" },
-        { "file": "voice/okaeri_02.ogg", "hours": "22-5" }
       ]
     },
     "player_open": {

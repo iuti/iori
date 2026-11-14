@@ -44,7 +44,7 @@ namespace Iori.Camp
         static readonly (string label, CampQualityLevel q)[] Qualities = { ("端末に合わせる", CampQualityLevel.Auto), ("スマホ相当", CampQualityLevel.Phone), ("フル", CampQualityLevel.Full) };
         static readonly (string label, string cue)[] VoiceTests =
         {
-            ("あいさつ", VoiceCues.Greet), ("おかえり", VoiceCues.Return), ("タップ", VoiceCues.Tap), ("プレーヤー", VoiceCues.PlayerOpen),
+            ("あいさつ", VoiceCues.Greet), ("タップ", VoiceCues.Tap), ("プレーヤー", VoiceCues.PlayerOpen),
             ("曲が止まった", VoiceCues.MusicStopped), ("雨が降った", VoiceCues.RainStart), ("雨が止んだ", VoiceCues.RainStop), ("火をつけた", VoiceCues.Firewood),
         };
         static readonly string[] Tabs = { "景色", "カメラ・画質", "音" };

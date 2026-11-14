@@ -9,7 +9,7 @@ namespace Iori.Audio
     {
         /// <summary>アプリを開いた(時間帯のあいさつ)。</summary>
         public const string Greet = "greet";
-        /// <summary>しばらく離れていたあと、アプリに戻ってきた。</summary>
+        /// <summary>家に帰ってきた(「おかえり」)。位置のしかけができたら使う。いまはどこからも言わない(chico の指定でとっておく)。</summary>
         public const string Return = "return";
         /// <summary>音楽プレーヤーを開いた。</summary>
         public const string PlayerOpen = "player_open";
@@ -81,8 +81,6 @@ namespace Iori.Audio
         public double MinGapSeconds = 6;
         /// <summary>時報などの予定された声がこの秒数以内に来るなら、場面の声は言わない(重ならないように)。</summary>
         public double ScheduledMarginSeconds = 6;
-        /// <summary>アプリを裏に回して、これ以上たってから戻ったら「おかえり」(それより短ければ何も言わない)。</summary>
-        public double ReturnAfterMinutes = 180;
         public Dictionary<string, VoiceCueDef> Cues = new Dictionary<string, VoiceCueDef>();
 
         public VoiceCueDef Find(string cue) => cue != null && Cues.TryGetValue(cue, out var c) ? c : null;
@@ -105,7 +103,6 @@ namespace Iori.Audio
                 Version = (int)JsonRead.Num(root, "version", 1),
                 MinGapSeconds = JsonRead.Num(root, "minGapSeconds", 6),
                 ScheduledMarginSeconds = JsonRead.Num(root, "scheduledMarginSeconds", 6),
-                ReturnAfterMinutes = JsonRead.Num(root, "returnAfterMinutes", 180),
             };
             if (root.TryGetValue("cues", out var cuesObj) && cuesObj != null)
             {
@@ -151,7 +148,6 @@ namespace Iori.Audio
         {
             if (MinGapSeconds < 0) throw new FormatException("minGapSeconds は 0 以上です");
             if (ScheduledMarginSeconds < 0) throw new FormatException("scheduledMarginSeconds は 0 以上です");
-            if (ReturnAfterMinutes <= 0) throw new FormatException("returnAfterMinutes は正の値です");
             foreach (var c in Cues.Values)
             {
                 if (c.Lines.Count == 0) throw new FormatException("cues." + c.Id + " にセリフがありません");
@@ -242,16 +238,6 @@ namespace Iori.Audio
         public void NoteSpoken(long untilMs)
         {
             if (untilMs > SpeakingUntilMs) SpeakingUntilMs = untilMs;
-        }
-
-        /// <summary>
-        /// アプリに戻ってきたときの場面。awayMs 離れていたら、長ければ「おかえり」(Return)、短ければ何も言わない(null)。
-        /// 起動したてのとき(awayMs が負)は時間帯のあいさつ(Greet)。
-        /// </summary>
-        public string CueForArrival(long awayMs)
-        {
-            if (awayMs < 0) return VoiceCues.Greet;
-            return awayMs >= (long)(_book.ReturnAfterMinutes * 60_000) ? VoiceCues.Return : null;
         }
     }
 }

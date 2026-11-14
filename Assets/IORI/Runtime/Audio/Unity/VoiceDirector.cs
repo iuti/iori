@@ -18,7 +18,6 @@ namespace Iori.Audio
         const string BookFile = StreamingAudio.RootFolder + "/voice.json";
         const long PlannedLateLimitMs = 2000;   // 再生係の単発音の遅れの許し(UnityAudioBackend、PlanEngine.java と同じ)
         const float StartGreetDelay = 1.5f;     // 起動して画面が落ち着いてから
-        const float ReturnDelay = 1.0f;
         const float FireSettleSeconds = 0.8f;   // 火のつまみを動かし終えてから
 
         public static VoiceDirector Instance { get; private set; }
@@ -43,8 +42,6 @@ namespace Iori.Audio
         ScheduledOneShot _planned;           // いま鳴っているはずの予定の声(時報)
         long _lastPlanT = long.MinValue;
         bool _greeted;
-        DateTime _pausedAtUtc;
-        bool _paused;
         string _lastWeather;
         bool _fireLit = true, _fireKnown;
         float _fireLitAt = -1f;
@@ -99,7 +96,7 @@ namespace Iori.Audio
             if (!_greeted)
             {
                 _greeted = true;
-                Say(_picker.CueForArrival(-1));
+                Say(VoiceCues.Greet);
             }
         }
 
@@ -107,23 +104,8 @@ namespace Iori.Audio
 
         void OnApplicationPause(bool paused)
         {
-            if (paused)
-            {
-                _paused = true;
-                _pausedAtUtc = DateTime.UtcNow;
-                if (_source.isPlaying) _source.Stop();
-                return;
-            }
-            if (!_paused || _picker == null) return;
-            _paused = false;
-            var cue = _picker.CueForArrival((long)(DateTime.UtcNow - _pausedAtUtc).TotalMilliseconds);
-            if (cue != null) StartCoroutine(SayLater(cue, ReturnDelay));
-        }
-
-        IEnumerator SayLater(string cue, float seconds)
-        {
-            yield return new WaitForSecondsRealtime(seconds);
-            Say(cue);
+            // 裏に回るとき、言いかけの声は止める(戻ってきたときの「おかえり」は、家に帰ったのが分かる仕組みができたら)
+            if (paused && _source.isPlaying) _source.Stop();
         }
 
         /// <summary>
@@ -317,7 +299,7 @@ namespace Iori.Audio
         IEnumerator SelfTest()
         {
             yield return new WaitForSecondsRealtime(2f);
-            var cues = new[] { VoiceCues.Greet, VoiceCues.Return, VoiceCues.Tap, VoiceCues.Tap, VoiceCues.PlayerOpen, VoiceCues.MusicStopped, VoiceCues.RainStart, VoiceCues.RainStop, VoiceCues.Firewood };
+            var cues = new[] { VoiceCues.Greet, VoiceCues.Tap, VoiceCues.Tap, VoiceCues.PlayerOpen, VoiceCues.MusicStopped, VoiceCues.RainStart, VoiceCues.RainStop, VoiceCues.Firewood };
             foreach (var cue in cues)
             {
                 Say(cue, true);

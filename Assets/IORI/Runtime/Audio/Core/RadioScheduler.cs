@@ -93,12 +93,11 @@ namespace Iori.Audio
             }
             plan.Music.Sort((a, c) => a.StartMs != c.StartMs ? a.StartMs.CompareTo(c.StartMs) : string.CompareOrdinal(a.Id, c.Id));
 
-            // 3. 単発音(音楽プレーヤーが鳴っている間は鳴らさない)。
-            if (!ctx.PlayerOn)
-            {
-                AddQuietPhrases(program, plan, ctx.TimeZone, nowMs, endMs);
-                if (program.Chime != null || program.Jiho != null) AddHourly(program, plan, ctx.TimeZone, nowMs, endMs);
-            }
+            // 3. 単発音。フレーズとチャイムは音楽プレーヤーが鳴っている間は鳴らさない。
+            //    時報の声は、静けさの時間でもプレーヤーの番でも言う(chico の指定)。
+            if (!ctx.PlayerOn) AddQuietPhrases(program, plan, ctx.TimeZone, nowMs, endMs);
+            if ((program.Chime != null && !ctx.PlayerOn) || program.Jiho != null)
+                AddHourly(program, plan, ctx.TimeZone, nowMs, endMs, chime: !ctx.PlayerOn);
             plan.OneShots.Sort((a, c) => a.AtMs.CompareTo(c.AtMs));
 
             // 4. 環境音。
@@ -228,8 +227,11 @@ namespace Iori.Audio
             }
         }
 
-        /// <summary>正時のチャイムと時報の声。どちらもテーマの時間帯の正時だけ(静けさの時間には鳴らさない)。</summary>
-        static void AddHourly(RadioProgram program, PlaybackPlan plan, TimeZoneInfo tz, long nowMs, long endMs)
+        /// <summary>
+        /// 正時のチャイムと時報の声。チャイムはテーマの時間帯の正時だけ(chime が false なら鳴らさない)、
+        /// 時報の声は時間帯によらず毎正時。
+        /// </summary>
+        static void AddHourly(RadioProgram program, PlaybackPlan plan, TimeZoneInfo tz, long nowMs, long endMs, bool chime)
         {
             var local = TimeZoneInfo.ConvertTime(DateTimeOffset.FromUnixTimeMilliseconds(nowMs), tz).DateTime;
             var hour = new DateTime(local.Year, local.Month, local.Day, local.Hour, 0, 0, DateTimeKind.Unspecified);
@@ -241,9 +243,9 @@ namespace Iori.Audio
                     var at = LocalToUtcMs(hour, tz);
                     if (at > endMs) break;
                     var span = plan.SpanAt(at);
-                    if (span != null && span.Mode == RadioMode.Theme)
+                    if (span != null)
                     {
-                        if (program.Chime != null && at > nowMs)
+                        if (chime && program.Chime != null && span.Mode == RadioMode.Theme && at > nowMs)
                             plan.OneShots.Add(new ScheduledOneShot
                             {
                                 AtMs = at,
