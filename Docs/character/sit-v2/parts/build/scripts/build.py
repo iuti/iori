@@ -282,6 +282,19 @@ _chd = np.abs(_chi - final).max(2) > 12
 _bgf = np.abs(final - final[5, 5]).max(2) < 14
 _strand = ((_chd & ~_bgf) | (dil(_chd, 2) & (_hue0 | (gray(final) < 110)) & ~_bgf)) & ~_cuphl
 sh_rgb[_strand] = final[_strand]; sh_a = np.maximum(sh_a, _strand.astype(np.float32))
+# un-mix the locks' edges from chico's under-colour B: C = a*H + (1-a)*B, H = the lock's core colour nearby
+_Bc = _chi; _C = final
+_D = np.abs(_C - _Bc).max(2)
+_overbody = _strand & ~(np.abs(_Bc - final[5, 5]).max(2) < 14)          # only where the under-colour is body, not background
+_core = _overbody & (_D > 60)
+_Hc = cv2.inpaint(np.where(_core[..., None], _C, 0).clip(0, 255).astype(np.uint8), (~_core).astype(np.uint8), 5, cv2.INPAINT_TELEA).astype(np.float32)
+_HB = _Hc - _Bc; _den = (_HB ** 2).sum(2)
+_solv = _overbody & (_den > 20 ** 2) & dil(_core, 9)
+_a = np.clip(((_C - _Bc) * _HB).sum(2) / np.maximum(_den, 1e-3), 0, 1)
+_unmixed = _solv & (_a < 0.97)
+sh_rgb[_unmixed] = _Hc[_unmixed]
+sh_a[_solv] = np.where(_a[_solv] < 0.05, 0.0, np.where(_a[_solv] >= 0.97, 1.0, _a[_solv]))
+print('lock edges un-mixed', int(_unmixed.sum()), 'dropped', int((_solv & (_a < 0.05)).sum()))
 fh_a = fh_a * ~_strand; fc_a = fc_a * ~_strand
 # non-hair pixels the hair layers still held below the chin (neck skin, collar) are the body's
 _nh = (((fh_a > 0.5) | (sh_a > 0.5)) & (yy > 300) & (xx > 540) & ~(_hue0 | (gray(final) < 110))) & ~_strand & ~(np.abs(final - final[5, 5]).max(2) < 16)
