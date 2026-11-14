@@ -47,7 +47,7 @@ namespace Iori.Camp
             ("あいさつ", VoiceCues.Greet), ("タップ", VoiceCues.Tap), ("プレーヤー", VoiceCues.PlayerOpen),
             ("曲が止まった", VoiceCues.MusicStopped), ("雨が降った", VoiceCues.RainStart), ("雨が止んだ", VoiceCues.RainStop), ("火をつけた", VoiceCues.Firewood),
         };
-        static readonly string[] TalkActions = { "LLM のキーを貼る", "声のキーを貼る", "返事の声", "キーを消す", "記憶を消す", "話しかけてみる" };
+        static readonly string[] TalkActions = { "LLM のキーを貼る", "声のキーを貼る", "返事の声", "キーを消す", "記憶を消す", "話しかけてみる", "声の ID を貼る", "声の ID を消す" };
         string _talkNote = "";
 
         void TalkAction(TalkDirector talk, int action)
@@ -60,12 +60,18 @@ namespace Iori.Camp
                     else _talkNote = "コピーしてあるものが Claude の API キー(sk-ant- で始まる)じゃないみたい。";
                     break;
                 case 1:
-                    if (pasted.Length >= 20 && pasted.IndexOf(' ') < 0 && !pasted.StartsWith("sk-ant-")) { talk.SetVoiceKey(pasted); _talkNote = "声のキーをしまったよ。"; }
+                    if (TalkApi.LooksLikeVoiceId(pasted)) _talkNote = "コピーしてあるのは声の ID みたい。「声の ID を貼る」のほうを押してね。";
+                    else if (pasted.Length >= 20 && pasted.IndexOf(' ') < 0 && !pasted.StartsWith("sk-ant-")) { talk.SetVoiceKey(pasted); _talkNote = "声のキーをしまったよ。"; }
                     else _talkNote = "コピーしてあるものが ElevenLabs の API キーじゃないみたい。";
                     break;
                 case 2: talk.VoiceOn = !talk.VoiceOn; break;
                 case 3: talk.SetLlmKey(""); talk.SetVoiceKey(""); _talkNote = "キーを消したよ。"; break;
                 case 4: talk.ForgetAll(); _talkNote = "記憶を消したよ。"; break;
+                case 6:
+                    if (TalkApi.LooksLikeVoiceId(pasted)) { talk.SetVoiceId(pasted); _talkNote = "声の ID を覚えたよ(" + pasted + ")。"; }
+                    else _talkNote = "コピーしてあるものが声の ID(英数字 20 文字)じゃないみたい。";
+                    break;
+                case 7: talk.SetVoiceId(""); _talkNote = "声の ID を消したよ(名前で探す)。"; break;
                 case 5: _talkNote = talk.Ask("こんばんは") ? "「こんばんは」と話しかけたよ。" : "いまは話せない(キーが無いか、返事待ち)。"; break;
             }
         }

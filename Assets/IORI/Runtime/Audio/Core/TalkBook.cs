@@ -20,6 +20,8 @@ namespace Iori.Audio
     {
         /// <summary>ElevenLabs の自分の声の一覧から、この名前を含む声を使う。</summary>
         public string VoiceName = "Chinyaku";
+        /// <summary>声の id を直接書くとき(空なら名前で探す)。書いてあれば一覧を読まないので、一覧を読む権限の無いキーでも使える。</summary>
+        public string VoiceId = "";
         /// <summary>使いたいモデルの順。「v4 turbo」のような語の並びで、モデルの id か名前にその語がすべてあるものを選ぶ。</summary>
         public List<string> Models = new List<string>();
         /// <summary>どれも見つからないときのモデルの id。</summary>
@@ -88,6 +90,7 @@ namespace Iori.Audio
             {
                 var v = JsonRead.Obj(vo, "voice");
                 b.Voice.VoiceName = JsonRead.Str(v, "voiceName", b.Voice.VoiceName);
+                b.Voice.VoiceId = JsonRead.Str(v, "voiceId", "").Trim();
                 b.Voice.Models = JsonRead.StrList(v, "models");
                 b.Voice.FallbackModel = JsonRead.Str(v, "fallbackModel", b.Voice.FallbackModel);
                 b.Voice.Language = JsonRead.Str(v, "language", "");

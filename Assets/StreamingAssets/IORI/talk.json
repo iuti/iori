@@ -8,6 +8,7 @@
   },
   "voice": {
     "voiceName": "Chinyaku",
+    "voiceId": "",
     "models": [ "v4 turbo", "turbo v4", "v3", "turbo v2 5", "flash v2 5" ],
     "fallbackModel": "eleven_multilingual_v2",
     "language": "",
