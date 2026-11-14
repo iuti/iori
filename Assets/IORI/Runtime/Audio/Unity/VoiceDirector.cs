@@ -27,8 +27,12 @@ namespace Iori.Audio
 
         public VoiceBook Book { get; private set; }
         public string LoadError { get; private set; }
-        /// <summary>声の音量(0〜1)。場面の声に掛かる(時報は予定表の単発音の音量)。</summary>
-        public float Volume = 1f;
+        /// <summary>声の音量(0〜1)。場面の声に掛かる(時報は予定表の単発音の音量)。中身は設定(<see cref="IoriSettings.VoiceVolume"/>)。</summary>
+        public float Volume
+        {
+            get => SettingsDirector.Store.GetFloat(IoriSettings.VoiceVolume);
+            set => SettingsDirector.Store.SetNumber(IoriSettings.VoiceVolume, value);
+        }
         /// <summary>動作確認用: 最後に言った(言おうとした)ことの一言。</summary>
         public string LastEvent { get; private set; } = "";
 

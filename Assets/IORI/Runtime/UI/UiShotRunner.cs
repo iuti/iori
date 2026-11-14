@@ -36,6 +36,7 @@ namespace Iori.Ui
             Iori.Camp.CampQuality.AdaptPaused = true;
             // before the music player looks for songs: give it the made-up ones, and keep it from saving anything
             MusicDirector.Persist = false;
+            SettingsDirector.Persist = false; // (the volumes moved for the pictures are not written to the settings file)
             string jackets = null;
             for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-ioriUiShotJackets") jackets = args[i + 1];
             try

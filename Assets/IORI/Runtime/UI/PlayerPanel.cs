@@ -77,7 +77,7 @@ namespace Iori.Ui
             _volumeBlock = UiKit.Node("Volume", Content, Side, 0, w, VolumeHeight);
             UiKit.Icon("Volume icon", _volumeBlock, 0, 12, 20, "volume", th.textSoft);
             _volume = UiSlider.Create("Volume line", _volumeBlock, 36, 0, w - 36);
-            _volume.onChanged = v => { if (Music) Music.SetVolume(v); };
+            _volume.Bind(IoriSettings.PlayerVolume);
 
             _pauseIcon = _play.icon.Picture;
             _playIcon = UiKit.LoadIcon("play");
@@ -99,7 +99,6 @@ namespace Iori.Ui
         protected override void OnOpened()
         {
             _version = -1;
-            if (Music) _volume.SetValue(Music.Volume);
         }
 
         protected override void Refresh()

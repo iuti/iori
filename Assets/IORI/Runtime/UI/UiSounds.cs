@@ -14,7 +14,8 @@ namespace Iori.Ui
         static UiSounds _instance;
         readonly Dictionary<string, AudioClip> _clips = new Dictionary<string, AudioClip>();
         AudioSource _source;
-        public float volume = 0.55f;
+        /// <summary>画面の音の音量。中身は設定(<see cref="IoriSettings.UiVolume"/>)。</summary>
+        public static float Volume => SettingsDirector.Store.GetFloat(IoriSettings.UiVolume);
 
         void Awake()
         {
@@ -38,7 +39,7 @@ namespace Iori.Ui
         public static void Play(string name, float gain = 1f)
         {
             if (!_instance || string.IsNullOrEmpty(name)) return;
-            if (_instance._clips.TryGetValue(name, out var clip) && clip) _instance._source.PlayOneShot(clip, _instance.volume * gain);
+            if (_instance._clips.TryGetValue(name, out var clip) && clip) _instance._source.PlayOneShot(clip, Volume * gain);
         }
     }
 }

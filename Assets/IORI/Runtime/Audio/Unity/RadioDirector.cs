@@ -14,8 +14,6 @@ namespace Iori.Audio
         const string IndexFile = StreamingAudio.RootFolder + "/audio-index.json";
         const string PrefWeather = "iori.radio.weather";
         const string PrefQuiet = "iori.radio.quiet";
-        const string PrefMusicVolume = "iori.radio.musicVolume";
-        const string PrefMixer = "iori.radio.mixer";
         static readonly TimeSpan RebuildInterval = TimeSpan.FromMinutes(30);
 
         public static RadioDirector Instance { get; private set; }
@@ -30,13 +28,14 @@ namespace Iori.Audio
         public bool Quiet { get; private set; }
         /// <summary>音楽プレーヤーが自分の曲を鳴らしている間は true。ラジオは黙り、環境音だけ鳴る。保存しない。</summary>
         public bool PlayerOn { get; private set; }
-        public float MusicVolume { get; private set; } = 1f;
+        /// <summary>ラジオの曲の音量(0〜1)。中身は設定(<see cref="IoriSettings.RadioVolume"/>)。</summary>
+        public float MusicVolume => SettingsDirector.Store.GetFloat(IoriSettings.RadioVolume);
         /// <summary>動作確認用の時計のずれ。保存しない。</summary>
         public long ClockOffsetMs { get; private set; }
 
         AudioIndex _audioIndex = new AudioIndex();
         DateTime _lastBuiltUtc;
-        bool _mixerDirty;
+        IDisposable _watchMusic, _watchAmbient;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Bootstrap()
@@ -44,6 +43,7 @@ namespace Iori.Audio
             if (Instance != null) return;
             var go = new GameObject("IORI Radio");
             DontDestroyOnLoad(go);
+            go.AddComponent<SettingsDirector>();
             go.AddComponent<RadioDirector>();
             go.AddComponent<MusicDirector>();
             go.AddComponent<VoiceDirector>();
@@ -55,7 +55,10 @@ namespace Iori.Audio
             Instance = this;
             Weather = PlayerPrefs.GetString(PrefWeather, WeatherIds.Clear);
             Quiet = PlayerPrefs.GetInt(PrefQuiet, 0) == 1;
-            MusicVolume = PlayerPrefs.GetFloat(PrefMusicVolume, 1f);
+            // 音量は設定から読み、設定が変われば(ラジオのシートでも、設定の画面でも)鳴らす音量を合わせる
+            var settings = SettingsDirector.Store;
+            _watchMusic = settings.Watch(IoriSettings.RadioVolume, _ => ApplyMusicVolume());
+            _watchAmbient = settings.Watch(IoriSettings.AmbientPrefix, key => ApplyAmbientVolume(IoriSettings.AmbientIdOf(key)));
 #if UNITY_ANDROID && !UNITY_EDITOR
             Backend = new AndroidPlaybackBackend();
 #else
@@ -88,7 +91,9 @@ namespace Iori.Audio
             if (indexJson == null)
                 Debug.LogWarning("[IORI] audio-index.json がないので、曲はすべて継ぎ目ループとして扱います(メニュー IORI/Audio から生成できます)");
             Mixer = new AmbientMixer(Program.Ambient);
-            Mixer.Load(PlayerPrefs.GetString(PrefMixer, ""));
+            var settings = SettingsDirector.Store;
+            settings.Define(IoriSettings.Ambient(Program.Ambient));
+            foreach (var layer in Program.Ambient) Mixer.SetUserVolume(layer.Id, settings.GetFloat(IoriSettings.AmbientVolume(layer.Id)));
             Rebuild();
         }
 
@@ -96,21 +101,19 @@ namespace Iori.Audio
         {
             if (Program == null) return;
             if (DateTime.UtcNow - _lastBuiltUtc > RebuildInterval) Rebuild();
-            if (_mixerDirty && Time.frameCount % 30 == 0)
-            {
-                PlayerPrefs.SetString(PrefMixer, Mixer.Save());
-                _mixerDirty = false;
-            }
+        }
+
+        void OnDestroy()
+        {
+            _watchMusic?.Dispose();
+            _watchAmbient?.Dispose();
+            if (Instance == this) Instance = null;
         }
 
         void OnApplicationPause(bool paused)
         {
             // 裏に回るときは何もしない(Android ではサービスが鳴らし続ける)。戻ってきたら作り直す。
-            if (paused)
-            {
-                if (_mixerDirty) { PlayerPrefs.SetString(PrefMixer, Mixer.Save()); _mixerDirty = false; }
-                PlayerPrefs.Save();
-            }
+            if (paused) PlayerPrefs.Save();
             else if (Program != null) Rebuild();
         }
 
@@ -157,18 +160,26 @@ namespace Iori.Audio
             Rebuild();
         }
 
-        public void SetMusicVolume(float volume)
+        /// <summary>ラジオの曲の音量を変える(設定に書くだけ。鳴らす音量は設定を聞いて合わせる)。</summary>
+        public void SetMusicVolume(float volume) => SettingsDirector.Store.SetNumber(IoriSettings.RadioVolume, volume);
+
+        /// <summary>環境音 1 つの音量を変える(設定に書くだけ)。</summary>
+        public void SetAmbientVolume(string id, float volume) => SettingsDirector.Store.SetNumber(IoriSettings.AmbientVolume(id), volume);
+
+        void ApplyMusicVolume()
         {
-            MusicVolume = Mathf.Clamp01(volume);
-            PlayerPrefs.SetFloat(PrefMusicVolume, MusicVolume);
-            if (Plan != null) Plan.MusicVolume = MusicVolume;
-            Backend.SetMusicVolume(MusicVolume);
+            var v = MusicVolume;
+            if (Plan != null) Plan.MusicVolume = v;
+            Backend.SetMusicVolume(v);
         }
 
-        public void SetAmbientVolume(string id, float volume)
+        void ApplyAmbientVolume(string id)
         {
-            Mixer.SetUserVolume(id, volume);
-            _mixerDirty = true;
+            if (Mixer == null || id == null) return;
+            bool known = false;
+            foreach (var l in Mixer.Layers) if (l.Id == id) known = true;
+            if (!known) return;
+            Mixer.SetUserVolume(id, SettingsDirector.Store.GetFloat(IoriSettings.AmbientVolume(id)));
             Backend.SetAmbientVolume(id, Mixer.EffectiveVolume(id, Weather));
         }
 

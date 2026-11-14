@@ -61,18 +61,10 @@ namespace Iori.Ui
                 var row = new Row { def = def, warm = def.Id == "fire" };
                 row.icon = UiKit.Icon("Icon " + def.Id, Content, Pad, y + 12, 22, icon, th.text);
                 row.slider = UiSlider.Create("Slider " + def.Id, Content, 66, y + 1, Width - Pad - 66);
-                string id = def.Id;
-                row.slider.onChanged = v => { if (RadioDirector.Instance) RadioDirector.Instance.SetAmbientVolume(id, v); };
+                row.slider.Bind(IoriSettings.AmbientVolume(def.Id));
                 _rows.Add(row);
                 y += RowHeight;
             }
-        }
-
-        protected override void OnOpened()
-        {
-            var radio = RadioDirector.Instance;
-            if (!radio || radio.Mixer == null) return;
-            foreach (var r in _rows) r.slider.SetValue(radio.Mixer.GetUserVolume(r.def.Id));
         }
 
         protected override void Refresh()

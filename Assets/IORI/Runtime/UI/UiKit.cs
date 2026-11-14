@@ -1,4 +1,5 @@
 using System;
+using Iori.Audio;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -317,6 +318,25 @@ namespace Iori.Ui
             _dim = dim;
             Paint();
         }
+
+        IDisposable _bound;
+
+        /// <summary>
+        /// Ties the slider to a setting (<see cref="SettingsDirector.Store"/>): moving it writes the setting, and
+        /// the setting changed anywhere else (another sheet, the settings screen) moves it. Every slider for
+        /// one volume is bound to the same key, so they are one bar seen from different places.
+        /// </summary>
+        public UiSlider Bind(string key)
+        {
+            _bound?.Dispose();
+            var store = SettingsDirector.Store;
+            SetValue(store.GetFloat(key));
+            onChanged = v => SettingsDirector.Store.SetNumber(key, v);
+            _bound = store.Watch(key, k => { if (this) SetValue(SettingsDirector.Store.GetFloat(k)); });
+            return this;
+        }
+
+        void OnDestroy() { _bound?.Dispose(); _bound = null; }
 
         public void SetValue(float v, bool notify = false)
         {

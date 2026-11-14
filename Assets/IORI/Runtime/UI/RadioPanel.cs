@@ -65,13 +65,7 @@ namespace Iori.Ui
             // the music volume
             UiKit.Icon("Volume icon", Content, Pad, 168, 20, "volume", th.textSoft);
             _volume = UiSlider.Create("Volume", Content, 62, 156, Width - Pad - 62);
-            _volume.onChanged = v => { if (RadioDirector.Instance) RadioDirector.Instance.SetMusicVolume(v); };
-        }
-
-        protected override void OnOpened()
-        {
-            var radio = RadioDirector.Instance;
-            if (radio) _volume.SetValue(radio.MusicVolume);
+            _volume.Bind(IoriSettings.RadioVolume);
         }
 
         /// <summary>
