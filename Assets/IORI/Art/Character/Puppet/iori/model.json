@@ -277,8 +277,8 @@
    "group": "head",
    "x": 453,
    "y": 261,
-   "w": 60,
-   "h": 46,
+   "w": 61,
+   "h": 44,
    "role": "lid_L",
    "texture": "textures/lid_L.png"
   },
@@ -336,7 +336,7 @@
    "x": 518,
    "y": 222,
    "w": 66,
-   "h": 53,
+   "h": 50,
    "role": "lid_R",
    "texture": "textures/lid_R.png"
   },

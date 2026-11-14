@@ -101,8 +101,10 @@ for side, box in (('L', (440, 252, 512, 312)), ('R', (512, 218, 592, 280))):
     lm = inb & dil(opening, 9) & ~ero(opening, 3) & (gray(final) < 140)
     add(f'lash_{side}', final, soft(lm, 0.5), group='head', role=f'eye_{side}', pivot=[round(cx, 1), round(cy, 1)])
     # the closed lid: the closed-eye picture over the whole eye area
-    lid = dil(opening, 13) & inb
-    add(f'lid_{side}', closed, cv2.GaussianBlur(lid.astype(np.float32), (0, 0), 2.0) * dil(lid, 5), group='head', role=f'lid_{side}')
+    core = dil(opening | lm, 5) & inb
+    lid = dil(core, 6) & inb
+    la = np.maximum(core.astype(np.float32), cv2.GaussianBlur(lid.astype(np.float32), (0, 0), 1.5) * lid)
+    add(f'lid_{side}', closed, la, group='head', role=f'lid_{side}')
 
 # 6. mouth: closed (final) + frames
 mb = (495, 298, 578, 348)
