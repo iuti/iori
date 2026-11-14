@@ -36,6 +36,7 @@ namespace Iori.Ui
             Iori.Camp.CampQuality.AdaptPaused = true;
             // before the music player looks for songs: give it the made-up ones, and keep it from saving anything
             MusicDirector.Persist = false;
+            SettingsDirector.Persist = false; // (the volumes moved for the pictures are not written to the settings file)
             string jackets = null;
             for (int i = 0; i < args.Length - 1; i++) if (args[i] == "-ioriUiShotJackets") jackets = args[i + 1];
             try
@@ -341,6 +342,33 @@ namespace Iori.Ui
             yield return Wait(0.4f);
         }
 
+        /// <summary>
+        /// The volumes live in one settings store: two sliders bound to one key are one bar, and the radio, the
+        /// player and the fire follow the store whoever moved it. Written to the report, then put back.
+        /// </summary>
+        void CheckSettings(RadioDirector radio)
+        {
+            var store = SettingsDirector.Store;
+            var host = new GameObject("Settings check", typeof(RectTransform));
+            var a = UiSlider.Create("A", host.transform, 0, 0, 200).Bind(IoriSettings.RadioVolume);
+            var b = UiSlider.Create("B", host.transform, 0, 50, 200).Bind(IoriSettings.RadioVolume);
+            float wasRadio = store.GetFloat(IoriSettings.RadioVolume), wasFire = store.GetFloat(IoriSettings.AmbientVolume("fire"));
+            float wasPlayer = store.GetFloat(IoriSettings.PlayerVolume);
+            a.SetValue(0.31f, true);
+            bool barsFollow = Mathf.Abs(b.Value - 0.31f) < 1e-4f;
+            bool radioFollows = Mathf.Abs(radio.MusicVolume - 0.31f) < 1e-4f && radio.Plan != null && Mathf.Abs(radio.Plan.MusicVolume - 0.31f) < 1e-4f;
+            store.SetNumber(IoriSettings.AmbientVolume("fire"), 0.42);
+            bool mixerFollows = Mathf.Abs(radio.Mixer.GetUserVolume("fire") - 0.42f) < 1e-4f;
+            var music = MusicDirector.Instance;
+            store.SetNumber(IoriSettings.PlayerVolume, 0.27);
+            bool playerFollows = music && Mathf.Abs(music.Volume - 0.27f) < 1e-4f;
+            _report.AppendLine($"settings: two bars on one key follow each other {barsFollow}, radio follows {radioFollows}, fire layer follows {mixerFollows}, player follows {playerFollows}, saving off {!SettingsDirector.Persist}, file {SettingsDirector.FilePath}");
+            store.SetNumber(IoriSettings.RadioVolume, wasRadio);
+            store.SetNumber(IoriSettings.AmbientVolume("fire"), wasFire);
+            store.SetNumber(IoriSettings.PlayerVolume, wasPlayer);
+            Destroy(host);
+        }
+
         IEnumerator Shot(string name)
         {
             yield return new WaitForEndOfFrame();
@@ -504,6 +532,7 @@ namespace Iori.Ui
             radio.SetWeather(wasWeather);
             radio.SetQuiet(wasQuiet);
             radio.SetAmbientVolume("fire", wasFire);
+            CheckSettings(radio);
             yield return null;
             Finish(0);
         }

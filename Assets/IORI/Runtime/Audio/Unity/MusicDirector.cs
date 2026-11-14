@@ -16,7 +16,6 @@ namespace Iori.Audio
     {
         const string PrefQueue = "iori.music.queue";
         const string PrefPosition = "iori.music.position";
-        const string PrefVolume = "iori.music.volume";
 
         public static MusicDirector Instance { get; private set; }
         /// <summary>動作確認用: false にすると、列と位置を保存も読み出しもしない(画面の撮影で、聴いていた列を上書きしないため)。</summary>
@@ -39,8 +38,8 @@ namespace Iori.Audio
         /// <summary>列を最後まで鳴らし終えて止まった(イオリの「曲、止まっちゃったね」)。自分で止めたときは来ない。</summary>
         public event Action QueueFinished;
 
-        /// <summary>プレーヤーの曲の音量(0〜1)。ラジオの曲の音量とは別に覚える。</summary>
-        public float Volume { get; private set; } = 1f;
+        /// <summary>プレーヤーの曲の音量(0〜1)。ラジオの曲の音量とは別。中身は設定(<see cref="IoriSettings.PlayerVolume"/>)。</summary>
+        public float Volume => SettingsDirector.Store.GetFloat(IoriSettings.PlayerVolume);
 
         public MusicTrack Current => Library.Find(Queue.Current);
         public bool IsPlaying => Active && Backend != null && Backend.IsPlaying;
@@ -66,8 +65,6 @@ namespace Iori.Audio
         {
             Instance = this;
             _seed = Environment.TickCount;
-            // (初めては、それまで一緒に使っていたラジオの曲の音量から始める)
-            Volume = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefVolume, PlayerPrefs.GetFloat("iori.radio.musicVolume", 1f)));
 #if UNITY_ANDROID && !UNITY_EDITOR
             Backend = gameObject.AddComponent<AndroidMusicBackend>();
 #else
@@ -126,8 +123,7 @@ namespace Iori.Audio
         /// <summary>プレーヤーの曲の音量を変える(0〜1)。</summary>
         public void SetVolume(float volume)
         {
-            Volume = Mathf.Clamp01(volume);
-            PlayerPrefs.SetFloat(PrefVolume, Volume);
+            SettingsDirector.Store.SetNumber(IoriSettings.PlayerVolume, volume);
             if (Backend != null) Backend.SetVolume(Volume);
         }
 
