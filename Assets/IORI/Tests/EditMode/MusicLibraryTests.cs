@@ -79,6 +79,21 @@ namespace Iori.Audio.Tests
         }
 
         [Test]
+        public void Search_IgnoresKanaWidthAndSpaces_AndPutsTitleHitsFirst()
+        {
+            var lib = Library();
+            Assert.That(lib.Search("わるつ").Select(t => t.Id), Is.EqualTo(new[] { "4" }));
+            Assert.That(lib.Search("ﾀｸﾞﾅｼ").Select(t => t.Id), Is.EqualTo(new[] { "6" }));
+            Assert.That(lib.Search("ＦＲＵＩＴＳ").Count, Is.EqualTo(3));
+            // 言葉は別々の欄にあってよい、どれも含むものだけ
+            Assert.That(lib.Search("trio apple").Select(t => t.Id), Is.EqualTo(new[] { "2" }));
+            Assert.That(lib.Search("小舟ラジオ 朝").Select(t => t.Id), Is.EqualTo(new[] { "3", "4" }));
+            // 曲名に当たる曲が先
+            var lib2 = new MusicLibrary(new List<MusicTrack> { T("a", "a song", "Night", ""), T("b", "Night", "x", "") });
+            Assert.That(lib2.Search("night").Select(t => t.Id), Is.EqualTo(new[] { "b", "a" }));
+        }
+
+        [Test]
         public void FormatTime_ShowsMinutesAndHours()
         {
             Assert.That(MusicLibrary.FormatTime(0), Is.EqualTo("0:00"));

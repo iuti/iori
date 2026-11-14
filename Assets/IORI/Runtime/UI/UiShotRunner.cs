@@ -233,6 +233,7 @@ namespace Iori.Ui
             ui.Library.ShowTab(2);
             yield return Wait(1.2f);
             yield return Shot("ui_17_artists");
+            yield return ListShots(ui, music);
             ui.Library.ShowTab(0);
 
             // a finger draws the player down: the scene shows above it (not the list under it), and let go it goes back to the home screen
@@ -261,6 +262,83 @@ namespace Iori.Ui
             music.Release();
             yield return Wait(1.0f);
             _report.AppendLine($"released: player has the floor {music.Active}, radio silent {radio.PlayerOn}");
+        }
+
+        int SongIndex(MusicDirector music, string title)
+        {
+            for (int i = 0; i < music.Library.Songs.Count; i++) if (music.Library.Songs[i].Title == title) return i;
+            return 0;
+        }
+
+        /// <summary>The lists the user makes, and the search. (The lists are made up here and kept only while the pictures are taken.)</summary>
+        IEnumerator ListShots(UiRoot ui, MusicDirector music)
+        {
+            var lib = ui.Library;
+            lib.ShowTab(LibraryPanel.ListsTab);
+            yield return Wait(1.0f);
+            yield return Shot("ui_25_lists_empty");
+
+            // a new list: opened to be changed, with its name ready to type
+            lib.NewList();
+            yield return Wait(0.8f);
+            lib.TypeName("焚き火の夜");
+            yield return Wait(0.4f);
+            yield return Shot("ui_26_list_new");
+            var list = music.Playlists.Lists[0];
+            foreach (var title in new[] { "星を数える係", "山の向こうの灯り", "最終便のあとで", "雨やどりのワルツ", "夜行バスの窓" })
+                music.Playlists.Add(list, music.Library.Songs[SongIndex(music, title)]);
+            music.SavePlaylists();
+            yield return Wait(0.6f);
+            yield return Shot("ui_27_list_editing");
+            lib.SetEditing(false);
+            yield return Wait(0.8f);
+            yield return Shot("ui_28_list");
+            _report.AppendLine($"list: {list.Name}, {music.Playlists.Resolve(list, music.Library).Count} songs, items shown {lib.ItemCount}");
+
+            // holding a song's row in the songs tab: the small sheet of lists
+            var morning = music.Playlists.Create("朝のコーヒー");
+            music.Playlists.Add(morning, music.Library.Songs[SongIndex(music, "朝のコーヒーは二杯")]);
+            music.SavePlaylists();
+            lib.ShowTab(LibraryPanel.SongsTab);
+            yield return Wait(0.6f);
+            lib.HoldItem(SongIndex(music, "縁側と扇風機"));
+            yield return Wait(0.6f);
+            yield return Shot("ui_29_picker");
+            lib.Picker.PressRow(2);
+            yield return Wait(0.5f);
+            yield return Shot("ui_30_picker_added");
+            _report.AppendLine($"picker: song in list {music.Playlists.Contains(list, lib.Picker.Track)}");
+            lib.Back();
+            yield return Wait(0.6f);
+
+            lib.ShowTab(LibraryPanel.ListsTab);
+            yield return Wait(0.8f);
+            yield return Shot("ui_31_lists");
+
+            // the bin made ready: the songs grow faint
+            lib.OpenList(1);
+            lib.SetEditing(true);
+            yield return Wait(0.5f);
+            lib.PressBin();
+            yield return Wait(0.3f);
+            yield return Shot("ui_32_list_bin_ready");
+            lib.SetEditing(false);
+            _report.AppendLine($"after the bin was pressed once and the change ended: {music.Playlists.Count} lists");
+
+            // the search: an artist, half-width katakana, and two words in different fields
+            lib.StartSearch("みなと");
+            yield return Wait(0.8f);
+            yield return Shot("ui_33_search");
+            _report.AppendLine($"search みなと: {lib.ItemCount} songs");
+            lib.StartSearch("ﾜﾙﾂ");
+            yield return Wait(0.6f);
+            _report.AppendLine($"search ﾜﾙﾂ: {lib.ItemCount} songs");
+            lib.StartSearch("はこにわ 星");
+            yield return Wait(0.6f);
+            yield return Shot("ui_34_search_two_words");
+            _report.AppendLine($"search はこにわ 星: {lib.ItemCount} songs");
+            lib.EndSearch();
+            yield return Wait(0.4f);
         }
 
         IEnumerator Shot(string name)

@@ -108,18 +108,53 @@ namespace Iori.Audio
 
         public MusicTrack Find(string id) => id != null && _byId.TryGetValue(id, out var t) ? t : null;
 
-        /// <summary>曲名、演奏者、アルバム名のどれかに言葉を含む曲(曲名の順)。空の言葉なら全部。</summary>
+        List<string> _folded;
+
+        /// <summary>
+        /// 曲名、演奏者、アルバム名に言葉を含む曲。空白で区切った言葉はどれも含むものだけ(別々の欄にあってよい)。
+        /// 文字は <see cref="TextFold"/> でそろえて比べる(大文字と小文字、全角と半角、ひらがなとカタカナ、空白)。
+        /// 並びは、曲名に言葉が全部ある曲が先、そのあとは曲名の順。空の言葉なら全部。
+        /// </summary>
         public List<MusicTrack> Search(string words)
         {
             var found = new List<MusicTrack>();
-            var q = (words ?? "").Trim();
-            foreach (var t in _songs)
-                if (q.Length == 0 || Has(t.Title, q) || Has(t.Artist, q) || Has(t.Album, q))
-                    found.Add(t);
+            var q = TextFold.Words(words);
+            if (q.Length == 0)
+            {
+                found.AddRange(_songs);
+                return found;
+            }
+            if (_folded == null)
+            {
+                _folded = new List<string>(_songs.Count);
+                foreach (var t in _songs)
+                    _folded.Add(TextFold.Fold(t.Title) + "\u001f" + TextFold.Fold(t.Artist) + "\u001f" + TextFold.Fold(t.Album));
+            }
+            var later = new List<MusicTrack>();
+            for (int i = 0; i < _songs.Count; i++)
+            {
+                var text = _folded[i];
+                if (!AllInOneField(text, q)) continue;
+                int cut = text.IndexOf('\u001f');
+                if (TextFold.Matches(text.Substring(0, cut), q)) found.Add(_songs[i]);
+                else later.Add(_songs[i]);
+            }
+            found.AddRange(later);
             return found;
         }
 
-        static bool Has(string text, string q) => !string.IsNullOrEmpty(text) && text.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
+        /// <summary>言葉がそれぞれ、どれか 1 つの欄に収まっているか(欄の境目をまたいだ当たりは数えない)。</summary>
+        static bool AllInOneField(string folded, string[] words)
+        {
+            var fields = folded.Split('\u001f');
+            foreach (var w in words)
+            {
+                bool hit = false;
+                foreach (var f in fields) if (f.IndexOf(w, StringComparison.Ordinal) >= 0) { hit = true; break; }
+                if (!hit) return false;
+            }
+            return true;
+        }
 
         static int Compare(string a, string b) => string.Compare(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase);
 
