@@ -144,6 +144,25 @@ namespace Iori.Puppet.Tests
         }
 
         [Test]
+        public void LayersNamedStill_NeverMove_EvenAboveTheSeatLine()
+        {
+            // the legs and the chair as one layer whose knees rise above the seat line, in front of the body
+            string json = Model.Replace(@"""x"": 60, ""y"": 560, ""w"": 400, ""h"": 208", @"""x"": 60, ""y"": 440, ""w"": 400, ""h"": 328")
+                               .Replace(@"""head_tilt"": 0,", @"""head_tilt"": 0, ""still"": [""base""],");
+            var moving = Layer(Rig(Model.Replace(@"""x"": 60, ""y"": 560, ""w"": 400, ""h"": 208", @"""x"": 60, ""y"": 440, ""w"": 400, ""h"": 328")), "base");
+            Assert.That(moving.still, Is.False);
+            var r = Rig(json);
+            var baseL = Layer(r, "base");
+            Assert.That(baseL.still, Is.True);
+            r.param.angleX = 30; r.param.bodyX = 10; r.param.bodyZ = 10; r.param.breath = 1;
+            Run(r, 2f);
+            AssertFinite(r);
+            Assert.That(MaxMove(baseL), Is.EqualTo(0f));
+            Assert.That(MaxMove(Layer(r, "body")), Is.GreaterThan(5f));
+            Assert.Throws<FormatException>(() => PuppetModel.Parse(Model.Replace(@"""head_tilt"": 0,", @"""head_tilt"": 0, ""still"": [""nobody""],")));
+        }
+
+        [Test]
         public void TurningTheHead_MovesTheFaceTowardTheTurn()
         {
             var r = Rig();

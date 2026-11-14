@@ -385,6 +385,7 @@ namespace Iori.Puppet
                     if (MathF.Sqrt(ux * ux + uy * uy) < 1.15f) still = false;
                 }
             }
+            if (Array.IndexOf(model.still, L.id) >= 0) still = true;     // named as never moving
             if (still) { P.still = true; Array.Copy(P.rest, P.pos, P.rest.Length); }
             return P;
         }

@@ -5,7 +5,9 @@
 //               axes instead of the picture's
 //   body_pivot  [x, y]: the point the upper body leans about (a seated figure: the hips), instead of a point below
 //               the middle of the picture's bottom edge
-// A seated figure needs nothing else: with anchors.bottom_y on the seat line, everything below it stays still.
+//   still       ["layer id", ...]: layers that never move, whatever their place (a seated figure: the legs and the
+//               chair as one layer, whose knees rise above the seat line in front of the body)
+// With anchors.bottom_y on the seat line, body layers wholly below it stay still without being listed.
 using System;
 using System.Collections.Generic;
 using Iori.Audio;
@@ -87,6 +89,8 @@ namespace Iori.Puppet
         public float headTilt;
         /// <summary>x-iori.body_pivot, or null</summary>
         public float[] bodyPivot;
+        /// <summary>x-iori.still: ids of the layers that never move (never null)</summary>
+        public string[] still = new string[0];
 
         /// <summary>The mesh lattice's cell, model px.</summary>
         public int Lattice => rig.lattice > 0 ? rig.lattice : Math.Max(6, (int)Math.Round(Math.Max(canvasW, canvasH) / 128.0));
@@ -224,6 +228,14 @@ namespace Iori.Puppet
             {
                 m.headTilt = Num(x, "head_tilt", 0);
                 m.bodyPivot = Pair(x, "body_pivot");
+                if (x.TryGetValue("still", out var st) && st is List<object> stillIds)
+                {
+                    var names = new List<string>();
+                    foreach (var o in stillIds) if (o is string name) names.Add(name);
+                    m.still = names.ToArray();
+                    foreach (var id in m.still)
+                        if (Array.FindIndex(m.layers, l => l.id == id) < 0) throw new FormatException("x-iori.still names a layer that is not there: " + id);
+                }
             }
             return m;
         }
