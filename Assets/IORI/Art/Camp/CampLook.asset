@@ -1,0 +1,488 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4fde53757314741a95da0a1cb6dcf7c, type: 3}
+  m_Name: CampLook
+  m_EditorClassIdentifier: IORI.Camp::Iori.Camp.CampLook
+  version: 10
+  keys:
+  - hour: 0
+    label: "\u591C"
+    palette:
+      horizon: {r: 0.27450982, g: 0.34509805, b: 0.7529412, a: 1}
+      mid: {r: 0.16470589, g: 0.19607843, b: 0.53333336, a: 1}
+      zenith: {r: 0.05882353, g: 0.07450981, b: 0.2509804, a: 1}
+      cloud: {r: 0.22745098, g: 0.28235295, b: 0.65882355, a: 1}
+      cloudDark: {r: 0.078431375, g: 0.101960786, b: 0.33333334, a: 1}
+      cloudAmount: 0.25
+      stars: 1
+      sunAzimuth: -22
+      sunElevation: -30
+      sunGlowColor: {r: 0.9019608, g: 0.9254902, b: 1, a: 1}
+      sunGlow: 0
+      sunDisc: 0
+      moon: 1
+      keyColor: {r: 0.5882353, g: 0.7137255, b: 1, a: 1}
+      keyIntensity: 0.5
+      keyShadow: 0.7
+      ambientSky: {r: 0.09019608, g: 0.48235294, b: 0.88235295, a: 1}
+      ambientEquator: {r: 0.09019608, g: 0.34901962, b: 0.8, a: 1}
+      ambientGround: {r: 0.0627451, g: 0.16470589, b: 0.5019608, a: 1}
+      ambientIntensity: 0.9
+      shadeGlaze: 0.75
+      fog: {r: 0.101960786, g: 0.16470589, b: 0.47058824, a: 1}
+      fogDensity: 0.004
+      mist: {r: 0.15686275, g: 0.22745098, b: 0.54901963, a: 1}
+      mistDensity: 0.005
+      farNear: {r: 0.0627451, g: 0.101960786, b: 0.33333334, a: 1}
+      farFar: {r: 0.16470589, g: 0.26666668, b: 0.627451, a: 1}
+      town: 1
+      water: {r: 0.13333334, g: 0.20392157, b: 0.59607846, a: 1}
+      fire: 1.15
+      tent: 1
+      lantern: 1
+      exposure: 0
+      saturation: 6
+      contrast: 6
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.5
+      rainTint: {r: 0.13725491, g: 0.16470589, b: 0.33333334, a: 1}
+  - hour: 3.5
+    label: "\u591C"
+    palette:
+      horizon: {r: 0.27450982, g: 0.34509805, b: 0.7529412, a: 1}
+      mid: {r: 0.16470589, g: 0.19607843, b: 0.53333336, a: 1}
+      zenith: {r: 0.05882353, g: 0.07450981, b: 0.2509804, a: 1}
+      cloud: {r: 0.22745098, g: 0.28235295, b: 0.65882355, a: 1}
+      cloudDark: {r: 0.078431375, g: 0.101960786, b: 0.33333334, a: 1}
+      cloudAmount: 0.25
+      stars: 1
+      sunAzimuth: -22
+      sunElevation: -30
+      sunGlowColor: {r: 0.9019608, g: 0.9254902, b: 1, a: 1}
+      sunGlow: 0
+      sunDisc: 0
+      moon: 1
+      keyColor: {r: 0.5882353, g: 0.7137255, b: 1, a: 1}
+      keyIntensity: 0.5
+      keyShadow: 0.7
+      ambientSky: {r: 0.09019608, g: 0.48235294, b: 0.88235295, a: 1}
+      ambientEquator: {r: 0.09019608, g: 0.34901962, b: 0.8, a: 1}
+      ambientGround: {r: 0.0627451, g: 0.16470589, b: 0.5019608, a: 1}
+      ambientIntensity: 0.9
+      shadeGlaze: 0.75
+      fog: {r: 0.101960786, g: 0.16470589, b: 0.47058824, a: 1}
+      fogDensity: 0.004
+      mist: {r: 0.15686275, g: 0.22745098, b: 0.54901963, a: 1}
+      mistDensity: 0.005
+      farNear: {r: 0.0627451, g: 0.101960786, b: 0.33333334, a: 1}
+      farFar: {r: 0.16470589, g: 0.26666668, b: 0.627451, a: 1}
+      town: 1
+      water: {r: 0.13333334, g: 0.20392157, b: 0.59607846, a: 1}
+      fire: 1.15
+      tent: 1
+      lantern: 1
+      exposure: 0
+      saturation: 6
+      contrast: 6
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.5
+      rainTint: {r: 0.13725491, g: 0.16470589, b: 0.33333334, a: 1}
+  - hour: 4.75
+    label: "\u591C\u660E\u3051\u524D"
+    palette:
+      horizon: {r: 0.91764706, g: 0.627451, b: 0.8392157, a: 1}
+      mid: {r: 0.64705884, g: 0.5411765, b: 0.9098039, a: 1}
+      zenith: {r: 0.2901961, g: 0.42352942, b: 0.8627451, a: 1}
+      cloud: {r: 0.95686275, g: 0.7058824, b: 0.8627451, a: 1}
+      cloudDark: {r: 0.5411765, g: 0.5019608, b: 0.8627451, a: 1}
+      cloudAmount: 0.3
+      stars: 0.45
+      sunAzimuth: 150
+      sunElevation: -6
+      sunGlowColor: {r: 1, g: 0.7058824, b: 0.76862746, a: 1}
+      sunGlow: 0.3
+      sunDisc: 0
+      moon: 0
+      keyColor: {r: 0.36078432, g: 0.6117647, b: 1, a: 1}
+      keyIntensity: 0.25
+      keyShadow: 0.55
+      ambientSky: {r: 0.101960786, g: 0.6117647, b: 1, a: 1}
+      ambientEquator: {r: 0.10980392, g: 0.4392157, b: 0.93333334, a: 1}
+      ambientGround: {r: 0.09019608, g: 0.2509804, b: 0.65882355, a: 1}
+      ambientIntensity: 1
+      shadeGlaze: 0.75
+      fog: {r: 0.2901961, g: 0.5019608, b: 0.9098039, a: 1}
+      fogDensity: 0.002
+      mist: {r: 0.49803922, g: 0.61960787, b: 0.9411765, a: 1}
+      mistDensity: 0.009
+      farNear: {r: 0.14117648, g: 0.20392157, b: 0.6039216, a: 1}
+      farFar: {r: 0.41568628, g: 0.5647059, b: 0.93333334, a: 1}
+      town: 1
+      water: {r: 0.37254903, g: 0.43529412, b: 0.8156863, a: 1}
+      fire: 1
+      tent: 1
+      lantern: 1
+      exposure: 0
+      saturation: 6
+      contrast: 4
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.45
+      rainTint: {r: 0.3529412, g: 0.39215687, b: 0.59607846, a: 1}
+  - hour: 6.25
+    label: "\u671D\u713C\u3051"
+    palette:
+      horizon: {r: 1, g: 0.8235294, b: 0.7058824, a: 1}
+      mid: {r: 0.8862745, g: 0.7764706, b: 0.93333334, a: 1}
+      zenith: {r: 0.5254902, g: 0.68235296, b: 0.9411765, a: 1}
+      cloud: {r: 1, g: 0.9411765, b: 0.89411765, a: 1}
+      cloudDark: {r: 0.7529412, g: 0.72156864, b: 0.9098039, a: 1}
+      cloudAmount: 0.4
+      stars: 0
+      sunAzimuth: 140
+      sunElevation: 7
+      sunGlowColor: {r: 1, g: 0.9137255, b: 0.76862746, a: 1}
+      sunGlow: 0.5
+      sunDisc: 1
+      moon: 0
+      keyColor: {r: 1, g: 0.8156863, b: 0.627451, a: 1}
+      keyIntensity: 1.5
+      keyShadow: 0.8
+      ambientSky: {r: 0.6117647, g: 0.76862746, b: 1, a: 1}
+      ambientEquator: {r: 0.72156864, g: 0.65882355, b: 0.9098039, a: 1}
+      ambientGround: {r: 0.4392157, g: 0.47058824, b: 0.6901961, a: 1}
+      ambientIntensity: 1.3
+      shadeGlaze: 0.15
+      fog: {r: 0.8117647, g: 0.8156863, b: 0.9490196, a: 1}
+      fogDensity: 0.003
+      mist: {r: 0.9098039, g: 0.8627451, b: 0.9411765, a: 1}
+      mistDensity: 0.02
+      farNear: {r: 0.3137255, g: 0.38431373, b: 0.6901961, a: 1}
+      farFar: {r: 0.84705883, g: 0.76862746, b: 0.89411765, a: 1}
+      town: 0.15
+      water: {r: 0.7058824, g: 0.7607843, b: 0.9411765, a: 1}
+      fire: 0.8
+      tent: 0
+      lantern: 0.3
+      exposure: 0
+      saturation: 4
+      contrast: 2
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.3
+      rainTint: {r: 0.5019608, g: 0.53333336, b: 0.65882355, a: 1}
+  - hour: 8.5
+    label: "\u663C"
+    palette:
+      horizon: {r: 0.8392157, g: 0.8627451, b: 0.98039216, a: 1}
+      mid: {r: 0.5254902, g: 0.7058824, b: 0.9647059, a: 1}
+      zenith: {r: 0.24705882, g: 0.50980395, b: 0.9254902, a: 1}
+      cloud: {r: 1, g: 1, b: 1, a: 1}
+      cloudDark: {r: 0.72156864, g: 0.78431374, b: 0.9411765, a: 1}
+      cloudAmount: 0.55
+      stars: 0
+      sunAzimuth: 75
+      sunElevation: 58
+      sunGlowColor: {r: 1, g: 0.9411765, b: 0.78431374, a: 1}
+      sunGlow: 0.35
+      sunDisc: 1
+      moon: 0
+      keyColor: {r: 1, g: 0.9490196, b: 0.84705883, a: 1}
+      keyIntensity: 2.4
+      keyShadow: 0.85
+      ambientSky: {r: 0.65882355, g: 0.8, b: 1, a: 1}
+      ambientEquator: {r: 0.627451, g: 0.6901961, b: 0.8784314, a: 1}
+      ambientGround: {r: 0.41568628, g: 0.47843137, b: 0.3764706, a: 1}
+      ambientIntensity: 1
+      shadeGlaze: 0
+      fog: {r: 0.7372549, g: 0.8156863, b: 0.9647059, a: 1}
+      fogDensity: 0.0022
+      mist: {r: 0.8156863, g: 0.8627451, b: 0.972549, a: 1}
+      mistDensity: 0.002
+      farNear: {r: 0.26666668, g: 0.3764706, b: 0.7058824, a: 1}
+      farFar: {r: 0.6745098, g: 0.7607843, b: 0.93333334, a: 1}
+      town: 0
+      water: {r: 0.56078434, g: 0.7058824, b: 0.9411765, a: 1}
+      fire: 0.7
+      tent: 0
+      lantern: 0
+      exposure: 0
+      saturation: 4
+      contrast: 2
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.2
+      rainTint: {r: 0.47058824, g: 0.5176471, b: 0.65882355, a: 1}
+  - hour: 15.5
+    label: "\u663C"
+    palette:
+      horizon: {r: 0.8392157, g: 0.8627451, b: 0.98039216, a: 1}
+      mid: {r: 0.5254902, g: 0.7058824, b: 0.9647059, a: 1}
+      zenith: {r: 0.24705882, g: 0.50980395, b: 0.9254902, a: 1}
+      cloud: {r: 1, g: 1, b: 1, a: 1}
+      cloudDark: {r: 0.72156864, g: 0.78431374, b: 0.9411765, a: 1}
+      cloudAmount: 0.55
+      stars: 0
+      sunAzimuth: 75
+      sunElevation: 58
+      sunGlowColor: {r: 1, g: 0.9411765, b: 0.78431374, a: 1}
+      sunGlow: 0.35
+      sunDisc: 1
+      moon: 0
+      keyColor: {r: 1, g: 0.9490196, b: 0.84705883, a: 1}
+      keyIntensity: 2.4
+      keyShadow: 0.85
+      ambientSky: {r: 0.65882355, g: 0.8, b: 1, a: 1}
+      ambientEquator: {r: 0.627451, g: 0.6901961, b: 0.8784314, a: 1}
+      ambientGround: {r: 0.41568628, g: 0.47843137, b: 0.3764706, a: 1}
+      ambientIntensity: 1
+      shadeGlaze: 0
+      fog: {r: 0.7372549, g: 0.8156863, b: 0.9647059, a: 1}
+      fogDensity: 0.0022
+      mist: {r: 0.8156863, g: 0.8627451, b: 0.972549, a: 1}
+      mistDensity: 0.002
+      farNear: {r: 0.26666668, g: 0.3764706, b: 0.7058824, a: 1}
+      farFar: {r: 0.6745098, g: 0.7607843, b: 0.93333334, a: 1}
+      town: 0
+      water: {r: 0.56078434, g: 0.7058824, b: 0.9411765, a: 1}
+      fire: 0.7
+      tent: 0
+      lantern: 0
+      exposure: 0
+      saturation: 4
+      contrast: 2
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.2
+      rainTint: {r: 0.47058824, g: 0.5176471, b: 0.65882355, a: 1}
+  - hour: 17
+    label: "\u5915\u65B9"
+    palette:
+      horizon: {r: 1, g: 0.76862746, b: 0.627451, a: 1}
+      mid: {r: 0.9098039, g: 0.72156864, b: 0.84705883, a: 1}
+      zenith: {r: 0.4862745, g: 0.6117647, b: 0.9254902, a: 1}
+      cloud: {r: 1, g: 0.8784314, b: 0.78431374, a: 1}
+      cloudDark: {r: 0.72156864, g: 0.5647059, b: 0.78431374, a: 1}
+      cloudAmount: 0.4
+      stars: 0
+      sunAzimuth: -20
+      sunElevation: 7
+      sunGlowColor: {r: 1, g: 0.84705883, b: 0.627451, a: 1}
+      sunGlow: 0.9
+      sunDisc: 1
+      moon: 0
+      keyColor: {r: 1, g: 0.6901961, b: 0.4392157, a: 1}
+      keyIntensity: 1.6
+      keyShadow: 0.85
+      ambientSky: {r: 0.56078434, g: 0.6901961, b: 0.9411765, a: 1}
+      ambientEquator: {r: 0.6901961, g: 0.59607846, b: 0.84705883, a: 1}
+      ambientGround: {r: 0.5019608, g: 0.40784314, b: 0.5647059, a: 1}
+      ambientIntensity: 1.1
+      shadeGlaze: 0.2
+      fog: {r: 0.9098039, g: 0.7529412, b: 0.78431374, a: 1}
+      fogDensity: 0.003
+      mist: {r: 0.9411765, g: 0.78431374, b: 0.7529412, a: 1}
+      mistDensity: 0.004
+      farNear: {r: 0.2901961, g: 0.2901961, b: 0.6039216, a: 1}
+      farFar: {r: 0.78431374, g: 0.65882355, b: 0.84705883, a: 1}
+      town: 0.4
+      water: {r: 0.6901961, g: 0.65882355, b: 0.8784314, a: 1}
+      fire: 0.9
+      tent: 0.3
+      lantern: 0.5
+      exposure: 0
+      saturation: 6
+      contrast: 4
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.4
+      rainTint: {r: 0.5019608, g: 0.53333336, b: 0.65882355, a: 1}
+  - hour: 18.25
+    label: "\u65E5\u6CA1\u5F8C"
+    palette:
+      horizon: {r: 0.91764706, g: 0.627451, b: 0.8392157, a: 1}
+      mid: {r: 0.64705884, g: 0.5411765, b: 0.9098039, a: 1}
+      zenith: {r: 0.2901961, g: 0.42352942, b: 0.8627451, a: 1}
+      cloud: {r: 0.95686275, g: 0.7058824, b: 0.8627451, a: 1}
+      cloudDark: {r: 0.5411765, g: 0.5019608, b: 0.8627451, a: 1}
+      cloudAmount: 0.3
+      stars: 0.6
+      sunAzimuth: -22
+      sunElevation: -5
+      sunGlowColor: {r: 1, g: 0.7058824, b: 0.76862746, a: 1}
+      sunGlow: 0.75
+      sunDisc: 0
+      moon: 0
+      keyColor: {r: 0.36078432, g: 0.6117647, b: 1, a: 1}
+      keyIntensity: 0.3
+      keyShadow: 0.55
+      ambientSky: {r: 0.101960786, g: 0.6117647, b: 1, a: 1}
+      ambientEquator: {r: 0.10980392, g: 0.4392157, b: 0.93333334, a: 1}
+      ambientGround: {r: 0.09019608, g: 0.2509804, b: 0.65882355, a: 1}
+      ambientIntensity: 1
+      shadeGlaze: 0.75
+      fog: {r: 0.2901961, g: 0.5019608, b: 0.9098039, a: 1}
+      fogDensity: 0.002
+      mist: {r: 0.49803922, g: 0.61960787, b: 0.9411765, a: 1}
+      mistDensity: 0.0035
+      farNear: {r: 0.14117648, g: 0.20392157, b: 0.6039216, a: 1}
+      farFar: {r: 0.41568628, g: 0.5647059, b: 0.93333334, a: 1}
+      town: 1
+      water: {r: 0.37254903, g: 0.43529412, b: 0.8156863, a: 1}
+      fire: 1
+      tent: 1
+      lantern: 1
+      exposure: 0
+      saturation: 6
+      contrast: 4
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.45
+      rainTint: {r: 0.3529412, g: 0.39215687, b: 0.59607846, a: 1}
+  - hour: 19.75
+    label: "\u591C"
+    palette:
+      horizon: {r: 0.27450982, g: 0.34509805, b: 0.7529412, a: 1}
+      mid: {r: 0.16470589, g: 0.19607843, b: 0.53333336, a: 1}
+      zenith: {r: 0.05882353, g: 0.07450981, b: 0.2509804, a: 1}
+      cloud: {r: 0.22745098, g: 0.28235295, b: 0.65882355, a: 1}
+      cloudDark: {r: 0.078431375, g: 0.101960786, b: 0.33333334, a: 1}
+      cloudAmount: 0.25
+      stars: 1
+      sunAzimuth: -22
+      sunElevation: -30
+      sunGlowColor: {r: 0.9019608, g: 0.9254902, b: 1, a: 1}
+      sunGlow: 0
+      sunDisc: 0
+      moon: 1
+      keyColor: {r: 0.5882353, g: 0.7137255, b: 1, a: 1}
+      keyIntensity: 0.5
+      keyShadow: 0.7
+      ambientSky: {r: 0.09019608, g: 0.48235294, b: 0.88235295, a: 1}
+      ambientEquator: {r: 0.09019608, g: 0.34901962, b: 0.8, a: 1}
+      ambientGround: {r: 0.0627451, g: 0.16470589, b: 0.5019608, a: 1}
+      ambientIntensity: 0.9
+      shadeGlaze: 0.75
+      fog: {r: 0.101960786, g: 0.16470589, b: 0.47058824, a: 1}
+      fogDensity: 0.004
+      mist: {r: 0.15686275, g: 0.22745098, b: 0.54901963, a: 1}
+      mistDensity: 0.005
+      farNear: {r: 0.0627451, g: 0.101960786, b: 0.33333334, a: 1}
+      farFar: {r: 0.16470589, g: 0.26666668, b: 0.627451, a: 1}
+      town: 1
+      water: {r: 0.13333334, g: 0.20392157, b: 0.59607846, a: 1}
+      fire: 1.15
+      tent: 1
+      lantern: 1
+      exposure: 0
+      saturation: 6
+      contrast: 6
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.5
+      rainTint: {r: 0.13725491, g: 0.16470589, b: 0.33333334, a: 1}
+  - hour: 24
+    label: "\u591C"
+    palette:
+      horizon: {r: 0.27450982, g: 0.34509805, b: 0.7529412, a: 1}
+      mid: {r: 0.16470589, g: 0.19607843, b: 0.53333336, a: 1}
+      zenith: {r: 0.05882353, g: 0.07450981, b: 0.2509804, a: 1}
+      cloud: {r: 0.22745098, g: 0.28235295, b: 0.65882355, a: 1}
+      cloudDark: {r: 0.078431375, g: 0.101960786, b: 0.33333334, a: 1}
+      cloudAmount: 0.25
+      stars: 1
+      sunAzimuth: -22
+      sunElevation: -30
+      sunGlowColor: {r: 0.9019608, g: 0.9254902, b: 1, a: 1}
+      sunGlow: 0
+      sunDisc: 0
+      moon: 1
+      keyColor: {r: 0.5882353, g: 0.7137255, b: 1, a: 1}
+      keyIntensity: 0.5
+      keyShadow: 0.7
+      ambientSky: {r: 0.09019608, g: 0.48235294, b: 0.88235295, a: 1}
+      ambientEquator: {r: 0.09019608, g: 0.34901962, b: 0.8, a: 1}
+      ambientGround: {r: 0.0627451, g: 0.16470589, b: 0.5019608, a: 1}
+      ambientIntensity: 0.9
+      shadeGlaze: 0.75
+      fog: {r: 0.101960786, g: 0.16470589, b: 0.47058824, a: 1}
+      fogDensity: 0.004
+      mist: {r: 0.15686275, g: 0.22745098, b: 0.54901963, a: 1}
+      mistDensity: 0.005
+      farNear: {r: 0.0627451, g: 0.101960786, b: 0.33333334, a: 1}
+      farFar: {r: 0.16470589, g: 0.26666668, b: 0.627451, a: 1}
+      town: 1
+      water: {r: 0.13333334, g: 0.20392157, b: 0.59607846, a: 1}
+      fire: 1.15
+      tent: 1
+      lantern: 1
+      exposure: 0
+      saturation: 6
+      contrast: 6
+      filter: {r: 1, g: 1, b: 1, a: 1}
+      bloom: 0.5
+      rainTint: {r: 0.13725491, g: 0.16470589, b: 0.33333334, a: 1}
+  fireColor: {r: 1, g: 0.6039216, b: 0.28235295, a: 1}
+  fireIntensity: 8
+  fireRange: 10
+  lanternColor: {r: 1, g: 0.7529412, b: 0.4392157, a: 1}
+  lanternIntensity: 1.3
+  lanternRange: 4.5
+  tentColor: {r: 1, g: 0.5803922, b: 0.21960784, a: 1}
+  tentIntensity: 12
+  tentRange: 6
+  lampSize: 0.7
+  litKnee: 0.7
+  litTop: 1
+  lampKnee: 0.4
+  lampTop: 0.75
+  lampWins: 0.8
+  lampYields: 0.75
+  lightBorder: 0.5
+  groundLampWrap: 0.1
+  groundLampAmount: 0.45
+  lampGlaze: 0.35
+  frontLamp: 0.3
+  frontStart: 0.3
+  frontEnd: 1
+  lampAir: 0.00015
+  lampAirWet: 0.0025
+  bloomScatter: 0.45
+  tentGlow: 1
+  lanternGlow: 3.5
+  dialGlow: 2.2
+  emberGlow: 1.3
+  townGlow: 3.5
+  strokeTiles: 0.667
+  strokeNear: 5
+  strokeAmount: 1
+  lightBands: 2.5
+  skyStrokeTiles: 0.33
+  skyStrokeAmount: 1
+  lakeClassic: 0
+  windDirection: {x: 0.8, y: 0.6}
+  wind: 1
+  rainWind: 2.2
+  rainSkyMix: 0.7
+  rainKey: 0.3
+  rainAmbient: 0.8
+  rainFog: 3
+  rainMist: 0.05
+  rainFire: 0.8
+  springGrass: {r: 1.05, g: 1.08, b: 0.95, a: 1}
+  springLeaf: {r: 1.1, g: 1.15, b: 0.9, a: 1}
+  summerGrass: {r: 1, g: 1, b: 1, a: 1}
+  summerLeaf: {r: 1, g: 1, b: 1, a: 1}
+  autumnGrass: {r: 1.5, g: 1.15, b: 0.7, a: 1}
+  autumnLeaf: {r: 2.6, g: 1.05, b: 0.45, a: 1}
+  winterGrass: {r: 1.5, g: 1.45, b: 1.5, a: 1}
+  winterLeaf: {r: 1.1, g: 1, b: 1.05, a: 1}
+  sleepAmbient: 0.6
+  sleepFire: 0.3
+  sleepTent: 0.25
+  sleepExposure: -0.35
+  aperture: 11
+  apertureClose: 3.2
+  focalLength: 85
