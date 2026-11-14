@@ -17,10 +17,10 @@ namespace Iori.Ui
     /// </summary>
     public abstract class UiPanel : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
-        /// <summary>Drawn down further than this (UI units, or a third of the sheet if that is less) the sheet goes away when let go.</summary>
-        const float PullAway = 110f;
+        /// <summary>Drawn down further than this (UI units, or three tenths of the sheet if that is less) the sheet goes away when let go.</summary>
+        const float PullAway = 90f;
         /// <summary>... or let go while moving down faster than this (UI units a second).</summary>
-        const float PullFlick = 650f;
+        const float PullFlick = 450f;
 
         /// <summary>The width of the column the controls are laid out in.</summary>
         public const float Width = UiRoot.DesignWidth;
@@ -156,15 +156,16 @@ namespace Iori.Ui
         {
             _pulling = false;
             var root = UiRoot.Instance;
-            Vector2 d = e.position - e.pressPosition;
-            if (Debug.isDebugBuild) Debug.Log($"[IORI] ui pull begin {name}: open {_open} top {(root ? root.OpenPanel == this : false)} d {d.x:0},{d.y:0}");
             if (!_open || !root || root.OpenPanel != this) return;
             // only a stroke that goes down
+            Vector2 d = e.position - e.pressPosition;
             if (-d.y <= Mathf.Abs(d.x) * 1.2f) return;
             _pulling = true;
-            // (from where the finger is now: the sheet does not jump by the distance it took to tell a stroke from a press)
+            // (counted from where the finger came down, so the whole stroke draws the sheet: on a slow phone the first
+            // news of a quick stroke comes when a third of it is already done)
             _pullBase = _pull;
-            _pullFromY = _pullLastY = e.position.y;
+            _pullFromY = e.pressPosition.y;
+            _pullLastY = e.position.y;
             _pullLastT = Time.unscaledTime;
             _pullSpeed = 0f;
         }
@@ -186,12 +187,11 @@ namespace Iori.Ui
 
         public void OnEndDrag(PointerEventData e)
         {
-            if (Debug.isDebugBuild) Debug.Log($"[IORI] ui pull end {name}: pulling {_pulling} pull {_pull:0} speed {_pullSpeed:0} top {Top:0}");
             if (!_pulling) return;
             _pulling = false;
             // (a finger that rested before it let go did not flick)
             if (Time.unscaledTime - _pullLastT > 0.12f) _pullSpeed = 0f;
-            bool away = _pull > Mathf.Min(PullAway, Top * 0.33f) || (_pullSpeed > PullFlick && _pull > 12f);
+            bool away = _pull > Mathf.Min(PullAway, Top * 0.3f) || (_pullSpeed > PullFlick && _pull > 12f);
             var root = UiRoot.Instance;
             if (!away || !_open || !root) return;
             _flung = true;

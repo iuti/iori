@@ -283,7 +283,6 @@ namespace Iori.Ui
                 Vector2 d = (e.position - e.pressPosition) / Mathf.Max(0.01f, _rt.lossyScale.x);
                 if (d.magnitude < 8f) return;
                 _decided = true;
-                if (Debug.isDebugBuild) Debug.Log($"[IORI] ui slider {name}: stroke {d.x:0},{d.y:0} panel {(bool)_panel}");
                 // a stroke downward draws the sheet down
                 if (_panel && -d.y > Mathf.Abs(d.x) * 1.5f)
                 {
@@ -300,7 +299,6 @@ namespace Iori.Ui
         public void OnPointerUp(PointerEventData e)
         {
             _pressTarget = 0f;
-            if (Debug.isDebugBuild) Debug.Log($"[IORI] ui slider {name}: up, decided {_decided} yielded {_yielded}");
             if (_yielded) return;
             if (!_decided) Set(e);
             UiSounds.Play(UiSounds.Slider, 0.7f);
